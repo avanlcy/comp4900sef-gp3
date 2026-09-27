@@ -73,3 +73,17 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Unreal Engine 4
+Binaries/
+Build/Receipts/
+Build/*.txt
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Unreal Engine 4 plugin
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/DerivedDataCache/
+Plugins/**/Saved/
