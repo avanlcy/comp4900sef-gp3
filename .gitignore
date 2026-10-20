@@ -72,3 +72,6 @@
 
 # Cache files for the editor to use
 **/DerivedDataCache/
+
+# Optional sample assets; re-add via Content Browser > Add > Add Feature or Content Pack
+**/Content/StarterContent/
