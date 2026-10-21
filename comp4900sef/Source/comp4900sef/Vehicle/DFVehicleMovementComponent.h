@@ -9,7 +9,7 @@
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 /**
- * The Sedan's PhysX movement with one rule on top: a car with no controller is parked.
+ * The Sedan's PhysX movement with one rule on top: a car with no controller, or a wrecked one, is parked.
  * The engine otherwise keeps driving an unmanned car from the last inputs it received,
  * so a player who got out while holding W would watch the car drive away.
  */
@@ -20,6 +20,14 @@ class COMP4900SEF_API UDFVehicleMovementComponent : public UWheeledVehicleMoveme
 
 public:
 	UDFVehicleMovementComponent(const FObjectInitializer& ObjectInitializer);
+
+	/** Throttle the driver last set (-1..1), before the engine smooths it. UE 4.27 has no getter for it. */
+	UFUNCTION(BlueprintPure, Category = "Dead Fire|Vehicle")
+	float GetThrottleInput() const;
+
+	/** Steering the driver last set (-1..1), before the engine smooths it. */
+	UFUNCTION(BlueprintPure, Category = "Dead Fire|Vehicle")
+	float GetSteeringInput() const;
 
 protected:
 	virtual void UpdateState(float DeltaTime) override;

@@ -1,6 +1,7 @@
 // Dead Fire - COMP 4900SEF Group 3
 
 #include "Character/DFCharacter.h"
+#include "Game/DFRaceGameMode.h"
 #include "Vehicle/DFVehiclePawn.h"
 #include "Weapons/DFWeaponComponent.h"
 #include "comp4900sef.h"
@@ -117,7 +118,7 @@ void ADFCharacter::LookUpAtRate(float Rate)
 
 void ADFCharacter::MoveForward(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f)
+	if (Controller != nullptr && Value != 0.0f && !IsDead())
 	{
 		const FRotator YawRotation(0, Controller->GetControlRotation().Yaw, 0);
 		AddMovementInput(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X), Value);
@@ -126,7 +127,7 @@ void ADFCharacter::MoveForward(float Value)
 
 void ADFCharacter::MoveRight(float Value)
 {
-	if (Controller != nullptr && Value != 0.0f)
+	if (Controller != nullptr && Value != 0.0f && !IsDead())
 	{
 		const FRotator YawRotation(0, Controller->GetControlRotation().Yaw, 0);
 		AddMovementInput(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y), Value);
@@ -153,6 +154,18 @@ bool ADFCharacter::IsInVehicle() const
 bool ADFCharacter::IsDead() const
 {
 	return Health <= 0.f;
+}
+
+void ADFCharacter::Revive()
+{
+	Health = MaxHealth;
+	// A stowed character keeps its movement off (SetStowed); it walks again when it gets out.
+	if (!bIsStowed)
+	{
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+	UE_LOG(LogDeadFire, Log, TEXT("%s revived"), *GetName());
+	OnCharacterRevived();
 }
 
 ADFVehiclePawn* ADFCharacter::FindNearestEnterableVehicle() const
@@ -246,7 +259,12 @@ float ADFCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	if (Health <= 0.f)
 	{
 		UE_LOG(LogDeadFire, Log, TEXT("%s died"), *GetName());
+		GetCharacterMovement()->DisableMovement();
 		OnCharacterDied();
+		if (ADFRaceGameMode* GameMode = GetWorld()->GetAuthGameMode<ADFRaceGameMode>())
+		{
+			GameMode->NotifyCharacterDied(this);
+		}
 	}
 	return DamageAmount;
 }

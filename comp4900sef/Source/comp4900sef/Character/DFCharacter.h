@@ -71,6 +71,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dead Fire|Health")
 	bool IsDead() const;
 
+	/** Back to full health and on its feet. Called by the GameMode when the racer respawns. */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Health")
+	void Revive();
+
 	/** Closest vehicle within the interaction radius that can be entered, or null. */
 	UFUNCTION(BlueprintPure, Category = "Dead Fire|Enter Exit")
 	ADFVehiclePawn* FindNearestEnterableVehicle() const;
@@ -96,6 +100,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Dead Fire|Events")
 	void OnCharacterDied();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Dead Fire|Events")
+	void OnCharacterRevived();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Dead Fire|Events")
 	void OnEnteredVehicle(ADFVehiclePawn* Vehicle);

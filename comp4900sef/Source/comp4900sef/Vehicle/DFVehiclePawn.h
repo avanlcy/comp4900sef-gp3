@@ -178,6 +178,34 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Enter Exit")
 	bool ExitVehicle();
 
+	/**
+	 * Takes the occupant out where it sits (unstowed, no exit spot search) without changing who is
+	 * possessed. Used before a wreck is removed. Does nothing without an occupant.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Enter Exit")
+	void EjectOccupant();
+
+	/** Restores full body health and every tire. */
+	void ResetHealth();
+
+	// ---- Driving ------------------------------------------------------------
+
+	/** Throttle from -1 (reverse) to 1, scaled down by blown tires. Ignored once the car is wrecked. */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Vehicle")
+	void MoveForward(float Val);
+
+	/** Steering from -1 (left) to 1. Ignored once the car is wrecked. */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Vehicle")
+	void MoveRight(float Val);
+
+	/** Parks the car: throttle and steering released, handbrake on. */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Vehicle")
+	void ReleaseControls();
+
+	/** Puts the car down at the transform's location and rotation, at rest: velocity zeroed, controls released. */
+	UFUNCTION(BlueprintCallable, Category = "Dead Fire|Vehicle")
+	void TeleportAndStop(const FTransform& Transform);
+
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	// ---- Blueprint hooks ----------------------------------------------------
@@ -215,8 +243,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	void MoveForward(float Val);
-	void MoveRight(float Val);
 	void OnHandbrakePressed();
 	void OnHandbrakeReleased();
 	void OnToggleCamera();
@@ -229,7 +255,6 @@ protected:
 	FVector GetWheelWorldLocation(int32 TireIndex) const;
 	/** Validates one exit candidate (path clear, ground found, room for the capsule) and returns the grounded spot. */
 	bool IsExitSpotFree(const FVector& Candidate, FVector& OutGroundedLocation) const;
-	void ResetHealth();
 
 	static const FName LookUpBinding;
 	static const FName LookRightBinding;

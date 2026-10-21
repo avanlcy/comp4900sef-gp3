@@ -11,7 +11,11 @@ UDFRacerComponent::UDFRacerComponent()
 	LapsCompleted = 0;
 	Kills = 0;
 	Deaths = 0;
-	NextCheckpointIndex = 0;
+	// Every racer starts on the start line (index 0), so gate 1 is the first one due.
+	NextCheckpointIndex = 1;
+	LastCheckpoint = nullptr;
+	OffTrackSeconds = 0.f;
+	LastCheckpointTime = -1.f;
 	DistanceAlongTrack = 0.f;
 }
 

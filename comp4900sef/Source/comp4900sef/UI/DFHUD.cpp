@@ -1,129 +1,96 @@
 // Dead Fire - COMP 4900SEF Group 3
 
 #include "UI/DFHUD.h"
-#include "Character/DFCharacter.h"
+#include "UI/DFRaceHUDWidget.h"
+#include "UI/DFRaceSummaryWidget.h"
 #include "Game/DFRaceGameState.h"
-#include "Game/DFRacerComponent.h"
-#include "Vehicle/DFVehiclePawn.h"
-#include "Engine/Canvas.h"
-#include "Engine/Engine.h"
-#include "Engine/Font.h"
+#include "comp4900sef.h"
+#include "Blueprint/UserWidget.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
-#include "UObject/ConstructorHelpers.h"
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 ADFHUD::ADFHUD()
 {
-	static ConstructorHelpers::FObjectFinder<UFont> Font(TEXT("/Engine/EngineFonts/RobotoDistanceField"));
-	HUDFont = Font.Succeeded() ? Font.Object : nullptr;
+	HUDWidgetClass = UDFRaceHUDWidget::StaticClass();
+	HUDWidget = nullptr;
+	SummaryWidgetClass = UDFRaceSummaryWidget::StaticClass();
+	SummaryWidget = nullptr;
 }
 
-void ADFHUD::DrawHUD()
+void ADFHUD::BeginPlay()
 {
-	Super::DrawHUD();
-	if (!Canvas)
+	Super::BeginPlay();
+	APlayerController* Player = GetOwningPlayerController();
+	if (!Player)
 	{
 		return;
 	}
-	const float Scale = FMath::Max(0.5f, Canvas->SizeY / 720.f);
-	DrawRaceInfo(Scale);
-
-	APawn* Pawn = GetOwningPawn();
-	if (Cast<ADFVehiclePawn>(Pawn))
+	// A Blueprint that cleared the class must not leave the race without a HUD: fall back to the built-in layout.
+	if (!HUDWidgetClass)
 	{
-		DrawVehicleInfo(Scale);
+		UE_LOG(LogDeadFire, Warning, TEXT("%s has no HUDWidgetClass; using the built-in UDFRaceHUDWidget"), *GetName());
+		HUDWidgetClass = UDFRaceHUDWidget::StaticClass();
 	}
-	else if (Cast<ADFCharacter>(Pawn))
+	HUDWidget = CreateWidget<UDFRaceHUDWidget>(Player, HUDWidgetClass);
+	if (HUDWidget)
 	{
-		DrawCharacterInfo(Scale);
+		HUDWidget->AddToViewport();
 	}
-}
-
-void ADFHUD::DrawRaceInfo(float Scale)
-{
-	const UDFRacerComponent* Racer = UDFRacerComponent::FindOn(GetOwningPlayerController());
-	const ADFRaceGameState* State = GetWorld() ? GetWorld()->GetGameState<ADFRaceGameState>() : nullptr;
-
-	const FString ScoreLine = FString::Printf(TEXT("SCORE %d    LAPS %d    KILLS %d"),
-		Racer ? Racer->Score : 0, Racer ? Racer->LapsCompleted : 0, Racer ? Racer->Kills : 0);
-	const FString TimeLine = State
-		? FString::Printf(TEXT("TIME %s"), *State->GetRemainingTimeText().ToString())
-		: FString(TEXT("TIME --:--"));
-	const FLinearColor TimeColor = (State && State->RemainingTime < 10.f) ? FLinearColor::Red : FLinearColor::Yellow;
-
-	DrawText(ScoreLine, FLinearColor::White, 24.f * Scale, 20.f * Scale, HUDFont, 1.1f * Scale);
-	DrawText(TimeLine, TimeColor, 24.f * Scale, 48.f * Scale, HUDFont, 1.1f * Scale);
-}
-
-void ADFHUD::DrawVehicleInfo(float Scale)
-{
-	ADFVehiclePawn* Vehicle = Cast<ADFVehiclePawn>(GetOwningPawn());
-	if (!Vehicle)
+	else
 	{
-		return;
-	}
-
-	const FString SpeedLine = FString::Printf(TEXT("%d km/h"), FMath::FloorToInt(Vehicle->GetSpeedKPH()));
-	const FString GearLine = FString::Printf(TEXT("GEAR %s"), *Vehicle->GetGearDisplayText().ToString());
-	const FString HealthLine = FString::Printf(TEXT("CAR %d / %d"), FMath::CeilToInt(Vehicle->Health), FMath::CeilToInt(Vehicle->MaxHealth));
-	FString TireLine = TEXT("TIRES ");
-	for (const FDFTireState& Tire : Vehicle->Tires)
-	{
-		TireLine += Tire.bBlown ? TEXT("[X] ") : FString::Printf(TEXT("[%d] "), FMath::CeilToInt(Tire.Health));
-	}
-
-	const float RightX = Canvas->SizeX - 260.f * Scale;
-	const float BottomY = Canvas->SizeY - 130.f * Scale;
-	DrawText(SpeedLine, FLinearColor::White, RightX, BottomY, HUDFont, 1.6f * Scale);
-	DrawText(GearLine, Vehicle->bInReverseGear ? FLinearColor::Red : FLinearColor::White, RightX, BottomY + 40.f * Scale, HUDFont, 1.1f * Scale);
-	DrawText(HealthLine, FLinearColor::White, 24.f * Scale, Canvas->SizeY - 80.f * Scale, HUDFont, 1.1f * Scale);
-	DrawText(TireLine, FLinearColor::White, 24.f * Scale, Canvas->SizeY - 52.f * Scale, HUDFont, 1.1f * Scale);
-
-	if (Vehicle->bIsDestroyed)
-	{
-		DrawPrompt(TEXT("VEHICLE DESTROYED"), Scale);
-	}
-	else if (Vehicle->Occupant)
-	{
-		DrawPrompt(Vehicle->CanExit() ? TEXT("[E] Exit vehicle") : TEXT("Stop to exit  [E]"), Scale);
+		UE_LOG(LogDeadFire, Warning, TEXT("%s could not create the HUD widget %s"), *GetName(), *HUDWidgetClass->GetName());
 	}
 }
 
-void ADFHUD::DrawCharacterInfo(float Scale)
+void ADFHUD::ShowSummary()
 {
-	ADFCharacter* Character = Cast<ADFCharacter>(GetOwningPawn());
-	if (!Character)
+	APlayerController* Player = GetOwningPlayerController();
+	if (!SummaryWidget && Player)
+	{
+		// Without a summary the player would be stuck at the end of the race: fall back to the built-in layout.
+		if (!SummaryWidgetClass)
+		{
+			UE_LOG(LogDeadFire, Warning, TEXT("%s has no SummaryWidgetClass; using the built-in UDFRaceSummaryWidget"), *GetName());
+			SummaryWidgetClass = UDFRaceSummaryWidget::StaticClass();
+		}
+		SummaryWidget = CreateWidget<UDFRaceSummaryWidget>(Player, SummaryWidgetClass);
+		if (!SummaryWidget)
+		{
+			UE_LOG(LogDeadFire, Warning, TEXT("%s could not create the summary widget %s"), *GetName(), *SummaryWidgetClass->GetName());
+		}
+	}
+	if (!SummaryWidget)
 	{
 		return;
 	}
 
-	const FString HealthLine = FString::Printf(TEXT("HEALTH %d / %d"), FMath::CeilToInt(Character->Health), FMath::CeilToInt(Character->MaxHealth));
-	DrawText(HealthLine, FLinearColor::White, 24.f * Scale, Canvas->SizeY - 52.f * Scale, HUDFont, 1.1f * Scale);
-
-	const float CenterX = Canvas->SizeX * 0.5f;
-	const float CenterY = Canvas->SizeY * 0.5f;
-	const float Arm = 8.f * Scale;
-	DrawLine(CenterX - Arm, CenterY, CenterX + Arm, CenterY, FLinearColor::White, 1.5f);
-	DrawLine(CenterX, CenterY - Arm, CenterX, CenterY + Arm, FLinearColor::White, 1.5f);
-
-	if (Character->IsDead())
+	const UWorld* World = GetWorld();
+	if (const ADFRaceGameState* State = World ? World->GetGameState<ADFRaceGameState>() : nullptr)
 	{
-		DrawPrompt(TEXT("YOU DIED"), Scale);
+		SummaryWidget->ShowResults(State->Result);
 	}
-	else if (Character->FindNearestEnterableVehicle())
+	else
 	{
-		DrawPrompt(TEXT("[E] Enter vehicle"), Scale);
+		UE_LOG(LogDeadFire, Warning, TEXT("%s shows the summary without a race GameState: no result to fill in"), *GetName());
+	}
+	if (!SummaryWidget->IsInViewport())
+	{
+		SummaryWidget->AddToViewport(10);
+	}
+	if (HUDWidget)
+	{
+		HUDWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	// The race is over: the mouse is for the summary's buttons now.
+	if (Player)
+	{
+		Player->bShowMouseCursor = true;
+		Player->SetInputMode(FInputModeUIOnly());
 	}
 }
 
-void ADFHUD::DrawPrompt(const FString& Text, float Scale)
+bool ADFHUD::IsSummaryShown() const
 {
-	float Width = 0.f;
-	float Height = 0.f;
-	GetTextSize(Text, Width, Height, HUDFont, 1.2f * Scale);
-	DrawText(Text, FLinearColor(1.f, 0.85f, 0.2f), (Canvas->SizeX - Width) * 0.5f, Canvas->SizeY * 0.72f, HUDFont, 1.2f * Scale);
+	return SummaryWidget && SummaryWidget->IsInViewport();
 }
-
-PRAGMA_ENABLE_DEPRECATION_WARNINGS

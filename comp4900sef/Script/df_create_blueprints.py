@@ -3,7 +3,7 @@
 Run inside the Unreal Editor (Python console, or through the MCP server's
 manage_editor.run_python). Safe to run again: existing assets are reused.
 
-    exec(open(r'E:/VSC projects/comp4900sef-gp3/comp4900sef/Script/df_create_blueprints.py').read())
+    exec(open(r'<repo>/comp4900sef/Script/df_create_blueprints.py').read())
 """
 import unreal
 
@@ -17,6 +17,7 @@ SPECS = [
     ('BP_DFHUD', '/Script/comp4900sef.DFHUD'),
     ('BP_DFTrackSpline', '/Script/comp4900sef.DFTrackSpline'),
     ('BP_DFRaceGameMode', '/Script/comp4900sef.DFRaceGameMode'),
+    ('BP_DFCheckpoint', '/Script/comp4900sef.DFCheckpoint'),
 ]
 
 

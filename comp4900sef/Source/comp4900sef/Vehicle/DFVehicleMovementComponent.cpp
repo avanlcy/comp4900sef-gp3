@@ -1,6 +1,7 @@
 // Dead Fire - COMP 4900SEF Group 3
 
 #include "Vehicle/DFVehicleMovementComponent.h"
+#include "Vehicle/DFVehiclePawn.h"
 #include "GameFramework/Pawn.h"
 
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -10,12 +11,25 @@ UDFVehicleMovementComponent::UDFVehicleMovementComponent(const FObjectInitialize
 {
 }
 
+float UDFVehicleMovementComponent::GetThrottleInput() const
+{
+	return RawThrottleInput;
+}
+
+float UDFVehicleMovementComponent::GetSteeringInput() const
+{
+	return RawSteeringInput;
+}
+
 void UDFVehicleMovementComponent::UpdateState(float DeltaTime)
 {
 	Super::UpdateState(DeltaTime);
 
 	const bool bUnmanned = PawnOwner == nullptr || PawnOwner->GetController() == nullptr;
-	if (bUnmanned)
+	// A wreck stays where it died, even while its driver still possesses it.
+	const ADFVehiclePawn* Vehicle = Cast<ADFVehiclePawn>(PawnOwner);
+	const bool bWrecked = Vehicle != nullptr && Vehicle->bIsDestroyed;
+	if (bUnmanned || bWrecked)
 	{
 		// Override the stale replicated inputs the base class falls back to.
 		SteeringInput = 0.f;

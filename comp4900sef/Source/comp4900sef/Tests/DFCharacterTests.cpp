@@ -13,6 +13,7 @@
 #include "CollisionQueryParams.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/EngineTypes.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DamageType.h"
 
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -83,6 +84,34 @@ bool FDFCharacterDiesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("health is zero"), Character->Health, 0.f);
 	TestTrue(TEXT("dead"), Character->IsDead());
 	TestEqual(TEXT("damage after death ignored"), Character->TakeDamage(10.f, Generic, nullptr, nullptr), 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFCharacterDeadReviveTest, "DeadFire.Character.DeadCannotMoveAndRevives", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFCharacterDeadReviveTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = DFTests::NewTestWorld();
+	// A car straight ahead, so a shot that is allowed would hit it (as in FireUsesCameraDirection).
+	ADFVehiclePawn* Vehicle = DFTests::SpawnAt<ADFVehiclePawn>(World, FVector(400.f, 0.f, 0.f));
+	ADFCharacter* Character = DFTests::SpawnAt<ADFCharacter>(World, FVector(0.f, 0.f, 96.f), FRotator::ZeroRotator);
+	if (!TestNotNull(TEXT("vehicle"), Vehicle) || !TestNotNull(TEXT("character"), Character)) return false;
+	UCharacterMovementComponent* Movement = Character->GetCharacterMovement();
+
+	// On foot and walking, as in play.
+	Movement->SetMovementMode(MOVE_Walking);
+	TestEqual(TEXT("walking before"), static_cast<int32>(Movement->MovementMode.GetValue()), static_cast<int32>(MOVE_Walking));
+
+	FDamageEvent Generic(UDamageType::StaticClass());
+	Character->TakeDamage(500.f, Generic, nullptr, nullptr);
+	TestTrue(TEXT("dead"), Character->IsDead());
+	TestEqual(TEXT("a dead character cannot move"), static_cast<int32>(Movement->MovementMode.GetValue()), static_cast<int32>(MOVE_None));
+	TestFalse(TEXT("a dead character cannot fire"), Character->Fire());
+	TestEqual(TEXT("the car ahead was not shot"), Vehicle->Health, 100.f);
+
+	Character->Revive();
+	TestEqual(TEXT("revived at full health"), Character->Health, 100.f);
+	TestFalse(TEXT("alive again"), Character->IsDead());
+	TestEqual(TEXT("walking again"), static_cast<int32>(Movement->MovementMode.GetValue()), static_cast<int32>(MOVE_Walking));
 	return true;
 }
 

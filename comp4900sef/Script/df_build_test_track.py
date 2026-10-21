@@ -1,8 +1,8 @@
-"""Builds the Phase 1 test level L_TestTrack: ground, lights, a looped road, a few
-infield props and the player start. Run inside the Unreal Editor after
-df_create_blueprints.py. Re-running recreates the level from scratch.
+"""Builds the test level L_TestTrack: ground, lights, a looped road with four checkpoint
+gates, a few infield props and the player start. Run inside the Unreal Editor after
+df_create_blueprints.py. Re-running empties the level and rebuilds it from scratch.
 
-    exec(open(r'E:/VSC projects/comp4900sef-gp3/comp4900sef/Script/df_build_test_track.py').read())
+    exec(open(r'<repo>/comp4900sef/Script/df_build_test_track.py').read())
 """
 import math
 import unreal
@@ -10,11 +10,14 @@ import unreal
 MAP_PATH = '/Game/DeadFire/Maps/L_TestTrack'
 BP_DIR = '/Game/DeadFire/Blueprints'
 
-# Kidney-shaped loop, world units (cm), about 400 m around. Road top surface is Z 0.
+# Kidney-shaped loop, world units (cm), about 490 m around. Road top surface is Z 0.
 TRACK_POINTS = [
     (0, 0), (6000, -600), (11500, 1200), (14000, 5500), (12000, 9500),
     (7000, 9000), (3000, 11500), (-2500, 9000), (-4000, 4500), (-2500, 1200),
 ]
+
+# Gates placed at equal distances along the road, the first on the start line.
+CHECKPOINT_COUNT = 4
 
 # (mesh path, location, yaw) props dropped in the infield so leaving the road has a purpose.
 PROPS = [
@@ -63,9 +66,22 @@ def spawn_static_mesh(mesh_path, location, rotation=None, scale=None, label=None
     return actor
 
 
+def open_empty_level():
+    """Opens MAP_PATH with no actors in it. new_level refuses an existing asset and
+    EditorAssetLibrary cannot delete maps, so a second run loads the map and clears it."""
+    if not eal.does_asset_exist(MAP_PATH):
+        if not ell.new_level(MAP_PATH):
+            raise RuntimeError('could not create level {}'.format(MAP_PATH))
+        return
+    if not ell.load_level(MAP_PATH):
+        raise RuntimeError('could not load level {}'.format(MAP_PATH))
+    # get_all_level_actors skips the WorldSettings and the builder brush, which stay.
+    for actor in ell.get_all_level_actors():
+        ell.destroy_actor(actor)
+
+
 def main():
-    if not ell.new_level(MAP_PATH):
-        raise RuntimeError('could not create level {}'.format(MAP_PATH))
+    open_empty_level()
 
     # Ground: a 500 m square slab whose top is 10 cm below the road surface.
     spawn_static_mesh('/Engine/BasicShapes/Cube', vec(5000, 5000, -60), scale=(500, 500, 1),
@@ -84,6 +100,16 @@ def main():
     track_class = eal.load_blueprint_class('{}/BP_DFTrackSpline'.format(BP_DIR))
     track = spawn(track_class, vec(0, 0, 0), label='MainTrack')
     track.set_points_from_array([vec(x, y, 0) for x, y in TRACK_POINTS], True)
+
+    # Checkpoint gates, evenly spaced along the road; gate 0 is the start/finish line.
+    checkpoint_class = eal.load_blueprint_class('{}/BP_DFCheckpoint'.format(BP_DIR))
+    track_length = track.get_track_length()
+    for k in range(CHECKPOINT_COUNT):
+        t = track.get_transform_at_distance(track_length * k / float(CHECKPOINT_COUNT))
+        gate = spawn(checkpoint_class, t.translation, rot(yaw=t.rotation.rotator().yaw), label='Checkpoint_{}'.format(k))
+        gate.set_editor_property('checkpoint_index', k)
+        unreal.log('Checkpoint_{}: index {} at {} yaw {:.1f}'.format(
+            k, gate.get_editor_property('checkpoint_index'), gate.get_actor_location(), gate.get_actor_rotation().yaw))
 
     # Infield props.
     for mesh_path, (x, y, z), yaw in PROPS:

@@ -28,6 +28,12 @@ void ADFPlayerController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 	if (ADFVehiclePawn* Vehicle = Cast<ADFVehiclePawn>(InPawn))
 	{
+		// A parked car belongs to its last driver only until they take another car: the one left
+		// behind is nobody's now, so its wreck or gate crossing is never charged to this player.
+		if (CurrentVehicle && CurrentVehicle != Vehicle)
+		{
+			CurrentVehicle->LastDriver = nullptr;
+		}
 		CurrentVehicle = Vehicle;
 	}
 	else if (ADFCharacter* OnFoot = Cast<ADFCharacter>(InPawn))

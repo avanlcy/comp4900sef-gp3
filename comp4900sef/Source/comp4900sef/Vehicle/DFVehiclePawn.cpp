@@ -5,6 +5,7 @@
 #include "Vehicle/DFWheelFront.h"
 #include "Vehicle/DFWheelRear.h"
 #include "Character/DFCharacter.h"
+#include "Game/DFRaceGameMode.h"
 #include "comp4900sef.h"
 #include "Camera/CameraComponent.h"
 #include "CollisionQueryParams.h"
@@ -42,6 +43,8 @@ ADFVehiclePawn::ADFVehiclePawn(const FObjectInitializer& ObjectInitializer)
 		GetMesh()->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 		GetMesh()->SetAnimInstanceClass(AnimBPClass.Class);
 	}
+	// Checkpoints are overlap triggers: the car's body has to report overlaps to pass them.
+	GetMesh()->SetGenerateOverlapEvents(true);
 
 	UWheeledVehicleMovementComponent4W* Vehicle4W = CastChecked<UWheeledVehicleMovementComponent4W>(GetVehicleMovement());
 	check(Vehicle4W->WheelSetups.Num() == 4);
@@ -147,12 +150,39 @@ void ADFVehiclePawn::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ADFVehiclePawn::MoveForward(float Val)
 {
+	if (bIsDestroyed)
+	{
+		return;
+	}
 	GetVehicleMovementComponent()->SetThrottleInput(Val * GetThrottleScale());
 }
 
 void ADFVehiclePawn::MoveRight(float Val)
 {
+	if (bIsDestroyed)
+	{
+		return;
+	}
 	GetVehicleMovementComponent()->SetSteeringInput(Val);
+}
+
+void ADFVehiclePawn::ReleaseControls()
+{
+	if (UWheeledVehicleMovementComponent* Movement = GetVehicleMovementComponent())
+	{
+		Movement->SetThrottleInput(0.f);
+		Movement->SetSteeringInput(0.f);
+		Movement->SetHandbrakeInput(true);
+	}
+}
+
+void ADFVehiclePawn::TeleportAndStop(const FTransform& Transform)
+{
+	// Location and rotation only, so a scaled transform never scales the car; TeleportPhysics moves the body along.
+	SetActorLocationAndRotation(Transform.GetLocation(), Transform.GetRotation(), false, nullptr, ETeleportType::TeleportPhysics);
+	GetMesh()->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	GetMesh()->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	ReleaseControls();
 }
 
 void ADFVehiclePawn::OnHandbrakePressed()
@@ -162,6 +192,11 @@ void ADFVehiclePawn::OnHandbrakePressed()
 
 void ADFVehiclePawn::OnHandbrakeReleased()
 {
+	// A wreck keeps the handbrake DestroyVehicle pulled.
+	if (bIsDestroyed)
+	{
+		return;
+	}
 	GetVehicleMovementComponent()->SetHandbrakeInput(false);
 }
 
@@ -444,12 +479,7 @@ bool ADFVehiclePawn::ExitVehicle()
 	ADFCharacter* Character = Occupant;
 
 	// Park the car so it does not roll away on its own.
-	if (UWheeledVehicleMovementComponent* Movement = GetVehicleMovement())
-	{
-		Movement->SetThrottleInput(0.f);
-		Movement->SetSteeringInput(0.f);
-		Movement->SetHandbrakeInput(true);
-	}
+	ReleaseControls();
 
 	Occupant = nullptr;
 	Character->CurrentVehicle = nullptr;
@@ -467,6 +497,19 @@ bool ADFVehiclePawn::ExitVehicle()
 	OnOccupantExited(Character);
 	Character->OnExitedVehicle(this);
 	return true;
+}
+
+void ADFVehiclePawn::EjectOccupant()
+{
+	ADFCharacter* Character = Occupant;
+	if (!Character)
+	{
+		return;
+	}
+	Occupant = nullptr;
+	Character->CurrentVehicle = nullptr;
+	Character->SetStowed(false, nullptr);
+	UE_LOG(LogDeadFire, Log, TEXT("%s ejected from %s"), *Character->GetName(), *GetName());
 }
 
 // ---- Damage -----------------------------------------------------------------
@@ -534,14 +577,17 @@ void ADFVehiclePawn::DestroyVehicle()
 		return;
 	}
 	bIsDestroyed = true;
-	if (UWheeledVehicleMovementComponent* Movement = GetVehicleMovement())
-	{
-		Movement->SetThrottleInput(0.f);
-		Movement->SetHandbrakeInput(true);
-	}
+	ReleaseControls();
 	UE_LOG(LogDeadFire, Log, TEXT("%s destroyed"), *GetName());
 	OnVehicleDestroyed();
 	OnDestroyedDelegate.Broadcast(this, LastDamageInstigator);
+
+	// The race counts the death (the driver's, or the last driver's for a parked car) and the kill.
+	UWorld* World = GetWorld();
+	if (ADFRaceGameMode* GameMode = World ? World->GetAuthGameMode<ADFRaceGameMode>() : nullptr)
+	{
+		GameMode->NotifyVehicleDestroyed(this, LastDamageInstigator);
+	}
 }
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

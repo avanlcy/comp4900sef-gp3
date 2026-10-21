@@ -8,6 +8,9 @@ public class comp4900sef : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// File-local helpers live in anonymous namespaces, which would collide once the module reaches the unity-build threshold.
+		bUseUnity = false;
+
 		// Sources are grouped in subfolders (Vehicle/, Character/, ...); include them from the module root.
 		PublicIncludePaths.Add(ModuleDirectory);
 

@@ -8,6 +8,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "Tests/DFPIETestUtils.h"
 #include "Character/DFCharacter.h"
 #include "Vehicle/DFVehiclePawn.h"
 #include "Weapons/DFWeaponComponent.h"
@@ -15,15 +16,12 @@
 #include "CollisionQueryParams.h"
 #include "Components/SplineMeshComponent.h"
 #include "Editor.h"
-#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "GameFramework/PlayerController.h"
 #include "InputCoreTypes.h"
-#include "Kismet/GameplayStatics.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
-#include "UnrealClient.h"
 #include "WheeledVehicleMovementComponent.h"
 
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -51,38 +49,6 @@ namespace DFSmoke
 		double WaitStarted = 0.0;
 	};
 	static FState State;
-
-	UWorld* PIEWorld()
-	{
-		for (const FWorldContext& Context : GEngine->GetWorldContexts())
-		{
-			if (Context.WorldType == EWorldType::PIE && Context.World())
-			{
-				return Context.World();
-			}
-		}
-		return nullptr;
-	}
-
-	APlayerController* PlayerController()
-	{
-		UWorld* World = PIEWorld();
-		return World ? UGameplayStatics::GetPlayerController(World, 0) : nullptr;
-	}
-
-	APawn* PlayerPawn()
-	{
-		UWorld* World = PIEWorld();
-		return World ? UGameplayStatics::GetPlayerPawn(World, 0) : nullptr;
-	}
-
-	void Key(const FKey& Key, EInputEvent Event)
-	{
-		if (APlayerController* PC = PlayerController())
-		{
-			PC->InputKey(Key, Event, 1.f, false);
-		}
-	}
 }
 
 // ---- Latent steps -----------------------------------------------------------
@@ -91,7 +57,7 @@ namespace DFSmoke
 DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FDFSmokeCheckRoadUnderCar, FAutomationTestBase*, Test);
 bool FDFSmokeCheckRoadUnderCar::Update()
 {
-	UWorld* World = DFSmoke::PIEWorld();
+	UWorld* World = DFPIE::PIEWorld();
 	ADFVehiclePawn* Vehicle = DFSmoke::State.Vehicle.Get();
 	if (!Test->TestNotNull(TEXT("PIE world"), World) || !Test->TestNotNull(TEXT("vehicle"), Vehicle)) return true;
 
@@ -115,7 +81,7 @@ bool FDFSmokeCheckStillInCar::Update()
 	ADFVehiclePawn* Vehicle = DFSmoke::State.Vehicle.Get();
 	if (!Test->TestNotNull(TEXT("vehicle"), Vehicle)) return true;
 	Test->AddInfo(FString::Printf(TEXT("E pressed at %.0f km/h"), Vehicle->GetSpeedKPH()));
-	Test->TestEqual(TEXT("E while moving keeps the player in the car"), DFSmoke::PlayerPawn(), static_cast<APawn*>(Vehicle));
+	Test->TestEqual(TEXT("E while moving keeps the player in the car"), DFPIE::PlayerPawn(), static_cast<APawn*>(Vehicle));
 	Test->TestEqual(TEXT("E while moving keeps the character stowed"), Vehicle->Occupant, DFSmoke::State.Character.Get());
 	return true;
 }
@@ -137,31 +103,17 @@ bool FDFSmokeCheckCarParked::Update()
 DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FDFSmokeFindVehicle, FAutomationTestBase*, Test);
 bool FDFSmokeFindVehicle::Update()
 {
-	APawn* Pawn = DFSmoke::PlayerPawn();
+	APawn* Pawn = DFPIE::PlayerPawn();
 	if (!Test->TestNotNull(TEXT("PIE player pawn exists"), Pawn)) return true;
 	ADFVehiclePawn* Vehicle = Cast<ADFVehiclePawn>(Pawn);
 	if (!Test->TestNotNull(TEXT("player starts in a vehicle"), Vehicle)) return true;
 	Test->TestTrue(TEXT("vehicle is the Blueprint child"), Vehicle->GetClass()->GetName().StartsWith(TEXT("BP_DFVehicle")));
 	Test->TestNotNull(TEXT("on-foot character stowed inside"), Vehicle->Occupant);
-	Test->TestTrue(TEXT("player controller is the Blueprint child"), DFSmoke::PlayerController()->GetClass()->GetName().StartsWith(TEXT("BP_DFPlayerController")));
+	Test->TestTrue(TEXT("player controller is the Blueprint child"), DFPIE::PlayerController()->GetClass()->GetName().StartsWith(TEXT("BP_DFPlayerController")));
 	DFSmoke::State.Vehicle = Vehicle;
 	DFSmoke::State.Character = Vehicle->Occupant;
 	DFSmoke::State.Start = Vehicle->GetActorLocation();
 	return true;
-}
-
-DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FDFSmokeKey, FKey, KeyToPress, EInputEvent, Event);
-bool FDFSmokeKey::Update()
-{
-	DFSmoke::Key(KeyToPress, Event);
-	return true;
-}
-
-/** Waits a number of engine frames (one Update per frame), independent of wall-clock throttling. */
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FDFSmokeWaitFrames, int32, Frames);
-bool FDFSmokeWaitFrames::Update()
-{
-	return --Frames <= 0;
 }
 
 /** Waits until the car has driven MinDistance cm from where it started, or fails after MaxFrames frames. */
@@ -213,7 +165,7 @@ DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FDFSmokeCheckOnFoot, FAutomationT
 bool FDFSmokeCheckOnFoot::Update()
 {
 	ADFVehiclePawn* Vehicle = DFSmoke::State.Vehicle.Get();
-	ADFCharacter* Character = Cast<ADFCharacter>(DFSmoke::PlayerPawn());
+	ADFCharacter* Character = Cast<ADFCharacter>(DFPIE::PlayerPawn());
 	if (!Test->TestNotNull(TEXT("pressing E put the player on foot"), Character)) return true;
 	Test->TestTrue(TEXT("character is the Blueprint child"), Character->GetClass()->GetName().StartsWith(TEXT("BP_DFCharacter")));
 	Test->TestFalse(TEXT("character visible"), Character->IsHidden());
@@ -238,7 +190,7 @@ bool FDFSmokeAimAtCar::Update()
 {
 	ADFVehiclePawn* Vehicle = DFSmoke::State.Vehicle.Get();
 	ADFCharacter* Character = DFSmoke::State.Character.Get();
-	APlayerController* PC = DFSmoke::PlayerController();
+	APlayerController* PC = DFPIE::PlayerController();
 	if (Vehicle && Character && PC)
 	{
 		const FVector From = Character->GetFollowCamera() ? Character->GetFollowCamera()->GetComponentLocation() : Character->GetActorLocation();
@@ -270,18 +222,11 @@ bool FDFSmokeCheckBackInCar::Update()
 {
 	ADFVehiclePawn* Vehicle = DFSmoke::State.Vehicle.Get();
 	ADFCharacter* Character = DFSmoke::State.Character.Get();
-	Test->TestEqual(TEXT("pressing E near the car re-enters it"), DFSmoke::PlayerPawn(), static_cast<APawn*>(Vehicle));
+	Test->TestEqual(TEXT("pressing E near the car re-enters it"), DFPIE::PlayerPawn(), static_cast<APawn*>(Vehicle));
 	if (Vehicle)
 	{
 		Test->TestEqual(TEXT("character stowed again"), Vehicle->Occupant, Character);
 	}
-	return true;
-}
-
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FDFSmokeScreenshot, FString, Name);
-bool FDFSmokeScreenshot::Update()
-{
-	FScreenshotRequest::RequestScreenshot(Name, false, false);
 	return true;
 }
 
@@ -302,63 +247,63 @@ bool FDFPIESmokeTest::RunTest(const FString& Parameters)
 	// background editor is CPU-throttled and its physics runs at a fraction of real time.
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(2.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(10));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(10));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeFindVehicle(this));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckRoadUnderCar(this));
 
 	// Drive: hold W until the car has covered 300 cm.
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::W, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::W, IE_Pressed));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitUntilMoved(this, 300.f, 1800));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeScreenshot(TEXT("DF_PIE_01_driving")));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEScreenshot(TEXT("DF_PIE_01_driving")));
 
 	// E while still rolling must be refused.
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(3));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(3));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Released));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckStillInCar(this));
 
 	// Stop: release W, hold the handbrake, wait until slow enough to exit.
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::W, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::SpaceBar, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::W, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::SpaceBar, IE_Pressed));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitUntilStopped(this, 60.f));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::SpaceBar, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::SpaceBar, IE_Released));
 
 	// Exit with E.
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckOnFoot(this, true));
 
 	// Shoot the car with the left mouse button.
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeAimAtCar());
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeScreenshot(TEXT("DF_PIE_02_on_foot")));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::LeftMouseButton, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(3));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::LeftMouseButton, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEScreenshot(TEXT("DF_PIE_02_on_foot")));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::LeftMouseButton, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(3));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::LeftMouseButton, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckShot(this));
 
 	// Get back in with E.
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(3));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(3));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckBackInCar(this));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeScreenshot(TEXT("DF_PIE_03_back_in_car")));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEScreenshot(TEXT("DF_PIE_03_back_in_car")));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
 
 	// Get out again while W is still held: the empty car must not drive away.
 	// (W keeps driving the character after the swap, so no "beside the car" check here.)
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::W, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(2));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Pressed));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(3));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::E, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeKey(EKeys::W, IE_Released));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(5));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::W, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(2));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Pressed));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(3));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::E, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEKey(EKeys::W, IE_Released));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(5));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckOnFoot(this, false));
-	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeWaitFrames(90));
+	ADD_LATENT_AUTOMATION_COMMAND(FDFPIEWaitFrames(90));
 	ADD_LATENT_AUTOMATION_COMMAND(FDFSmokeCheckCarParked(this));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());

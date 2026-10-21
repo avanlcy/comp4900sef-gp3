@@ -7,6 +7,7 @@
 
 #include "DFTestUtils.h"
 #include "Character/DFCharacter.h"
+#include "Vehicle/DFVehicleMovementComponent.h"
 #include "Vehicle/DFVehiclePawn.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/EngineTypes.h"
@@ -130,6 +131,29 @@ bool FDFVehicleBlueprintDefaultsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("tire max follows TireMaxHealth"), Vehicle->Tires[0].MaxHealth, 50.f);
 	TestEqual(TEXT("tire health follows TireMaxHealth"), Vehicle->Tires[3].Health, 50.f);
 	TestEqual(TEXT("bone names kept"), Vehicle->Tires[0].BoneName, FName(TEXT("Wheel_Front_Left")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FDFVehicleDestroyedThrottleTest, "DeadFire.Vehicle.DestroyedCarIgnoresThrottle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+bool FDFVehicleDestroyedThrottleTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = DFTests::NewTestWorld();
+	ADFVehiclePawn* Vehicle = DFTests::SpawnAt<ADFVehiclePawn>(World, FVector::ZeroVector);
+	if (!TestNotNull(TEXT("vehicle spawned"), Vehicle)) return false;
+	UDFVehicleMovementComponent* Movement = Cast<UDFVehicleMovementComponent>(Vehicle->GetVehicleMovementComponent());
+	if (!TestNotNull(TEXT("Dead Fire movement component"), Movement)) return false;
+
+	Vehicle->MoveForward(1.f);
+	TestEqual(TEXT("throttle follows the input"), Movement->GetThrottleInput(), 1.f);
+
+	Vehicle->TakeDamage(1000.f, FDamageEvent(UDamageType::StaticClass()), nullptr, nullptr);
+	if (!TestTrue(TEXT("vehicle wrecked"), Vehicle->bIsDestroyed)) return false;
+	TestEqual(TEXT("the wreck cuts the throttle"), Movement->GetThrottleInput(), 0.f);
+
+	Vehicle->MoveForward(1.f);
+	Vehicle->MoveRight(1.f);
+	TestEqual(TEXT("a wreck ignores the throttle"), Movement->GetThrottleInput(), 0.f);
+	TestEqual(TEXT("a wreck ignores the steering"), Movement->GetSteeringInput(), 0.f);
 	return true;
 }
 

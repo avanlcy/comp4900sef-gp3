@@ -31,6 +31,7 @@ bool FDFGameScoringHooksTest::RunTest(const FString& Parameters)
 	GameMode->NotifyLapCompleted(PC1);
 	TestEqual(TEXT("lap adds 100 points"), Racer1->Score, 100);
 	TestEqual(TEXT("lap counted"), Racer1->LapsCompleted, 1);
+	TestEqual(TEXT("after the start line gate 1 is next"), Racer1->NextCheckpointIndex, 1);
 	TestEqual(TEXT("other racer untouched"), Racer2->Score, 0);
 
 	ADFVehiclePawn* Car = DFTests::SpawnAt<ADFVehiclePawn>(World, FVector(0.f, 2000.f, 0.f));
@@ -40,8 +41,9 @@ bool FDFGameScoringHooksTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("kill adds 50 points"), Racer2->Score, 50);
 	TestEqual(TEXT("kill counted"), Racer2->Kills, 1);
 
+	// Racers start with gate 1 next (they start on the line).
 	GameMode->NotifyCheckpointPassed(PC2);
-	TestEqual(TEXT("checkpoint advances the racer"), Racer2->NextCheckpointIndex, 1);
+	TestEqual(TEXT("checkpoint advances the racer"), Racer2->NextCheckpointIndex, 2);
 
 	TArray<UDFRacerComponent*> Ranked = GameMode->GetRankedRacers();
 	TestEqual(TEXT("two racers ranked"), Ranked.Num(), 2);
@@ -73,7 +75,7 @@ bool FDFGameCheckpointTimeTest::RunTest(const FString& Parameters)
 
 	GameMode->NotifyCheckpointPassed(Bot);
 	TestEqual(TEXT("NPC checkpoint does not touch the player's clock"), State->RemainingTime, 68.f);
-	TestEqual(TEXT("NPC progress still recorded"), BotRacer->NextCheckpointIndex, 1);
+	TestEqual(TEXT("NPC progress still recorded (gate 1 to gate 2)"), BotRacer->NextCheckpointIndex, 2);
 	return true;
 }
 
@@ -100,10 +102,11 @@ bool FDFGameKillCreditTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("wrecking your own parked car is not a kill"), Racer1->Score, 0);
 	TestEqual(TEXT("own car counts as a death"), Racer1->Deaths, 1);
 
+	// PC1 is still waiting to respawn from the first wreck: the rival is credited, but one incident costs one life.
 	GameMode->NotifyVehicleDestroyed(Car, PC2);
 	TestEqual(TEXT("rival gets the kill points"), Racer2->Score, 50);
 	TestEqual(TEXT("rival kill counted"), Racer2->Kills, 1);
-	TestEqual(TEXT("victim death counted"), Racer1->Deaths, 2);
+	TestEqual(TEXT("no second death while the respawn is pending"), Racer1->Deaths, 1);
 	return true;
 }
 
