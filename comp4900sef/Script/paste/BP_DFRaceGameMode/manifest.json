@@ -1,0 +1,919 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFRaceGameMode",
+ "parent": "/Script/Engine.GameModeBase",
+ "components": [],
+ "variables": [
+  {
+   "name": "OnFootCharacterClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "RaceTimeLimit",
+   "type": "float",
+   "default": "120",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "CheckpointTimeBonus",
+   "type": "float",
+   "default": "8",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "PointsPerLap",
+   "type": "int",
+   "default": "100",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "PointsPerKill",
+   "type": "int",
+   "default": "50",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "MaxDeaths",
+   "type": "int",
+   "default": "3",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "ScoreRequirement",
+   "type": "int",
+   "default": "300",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "RespawnDelay",
+   "type": "float",
+   "default": "2",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "OffTrackMargin",
+   "type": "float",
+   "default": "500",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "OffTrackGraceSeconds",
+   "type": "float",
+   "default": "5",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "RaceState",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFRaceGameState.BP_DFRaceGameState_C",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "Checkpoints",
+   "type": "array<object:/Game/DeadFire/Blueprints/BP_DFCheckpoint.BP_DFCheckpoint_C>",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "Tracks",
+   "type": "array<object:/Game/DeadFire/Blueprints/BP_DFTrackSpline.BP_DFTrackSpline_C>",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "MainTrack",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFTrackSpline.BP_DFTrackSpline_C",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "PendingRespawnRacer",
+   "type": "object:/Script/Engine.Controller",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "RespawnDueTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  }
+ ],
+ "dispatchers": [
+  {
+   "name": "OnRaceEnded",
+   "params": [
+    "Reason:enum:/Game/DeadFire/Data/E_DFRaceEndReason.E_DFRaceEndReason",
+    "bPassed:bool"
+   ]
+  },
+  {
+   "name": "OnRacerRespawned",
+   "params": [
+    "Racer:object:/Script/Engine.Controller"
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "name": "FindRacer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RegisterCheckpoint",
+   "inputs": [
+    "Checkpoint:object:/Game/DeadFire/Blueprints/BP_DFCheckpoint.BP_DFCheckpoint_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "CollectLevelActors",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "AddScore",
+   "inputs": [
+    "C:object:/Script/Engine.Controller",
+    "Points:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GrantCheckpointTimeBonus",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyLapCompleted",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyCheckpointPassed",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyCheckpointReached",
+   "inputs": [
+    "Racer:object:/Script/Engine.Controller",
+    "Checkpoint:object:/Game/DeadFire/Blueprints/BP_DFCheckpoint.BP_DFCheckpoint_C"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "HandleRacerDeath",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyVehicleDestroyed",
+   "inputs": [
+    "Victim:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "Killer:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyCharacterDied",
+   "inputs": [
+    "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetRespawnTransform",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [
+    "Transform:struct:/Script/CoreUObject.Transform"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RespawnRacer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "SpawnAt:struct:/Script/CoreUObject.Transform"
+   ]
+  },
+  {
+   "name": "IsOnAnyTrack",
+   "inputs": [
+    "Location:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "TickRacer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "IsRacerAhead",
+   "inputs": [
+    "A:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C",
+    "B:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetRankedRacers",
+   "inputs": [],
+   "outputs": [
+    "Racers:array<object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C>"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Ranked:array<object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C>"
+   ]
+  },
+  {
+   "name": "EndRace",
+   "inputs": [
+    "Reason:enum:/Game/DeadFire/Data/E_DFRaceEndReason.E_DFRaceEndReason"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Player:object:/Script/Engine.PlayerController"
+   ]
+  },
+  {
+   "name": "RestartRace",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Player:object:/Script/Engine.PlayerController"
+   ]
+  }
+ ],
+ "graphs": [
+  {
+   "name": "FindRacer",
+   "file": "FindRacer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ]
+   ]
+  },
+  {
+   "name": "RegisterCheckpoint",
+   "file": "RegisterCheckpoint.txt",
+   "links": [
+    [
+     "entry",
+     "Checkpoint",
+     "DFN_K2Node_CallArrayFunction_0",
+     "ItemToFind"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Checkpoint",
+     "DFN_K2Node_CallArrayFunction_1",
+     "NewItem"
+    ]
+   ]
+  },
+  {
+   "name": "CollectLevelActors",
+   "file": "CollectLevelActors.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "AddScore",
+   "file": "AddScore.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Points",
+     "DFN_K2Node_CallFunction_2",
+     "B"
+    ]
+   ]
+  },
+  {
+   "name": "GrantCheckpointTimeBonus",
+   "file": "GrantCheckpointTimeBonus.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_DynamicCast_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyLapCompleted",
+   "file": "NotifyLapCompleted.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_3",
+     "C"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyCheckpointPassed",
+   "file": "NotifyCheckpointPassed.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_7",
+     "C"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyCheckpointReached",
+   "file": "NotifyCheckpointReached.txt",
+   "links": [
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_CallFunction_1",
+     "C"
+    ],
+    [
+     "entry",
+     "Checkpoint",
+     "DFN_K2Node_VariableGet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Checkpoint",
+     "DFN_K2Node_VariableSet_0",
+     "LastCheckpoint"
+    ],
+    [
+     "entry",
+     "Checkpoint",
+     "DFN_K2Node_VariableGet_5",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_CallFunction_9",
+     "C"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_CallFunction_10",
+     "C"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_CallFunction_11",
+     "C"
+    ]
+   ]
+  },
+  {
+   "name": "HandleRacerDeath",
+   "file": "HandleRacerDeath.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_1",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_3",
+     "B"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_12",
+     "Object"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_VariableSet_1",
+     "PendingRespawnRacer"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyVehicleDestroyed",
+   "file": "NotifyVehicleDestroyed.txt",
+   "links": [
+    [
+     "entry",
+     "Victim",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Victim",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Victim",
+     "DFN_K2Node_CallFunction_3",
+     "Object"
+    ],
+    [
+     "entry",
+     "Killer",
+     "DFN_K2Node_CallFunction_5",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_13",
+     "execute"
+    ],
+    [
+     "entry",
+     "Killer",
+     "DFN_K2Node_CallFunction_14",
+     "C"
+    ],
+    [
+     "entry",
+     "Killer",
+     "DFN_K2Node_CallFunction_15",
+     "A"
+    ],
+    [
+     "entry",
+     "Killer",
+     "DFN_K2Node_CallFunction_19",
+     "C"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyCharacterDied",
+   "file": "NotifyCharacterDied.txt",
+   "links": [
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallFunction_1",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_8",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetRespawnTransform",
+   "file": "GetRespawnTransform.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "RespawnRacer",
+   "file": "RespawnRacer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_DynamicCast_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_3",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_4",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_VariableSet_3",
+     "LastDriver"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_21",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallDelegate_0",
+     "Racer"
+    ]
+   ]
+  },
+  {
+   "name": "IsOnAnyTrack",
+   "file": "IsOnAnyTrack.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_1",
+     "WorldLocation"
+    ]
+   ]
+  },
+  {
+   "name": "TickRacer",
+   "file": "TickRacer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_8",
+     "B"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_14",
+     "B"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_16",
+     "C"
+    ]
+   ]
+  },
+  {
+   "name": "IsRacerAhead",
+   "file": "IsRacerAhead.txt",
+   "links": [
+    [
+     "entry",
+     "A",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "B",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "A",
+     "DFN_K2Node_VariableGet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "B",
+     "DFN_K2Node_VariableGet_3",
+     "self"
+    ],
+    [
+     "entry",
+     "A",
+     "DFN_K2Node_VariableGet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "B",
+     "DFN_K2Node_VariableGet_5",
+     "self"
+    ],
+    [
+     "DFN_K2Node_CallFunction_8",
+     "ReturnValue",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetRankedRacers",
+   "file": "GetRankedRacers.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EndRace",
+   "file": "EndRace.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Reason",
+     "DFN_K2Node_CallFunction_2",
+     "InByte"
+    ],
+    [
+     "entry",
+     "Reason",
+     "DFN_K2Node_CallFunction_12",
+     "A"
+    ],
+    [
+     "entry",
+     "Reason",
+     "DFN_K2Node_MakeStruct_0",
+     "{{/Game/DeadFire/Data/S_DFRaceResult.Reason}}"
+    ],
+    [
+     "entry",
+     "Reason",
+     "DFN_K2Node_CallDelegate_0",
+     "Reason"
+    ]
+   ]
+  },
+  {
+   "name": "RestartRace",
+   "file": "RestartRace.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {
+  "OnFootCharacterClass": "class:/Game/DeadFire/Blueprints/BP_DFCharacter",
+  "DefaultPawnClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle",
+  "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFPlayerController",
+  "GameStateClass": "class:/Game/DeadFire/Blueprints/BP_DFRaceGameState",
+  "HUDClass": "class:/Game/DeadFire/Blueprints/BP_DFHUD"
+ }
+}

@@ -1,0 +1,399 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFTrackSpline",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Spline",
+   "class": "/Script/Engine.SplineComponent",
+   "parent": "",
+   "properties": {
+    "closed_loop": true
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "bIsMainTrack",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "RoadMesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "RoadMaterial",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "RoadWidth",
+   "type": "float",
+   "default": "1400",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "RoadThickness",
+   "type": "float",
+   "default": "20",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "PieceLength",
+   "type": "float",
+   "default": "1000",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "bGenerateBarriers",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "BarrierMesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "BarrierMaterial",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "BarrierHeight",
+   "type": "float",
+   "default": "80",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "BarrierThickness",
+   "type": "float",
+   "default": "30",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "MeshNativeSize",
+   "type": "float",
+   "default": "100",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
+   "name": "SegmentCount",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Track|Generated",
+   "editable": false
+  },
+  {
+   "name": "GeneratedMeshCount",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Track|Generated",
+   "editable": false
+  },
+  {
+   "name": "PieceStep",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Track|Generated",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "GetSegmentCount",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetGeneratedMeshCount",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetTrackLength",
+   "inputs": [],
+   "outputs": [
+    "Length:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetDistanceAlongTrack",
+   "inputs": [
+    "WorldLocation:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "Distance:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetLateralDistanceFromTrack",
+   "inputs": [
+    "WorldLocation:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "Distance:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "IsOnRoad",
+   "inputs": [
+    "WorldLocation:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetTransformAtDistance",
+   "inputs": [
+    "Distance:float"
+   ],
+   "outputs": [
+    "Transform:struct:/Script/CoreUObject.Transform"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RebuildTrack",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "GetSegmentCount",
+   "file": "GetSegmentCount.txt",
+   "links": [
+    [
+     "DFN_K2Node_VariableGet_0",
+     "SegmentCount",
+     "result",
+     "Count"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetGeneratedMeshCount",
+   "file": "GetGeneratedMeshCount.txt",
+   "links": [
+    [
+     "DFN_K2Node_VariableGet_0",
+     "GeneratedMeshCount",
+     "result",
+     "Count"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetTrackLength",
+   "file": "GetTrackLength.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "Length"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetDistanceAlongTrack",
+   "file": "GetDistanceAlongTrack.txt",
+   "links": [
+    [
+     "entry",
+     "WorldLocation",
+     "DFN_K2Node_CallFunction_0",
+     "WorldLocation"
+    ],
+    [
+     "DFN_K2Node_CallFunction_1",
+     "ReturnValue",
+     "result",
+     "Distance"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetLateralDistanceFromTrack",
+   "file": "GetLateralDistanceFromTrack.txt",
+   "links": [
+    [
+     "entry",
+     "WorldLocation",
+     "DFN_K2Node_CallFunction_0",
+     "WorldLocation"
+    ],
+    [
+     "entry",
+     "WorldLocation",
+     "DFN_K2Node_CallFunction_1",
+     "V2"
+    ],
+    [
+     "DFN_K2Node_CallFunction_1",
+     "ReturnValue",
+     "result",
+     "Distance"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "IsOnRoad",
+   "file": "IsOnRoad.txt",
+   "links": [
+    [
+     "entry",
+     "WorldLocation",
+     "DFN_K2Node_CallFunction_0",
+     "WorldLocation"
+    ],
+    [
+     "DFN_K2Node_CallFunction_2",
+     "ReturnValue",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetTransformAtDistance",
+   "file": "GetTransformAtDistance.txt",
+   "links": [
+    [
+     "entry",
+     "Distance",
+     "DFN_K2Node_CallFunction_0",
+     "Distance"
+    ],
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "Transform"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "UserConstructionScript",
+   "file": "UserConstructionScript.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "RebuildTrack",
+   "file": "RebuildTrack.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  }
+ ],
+ "defaults": {
+  "RoadMesh": "/Engine/BasicShapes/Cube",
+  "BarrierMesh": "/Engine/BasicShapes/Cube",
+  "RoadMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid",
+  "BarrierMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
+ }
+}

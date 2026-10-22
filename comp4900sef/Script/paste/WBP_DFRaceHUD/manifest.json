@@ -1,0 +1,860 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFRaceHUD",
+ "parent": "/Script/UMG.UserWidget",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "SetShown",
+   "inputs": [
+    "Target:object:/Script/UMG.Widget",
+    "bShown:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "SetRed",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "bRed:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RefreshCar",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Tires:string"
+   ]
+  },
+  {
+   "name": "RefreshFoot",
+   "inputs": [
+    "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RefreshWarning",
+   "inputs": [
+    "PC:object:/Game/DeadFire/Blueprints/BP_DFPlayerController.BP_DFPlayerController_C",
+    "GM:object:/Game/DeadFire/Blueprints/BP_DFRaceGameMode.BP_DFRaceGameMode_C",
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Refresh",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "SetShown",
+   "file": "SetShown.txt",
+   "links": [
+    [
+     "entry",
+     "bShown",
+     "DFN_K2Node_IfThenElse_0",
+     "Condition"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ]
+   ]
+  },
+  {
+   "name": "SetRed",
+   "file": "SetRed.txt",
+   "links": [
+    [
+     "entry",
+     "bRed",
+     "DFN_K2Node_CallFunction_0",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "RefreshCar",
+   "file": "RefreshCar.txt",
+   "links": [
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_5",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_6",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_7",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_32",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_35",
+     "self"
+    ]
+   ]
+  },
+  {
+   "name": "RefreshFoot",
+   "file": "RefreshFoot.txt",
+   "links": [
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallFunction_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallFunction_12",
+     "self"
+    ]
+   ]
+  },
+  {
+   "name": "RefreshWarning",
+   "file": "RefreshWarning.txt",
+   "links": [
+    [
+     "entry",
+     "PC",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "PC",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "GM",
+     "DFN_K2Node_VariableGet_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "GM",
+     "DFN_K2Node_VariableGet_5",
+     "self"
+    ]
+   ]
+  },
+  {
+   "name": "Refresh",
+   "file": "Refresh.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {},
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "StatsBox",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "position": [
+     40,
+     30
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "ScoreText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "StatsBox",
+   "props": {
+    "text": "SCORE 0",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "name": "LapText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "StatsBox",
+   "props": {
+    "text": "LAPS 0",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "name": "KillsText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "StatsBox",
+   "props": {
+    "text": "KILLS 0",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "name": "LivesText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "StatsBox",
+   "props": {
+    "text": "LIVES 3",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "name": "TimeText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "",
+   "props": {
+    "text": "2:00",
+    "font_size": 44,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "anchors": [
+     0.5,
+     0,
+     0.5,
+     0
+    ],
+    "alignment": [
+     0.5,
+     0
+    ],
+    "position": [
+     0,
+     24
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "DrivePanel",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "alignment": [
+     1,
+     1
+    ],
+    "position": [
+     -40,
+     -36
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "SpeedText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "DrivePanel",
+   "props": {
+    "text": "0 km/h",
+    "font_size": 40,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Right"
+   },
+   "slot": {
+    "h_align": "Right"
+   }
+  },
+  {
+   "name": "GearText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "DrivePanel",
+   "props": {
+    "text": "GEAR N",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Right"
+   },
+   "slot": {
+    "h_align": "Right"
+   }
+  },
+  {
+   "name": "VehiclePanel",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     1,
+     0,
+     1
+    ],
+    "alignment": [
+     0,
+     1
+    ],
+    "position": [
+     40,
+     -36
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "VehicleHealthText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "VehiclePanel",
+   "props": {
+    "text": "CAR 100 / 100",
+    "font_size": 24,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {}
+  },
+  {
+   "name": "VehicleHealthBox",
+   "class": "/Script/UMG.SizeBox",
+   "parent": "VehiclePanel",
+   "props": {
+    "width_override": 320,
+    "height_override": 14
+   },
+   "slot": {
+    "padding": [
+     0,
+     4,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "VehicleHealthBar",
+   "class": "/Script/UMG.ProgressBar",
+   "parent": "VehicleHealthBox",
+   "props": {
+    "percent": 1.0,
+    "fill_color": [
+     0.2,
+     0.85,
+     0.3,
+     1
+    ]
+   },
+   "slot": {}
+  },
+  {
+   "name": "TireText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "VehiclePanel",
+   "props": {
+    "text": "TIRES [30] [30] [30] [30]",
+    "font_size": 20,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {}
+  },
+  {
+   "name": "CharacterPanel",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     1,
+     0,
+     1
+    ],
+    "alignment": [
+     0,
+     1
+    ],
+    "position": [
+     40,
+     -36
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "CharacterHealthText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "CharacterPanel",
+   "props": {
+    "text": "HEALTH 100 / 100",
+    "font_size": 24,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {}
+  },
+  {
+   "name": "CharacterHealthBox",
+   "class": "/Script/UMG.SizeBox",
+   "parent": "CharacterPanel",
+   "props": {
+    "width_override": 320,
+    "height_override": 14
+   },
+   "slot": {
+    "padding": [
+     0,
+     4,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "CharacterHealthBar",
+   "class": "/Script/UMG.ProgressBar",
+   "parent": "CharacterHealthBox",
+   "props": {
+    "percent": 1.0,
+    "fill_color": [
+     0.25,
+     0.6,
+     1.0,
+     1
+    ]
+   },
+   "slot": {}
+  },
+  {
+   "name": "CrosshairText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "",
+   "props": {
+    "text": "+",
+    "font_size": 32,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "anchors": [
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "PromptText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "",
+   "props": {
+    "text": "",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "anchors": [
+     0.5,
+     0.72,
+     0.5,
+     0.72
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "WarningText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "",
+   "props": {
+    "text": "",
+    "font_size": 40,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "anchors": [
+     0.5,
+     0.4,
+     0.5,
+     0.4
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  }
+ ]
+}

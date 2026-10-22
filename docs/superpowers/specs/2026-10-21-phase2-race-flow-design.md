@@ -4,6 +4,8 @@ Date: 2026-10-21
 Extends: `2026-10-20-dead-fire-design.md` (§3 core loop, §4 rules, §6 architecture, §7 phase table). This document only adds what Phase 2 needs; nothing in the base design is changed unless stated.
 Status: the project manager asked for Phase 2 to start without a question round, so every decision below that the proposal and flowchart do not settle is an implementer's call, marked **[call]**. The team can overturn any of them in the Blueprint children or by asking for a C++ change.
 
+**Revision 2026-10-21:** the project moved from C++ to Blueprint (base design §5). The rules in §2–§5 and §7 stand as written; the class names (`ADF*`, `UDF*`) now mean the corresponding Blueprints (`BP_DF*`, `BPC_DF*`) from the base design §6. §6 (C++ widgets with a snapshot struct) is superseded: the HUD and summary are Widget Blueprints built in the designer and read the controller and pawn directly; the layout and copy in §6 still apply. §9's C++ test suite is replaced by Blueprint Functional Tests. See `docs/superpowers/plans/2026-10-21-blueprint-migration.md`.
+
 ## 1. What Phase 2 delivers
 
 Proposal weeks 8–9: "checkpoints, scoring, race flow, basic HUD". Concretely:

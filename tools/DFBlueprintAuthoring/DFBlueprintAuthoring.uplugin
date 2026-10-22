@@ -1,0 +1,20 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "DF Blueprint Authoring",
+	"Description": "Editor-only Python-callable functions that create Blueprint variables, functions, event dispatchers, struct members, enum values and graph nodes (from the editor's clipboard text). Dead Fire build tooling; installed into the local engine, not shipped with the project.",
+	"Category": "Editor",
+	"CreatedBy": "Dead Fire (COMP 4900SEF Group 3)",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": true,
+	"EnabledByDefault": true,
+	"Modules": [
+		{
+			"Name": "DFBlueprintAuthoring",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

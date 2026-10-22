@@ -1,0 +1,90 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFHUD",
+ "parent": "/Script/Engine.HUD",
+ "components": [],
+ "variables": [
+  {
+   "name": "HUDWidgetClass",
+   "type": "class:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|HUD",
+   "editable": true
+  },
+  {
+   "name": "SummaryWidgetClass",
+   "type": "class:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|HUD",
+   "editable": true
+  },
+  {
+   "name": "HUDWidget",
+   "type": "object:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|HUD",
+   "editable": false
+  },
+  {
+   "name": "SummaryWidget",
+   "type": "object:/Game/DeadFire/UI/WBP_DFRaceSummary.WBP_DFRaceSummary_C",
+   "default": "",
+   "category": "Dead Fire|HUD",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "ShowRaceHUD",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ShowSummary",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "ShowRaceHUD",
+   "file": "ShowRaceHUD.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ShowSummary",
+   "file": "ShowSummary.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {
+  "HUDWidgetClass": "class:/Game/DeadFire/UI/WBP_DFRaceHUD",
+  "SummaryWidgetClass": "class:/Game/DeadFire/UI/WBP_DFRaceSummary"
+ }
+}

@@ -1,0 +1,75 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFPlayerController",
+ "parent": "/Script/Engine.PlayerController",
+ "components": [
+  {
+   "name": "Racer",
+   "class": "/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C",
+   "parent": "",
+   "properties": {}
+  }
+ ],
+ "variables": [
+  {
+   "name": "OnFootCharacter",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C",
+   "default": "",
+   "category": "Dead Fire|State",
+   "editable": false
+  },
+  {
+   "name": "CurrentVehicle",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "Dead Fire|State",
+   "editable": false
+  },
+  {
+   "name": "LastVehicle",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "Dead Fire|State",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SwitchToPawn",
+   "inputs": [
+    "NewPawn:object:/Script/Engine.Pawn"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SwitchToPawn",
+   "file": "SwitchToPawn.txt",
+   "links": [
+    [
+     "entry",
+     "NewPawn",
+     "DFN_K2Node_CallFunction_0",
+     "InPawn"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

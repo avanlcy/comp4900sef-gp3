@@ -1,0 +1,26 @@
+{
+ "kind": "struct",
+ "asset": "/Game/DeadFire/Data/S_DFTireState",
+ "members": [
+  {
+   "name": "BoneName",
+   "type": "name",
+   "default": ""
+  },
+  {
+   "name": "Health",
+   "type": "float",
+   "default": "30"
+  },
+  {
+   "name": "MaxHealth",
+   "type": "float",
+   "default": "30"
+  },
+  {
+   "name": "bBlown",
+   "type": "bool",
+   "default": "false"
+  }
+ ]
+}

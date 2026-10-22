@@ -1,0 +1,172 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFCheckpoint",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Trigger",
+   "class": "/Script/Engine.BoxComponent",
+   "parent": "",
+   "properties": {
+    "box_extent": {
+     "vector": [
+      100,
+      1400,
+      250
+     ]
+    },
+    "call:set_collision_profile_name": "Trigger",
+    "generate_overlap_events": true
+   }
+  },
+  {
+   "name": "LeftPole",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/VehicleAdv/ArenaMesh/pole",
+    "relative_location": {
+     "vector": [
+      0,
+      -700,
+      0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision"
+   }
+  },
+  {
+   "name": "RightPole",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/VehicleAdv/ArenaMesh/pole",
+    "relative_location": {
+     "vector": [
+      0,
+      700,
+      0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision"
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "CheckpointIndex",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Checkpoint",
+   "editable": true
+  },
+  {
+   "name": "TriggerHalfExtent",
+   "type": "struct:/Script/CoreUObject.Vector",
+   "default": "(X=100.000000,Y=1400.000000,Z=250.000000)",
+   "category": "Dead Fire|Checkpoint",
+   "editable": true
+  },
+  {
+   "name": "PoleOffset",
+   "type": "float",
+   "default": "700",
+   "category": "Dead Fire|Checkpoint",
+   "editable": true
+  },
+  {
+   "name": "RespawnHeightOffset",
+   "type": "float",
+   "default": "50",
+   "category": "Dead Fire|Checkpoint",
+   "editable": true
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "GetRespawnTransform",
+   "inputs": [],
+   "outputs": [
+    "Transform:struct:/Script/CoreUObject.Transform"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "NotifyVehicle",
+   "inputs": [
+    "Vehicle:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "GetRespawnTransform",
+   "file": "GetRespawnTransform.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_4",
+     "ReturnValue",
+     "result",
+     "Transform"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "NotifyVehicle",
+   "file": "NotifyVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "Vehicle",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Vehicle",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "UserConstructionScript",
+   "file": "UserConstructionScript.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

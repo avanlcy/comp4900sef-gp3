@@ -3,17 +3,6 @@
 	"EngineAssociation": "4.27",
 	"Category": "",
 	"Description": "Dead Fire - action racing hybrid (COMP 4900SEF Group 3)",
-	"Modules": [
-		{
-			"Name": "comp4900sef",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine",
-				"PhysXVehicles"
-			]
-		}
-	],
 	"Plugins": [
 		{
 			"Name": "PhysXVehicles",

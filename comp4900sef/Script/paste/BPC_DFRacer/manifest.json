@@ -1,0 +1,82 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Components/BPC_DFRacer",
+ "parent": "/Script/Engine.ActorComponent",
+ "components": [],
+ "variables": [
+  {
+   "name": "Score",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "LapsCompleted",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "Kills",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "Deaths",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "NextCheckpointIndex",
+   "type": "int",
+   "default": "1",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "LastCheckpoint",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFCheckpoint.BP_DFCheckpoint_C",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "LastCheckpointTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "OffTrackSeconds",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "DistanceAlongTrack",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "RacerName",
+   "type": "text",
+   "default": "Player",
+   "category": "Dead Fire|Race",
+   "editable": true
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {}
+}

@@ -1,0 +1,142 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Components/BPC_DFWeapon",
+ "parent": "/Script/Engine.ActorComponent",
+ "components": [],
+ "variables": [
+  {
+   "name": "Damage",
+   "type": "float",
+   "default": "20",
+   "category": "Dead Fire|Weapon",
+   "editable": true
+  },
+  {
+   "name": "Range",
+   "type": "float",
+   "default": "8000",
+   "category": "Dead Fire|Weapon",
+   "editable": true
+  },
+  {
+   "name": "Cooldown",
+   "type": "float",
+   "default": "0.15",
+   "category": "Dead Fire|Weapon",
+   "editable": true
+  },
+  {
+   "name": "bDebugTrace",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Weapon",
+   "editable": true
+  },
+  {
+   "name": "DamageTypeClass",
+   "type": "class:/Script/Engine.DamageType",
+   "default": "/Script/Engine.DamageType",
+   "category": "Dead Fire|Weapon",
+   "editable": true
+  },
+  {
+   "name": "LastFireTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Weapon",
+   "editable": false
+  }
+ ],
+ "dispatchers": [
+  {
+   "name": "OnFired",
+   "params": [
+    "Hit:struct:/Script/Engine.HitResult",
+    "bHit:bool"
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "name": "CanFire",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Fire",
+   "inputs": [
+    "Origin:struct:/Script/CoreUObject.Vector",
+    "Direction:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "bHit:bool",
+    "Hit:struct:/Script/Engine.HitResult"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "CanFire",
+   "file": "CanFire.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_2",
+     "ReturnValue",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "Fire",
+   "file": "Fire.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Direction",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Origin",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Origin",
+     "DFN_K2Node_CallFunction_3",
+     "Start"
+    ],
+    [
+     "entry",
+     "Direction",
+     "DFN_K2Node_CallFunction_8",
+     "HitFromDirection"
+    ]
+   ]
+  }
+ ],
+ "defaults": {}
+}

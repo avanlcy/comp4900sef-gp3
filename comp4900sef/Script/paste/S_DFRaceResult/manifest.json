@@ -1,0 +1,46 @@
+{
+ "kind": "struct",
+ "asset": "/Game/DeadFire/Data/S_DFRaceResult",
+ "members": [
+  {
+   "name": "Reason",
+   "type": "enum:/Game/DeadFire/Data/E_DFRaceEndReason.E_DFRaceEndReason",
+   "default": ""
+  },
+  {
+   "name": "bPassed",
+   "type": "bool",
+   "default": "false"
+  },
+  {
+   "name": "Rank",
+   "type": "int",
+   "default": "0"
+  },
+  {
+   "name": "RacerCount",
+   "type": "int",
+   "default": "0"
+  },
+  {
+   "name": "Score",
+   "type": "int",
+   "default": "0"
+  },
+  {
+   "name": "Laps",
+   "type": "int",
+   "default": "0"
+  },
+  {
+   "name": "Kills",
+   "type": "int",
+   "default": "0"
+  },
+  {
+   "name": "Deaths",
+   "type": "int",
+   "default": "0"
+  }
+ ]
+}

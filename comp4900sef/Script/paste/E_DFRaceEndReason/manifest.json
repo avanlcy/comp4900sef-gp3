@@ -1,0 +1,9 @@
+{
+ "kind": "enum",
+ "asset": "/Game/DeadFire/Data/E_DFRaceEndReason",
+ "values": [
+  "None",
+  "TimeUp",
+  "DeathLimit"
+ ]
+}

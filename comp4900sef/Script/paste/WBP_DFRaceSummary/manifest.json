@@ -1,0 +1,309 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFRaceSummary",
+ "parent": "/Script/UMG.UserWidget",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ShowResult",
+   "inputs": [
+    "Result:struct:/Game/DeadFire/Data/S_DFRaceResult.S_DFRaceResult",
+    "ScoreRequirement:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ShowResult",
+   "file": "ShowResult.txt",
+   "links": [
+    [
+     "entry",
+     "Result",
+     "DFN_K2Node_BreakStruct_0",
+     "S_DFRaceResult"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_4",
+     "execute"
+    ],
+    [
+     "entry",
+     "ScoreRequirement",
+     "DFN_K2Node_CallFunction_12",
+     "InInt"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {},
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Backdrop",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.65
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "SummaryBox",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "SummaryBox",
+   "props": {
+    "text": "RACE COMPLETE",
+    "font_size": 60,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     16
+    ]
+   }
+  },
+  {
+   "name": "PlaceText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "SummaryBox",
+   "props": {
+    "text": "Place 1 of 1",
+    "font_size": 32,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     8
+    ]
+   }
+  },
+  {
+   "name": "StatsText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "SummaryBox",
+   "props": {
+    "text": "Score 0 / 300    Laps 0    Kills 0    Deaths 0",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ]
+   }
+  },
+  {
+   "name": "ButtonRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "SummaryBox",
+   "props": {},
+   "slot": {
+    "h_align": "Center"
+   }
+  },
+  {
+   "name": "RetryButton",
+   "class": "/Script/UMG.Button",
+   "parent": "ButtonRow",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     24,
+     0
+    ]
+   }
+  },
+  {
+   "name": "RetryLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "RetryButton",
+   "props": {
+    "text": "RETRY",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "QuitButton",
+   "class": "/Script/UMG.Button",
+   "parent": "ButtonRow",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "QuitLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "QuitButton",
+   "props": {
+    "text": "QUIT",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  }
+ ]
+}

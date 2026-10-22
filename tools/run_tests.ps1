@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-  Runs the Dead Fire editor automation tests headless and prints a pass/fail summary.
+  Runs the Dead Fire Blueprint Functional Tests headless and prints a pass/fail summary.
 
 .DESCRIPTION
   Launches UE4Editor-Cmd with -NullRHI, runs every automation test whose name
-  starts with -Filter (default "DeadFire"), quits, then parses the log for
+  starts with -Filter (default "Project.Functional Tests", i.e. the FT_DF* actors
+  placed in /Game/DeadFire/Tests/L_DF_FunctionalTests), quits, then parses the log for
   "Test Completed. Result={Passed|Failed}" lines. Python remote execution is
   disabled in this instance so it never confuses an MCP server attached to a
   normally running editor, and background CPU throttling is off so Play-In-Editor
@@ -15,10 +16,10 @@
 
 .EXAMPLE
   .\tools\run_tests.ps1
-  .\tools\run_tests.ps1 -Filter DeadFire.Vehicle
+  .\tools\run_tests.ps1 -Filter "Project.Functional Tests.L_DF_FunctionalTests.FT_DFVehicle"
 #>
 param(
-    [string]$Filter = "DeadFire",
+    [string]$Filter = "Project.Functional Tests",
     [string]$EnginePath = "D:\UE_4.27",
     [string]$Project = (Join-Path $PSScriptRoot "..\comp4900sef\comp4900sef.uproject"),
     [int]$TimeoutSeconds = 900
@@ -64,8 +65,12 @@ $results = $lines | Where-Object { $_ -match "Test Completed\. Result=\{(Passed|
 }
 $foundLine = $lines | Where-Object { $_ -match "Found (\d+) automation tests" } | Select-Object -First 1
 $found = if ($foundLine -and $foundLine -match "Found (\d+) automation tests") { [int]$Matches[1] } else { -1 }
-$fatal = $lines | Where-Object { $_ -match "Fatal error|Assertion failed|LogWindows: Error: === Critical error" }
-$errors = $lines | Where-Object { $_ -match "LogAutomationController: Error" }
+# engine crashes / C++ check() failures only; a functional test's "Assertion failed: '...'" is an ordinary test failure
+$fatal = $lines | Where-Object { $_ -match "Fatal error|LogWindows: Error: === Critical error|Assertion failed: .*\[File:" }
+$errors = $lines | Where-Object { $_ -match "LogAutomationController: Error" -and $_ -notmatch "Test Completed\. Result=" }
+# engine warnings raised during tests (they do not fail tests: bTreatLogWarningsAsTestErrors=False in DefaultEngine.ini)
+$warnings = $lines | Where-Object { $_ -match "LogAutomationController: Warning" } |
+    ForEach-Object { $_ -replace '^.*LogAutomationController: Warning: ', '' } | Group-Object | Sort-Object Count -Descending
 
 $passed = @($results | Where-Object Result -eq "Passed").Count
 $failed = @($results | Where-Object Result -eq "Failed").Count
@@ -75,7 +80,11 @@ foreach ($r in $results) {
 }
 if ($errors) {
     Write-Host "--- errors ---" -ForegroundColor Yellow
-    $errors | Select-Object -First 40 | ForEach-Object { Write-Host $_ }
+    $errors | Select-Object -First 40 | ForEach-Object { Write-Host ($_ -replace '^.*LogAutomationController: Error: ', '') }
+}
+if ($warnings) {
+    Write-Host "--- engine warnings during tests (not failures) ---" -ForegroundColor DarkYellow
+    $warnings | Select-Object -First 8 | ForEach-Object { Write-Host ("  {0,4} x {1}" -f $_.Count, $_.Name.Substring(0, [Math]::Min(150, $_.Name.Length))) }
 }
 if ($fatal) {
     Write-Host "--- fatal ---" -ForegroundColor Red

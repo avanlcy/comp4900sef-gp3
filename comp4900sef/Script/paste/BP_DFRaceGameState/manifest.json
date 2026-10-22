@@ -1,0 +1,63 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFRaceGameState",
+ "parent": "/Script/Engine.GameStateBase",
+ "components": [],
+ "variables": [
+  {
+   "name": "RemainingTime",
+   "type": "float",
+   "default": "120",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "bRaceActive",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Race",
+   "editable": false
+  },
+  {
+   "name": "Result",
+   "type": "struct:/Game/DeadFire/Data/S_DFRaceResult.S_DFRaceResult",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "GetRemainingTimeString",
+   "inputs": [],
+   "outputs": [
+    "Text:string"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "GetRemainingTimeString",
+   "file": "GetRemainingTimeString.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_10",
+     "ReturnValue",
+     "result",
+     "Text"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  }
+ ],
+ "defaults": {}
+}

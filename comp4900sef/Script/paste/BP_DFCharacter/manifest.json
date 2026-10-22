@@ -1,0 +1,305 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFCharacter",
+ "parent": "/Game/ThirdPersonBP/Blueprints/ThirdPersonCharacter",
+ "components": [
+  {
+   "name": "InteractionSphere",
+   "class": "/Script/Engine.SphereComponent",
+   "parent": "",
+   "properties": {
+    "sphere_radius": 300.0
+   }
+  },
+  {
+   "name": "Weapon",
+   "class": "/Game/DeadFire/Components/BPC_DFWeapon.BPC_DFWeapon_C",
+   "parent": "",
+   "properties": {}
+  }
+ ],
+ "variables": [
+  {
+   "name": "MaxHealth",
+   "type": "float",
+   "default": "100",
+   "category": "Dead Fire|Health",
+   "editable": true
+  },
+  {
+   "name": "Health",
+   "type": "float",
+   "default": "100",
+   "category": "Dead Fire|Health",
+   "editable": false
+  },
+  {
+   "name": "CurrentVehicle",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "Dead Fire|State",
+   "editable": false
+  },
+  {
+   "name": "bIsStowed",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|State",
+   "editable": false
+  },
+  {
+   "name": "bIsDead",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|State",
+   "editable": false
+  },
+  {
+   "name": "OwningController",
+   "type": "object:/Script/Engine.Controller",
+   "default": "",
+   "category": "Dead Fire|State",
+   "editable": false
+  }
+ ],
+ "dispatchers": [
+  {
+   "name": "OnCharacterDamaged",
+   "params": [
+    "Damage:float"
+   ]
+  },
+  {
+   "name": "OnCharacterDied",
+   "params": []
+  },
+  {
+   "name": "OnCharacterRevived",
+   "params": []
+  },
+  {
+   "name": "OnEnteredVehicle",
+   "params": [
+    "Vehicle:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ]
+  },
+  {
+   "name": "OnExitedVehicle",
+   "params": [
+    "Vehicle:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "name": "IsInVehicle",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "IsDead",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "FindNearestEnterableVehicle",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Best:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "BestDist:float=1000000000"
+   ]
+  },
+  {
+   "name": "TryEnterVehicle",
+   "inputs": [
+    "Vehicle:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Target:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ]
+  },
+  {
+   "name": "SetStowed",
+   "inputs": [
+    "bStowed:bool",
+    "AttachTo:object:/Script/Engine.Actor"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Fire",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Revive",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "IsInVehicle",
+   "file": "IsInVehicle.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "IsDead",
+   "file": "IsDead.txt",
+   "links": [
+    [
+     "DFN_K2Node_VariableGet_0",
+     "bIsDead",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "FindNearestEnterableVehicle",
+   "file": "FindNearestEnterableVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ],
+    [
+     "DFN_K2Node_VariableGet_2",
+     "Best",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "DFN_K2Node_MacroInstance_0",
+     "Completed",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "TryEnterVehicle",
+   "file": "TryEnterVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Vehicle",
+     "DFN_K2Node_VariableSet_0",
+     "Target"
+    ]
+   ]
+  },
+  {
+   "name": "SetStowed",
+   "file": "SetStowed.txt",
+   "links": [
+    [
+     "entry",
+     "bStowed",
+     "DFN_K2Node_IfThenElse_0",
+     "Condition"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "AttachTo",
+     "DFN_K2Node_CallFunction_3",
+     "ParentActor"
+    ]
+   ]
+  },
+  {
+   "name": "Fire",
+   "file": "Fire.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "Revive",
+   "file": "Revive.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}
