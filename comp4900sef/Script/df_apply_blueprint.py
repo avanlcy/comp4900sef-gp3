@@ -79,6 +79,14 @@ def _check(result, what):
         log("%s: %s" % (what, result))
 
 
+def _save(asset):
+    """Saves the asset to disk and fails loudly when the editor could not write it (typically the file is locked by
+    another editor process, such as a headless test run): a silent failure leaves the on-disk copy stale while the
+    in-memory one is what verify and the tests see."""
+    if not unreal.EditorAssetLibrary.save_asset(asset, False):
+        raise RuntimeError("%s: save failed (is the file locked by another editor process, e.g. a headless test run?)" % asset)
+
+
 def _compile(bp, what):
     msgs = A.compile(bp)
     first, _, rest = msgs.partition("\n")
@@ -233,13 +241,13 @@ def pass1(m):
         s = _ensure_asset(m["asset"], unreal.UserDefinedStruct, unreal.StructureFactory())
         for mem in m["members"]:
             _check(A.add_struct_member(s, mem["name"], mem["type"], mem.get("default", "")), "%s.%s" % (m["asset"], mem["name"]))
-        unreal.EditorAssetLibrary.save_asset(m["asset"], False)
+        _save(m["asset"])
         return
     if kind == "enum":
         e = _ensure_asset(m["asset"], unreal.UserDefinedEnum, unreal.EnumFactory())
         for v in m["values"]:
             _check(A.add_enum_value(e, v), "%s.%s" % (m["asset"], v))
-        unreal.EditorAssetLibrary.save_asset(m["asset"], False)
+        _save(m["asset"])
         return
     bp = _ensure_blueprint(m["asset"], m["parent"])
     if kind == "widget":
@@ -403,7 +411,7 @@ def pass2(m, folder):
         for k, v in (m.get("defaults") or {}).items():
             cdo.set_editor_property(k, _value(v))
         _compile(bp, m["asset"] + " (defaults)")
-    unreal.EditorAssetLibrary.save_asset(m["asset"], False)
+    _save(m["asset"])
     log("applied %s" % m["asset"])
 
 
