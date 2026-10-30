@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShip_DifficultyInfo",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The difficulty table: rival delta, NPC speed scale and item interval scale per level; out of range reads NORMAL.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

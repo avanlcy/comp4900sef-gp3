@@ -12,9 +12,9 @@ write anything odd in the notes column.
 | 3 | Hold **S** while moving, then while stopped | Brakes, then reverses; gear shows `R` in red | | |
 | 4 | **Space** while moving | Handbrake slides the rear | | |
 | 5 | **Tab** | Switches between chase and in-car camera | | |
-| 6 | Drive through gate 2 (the second pair of poles) | `CHECKPOINT  +8 s` flashes for about 1.5 s; clock jumps up 8 s | | |
+| 6 | Drive through gate 2 (the second pair of poles) | `CHECKPOINT  +3 s` flashes for about 1.5 s; clock jumps up 3 s (Phase 6 balance; 2 s on SWITCHBACK) | | |
 | 7 | Drive back through the same gate, or skip ahead to a later gate | Nothing is credited | | |
-| 8 | Complete a lap (all gates in order, then the start line) | `LAPS 1`, `SCORE 100`, +8 s | | |
+| 8 | Complete a lap (all gates in order, then the start line) | `LAPS 1`, `SCORE 100`, +3 s | | |
 | 9 | While moving above 10 km/h press **E** | Prompt reads `Stop to exit  [E]`; you stay in | | |
 | 10 | Stop, press **E** | The mannequin appears beside the car; HUD switches to `HEALTH 100 / 100`, crosshair `+`, prompt `[E] Enter vehicle` near the car | | |
 | 11 | **W A S D**, **Space**, mouse | Walk, jump, look around | | |
@@ -63,11 +63,20 @@ write anything odd in the notes column.
 | 54 | SETTINGS: the display button | Toggles WINDOWED and FULLSCREEN (in a packaged build; the editor viewport stays as it is) | | |
 | 55 | SETTINGS: RESET PROGRESS | The label reads `PROGRESS RESET`; BACK shows `CARS 1 / 3   TRACKS 1 / 2` again | | |
 | 56 | Summary MENU and the pause menu's MAIN MENU | Both fade out and arrive on the car page of the main menu | | |
+| 57 | Phase 6. Unzip the Development build from `Builds\` and run `comp4900sef.exe` (not the editor) | The window is titled Dead Fire and opens on the main menu; no `LIGHTING NEEDS TO BE REBUILT` text anywhere | | |
+| 58 | In the packaged game press **Escape** while racing, then Escape again | The pause menu opens and closes (Escape does not quit) | | |
+| 59 | Race PROVING GROUND on NORMAL at a steady pace without stopping for crates | The clock runs out after roughly three minutes (about six laps); stopping for crates ends it sooner | | |
+| 60 | SETTINGS: HARD, race; then EASY, race | HARD: five rivals that pull away faster and attack more often; EASY: two slower rivals. Note whether HARD feels harder or only more chaotic | | |
+| 61 | SETTINGS: drag MASTER VOLUME to 30 %, release, QUIT, start the game again | The slider still reads 30 % | | |
+| 62 | Pause a race, MAIN MENU | The car page with a working mouse cursor; the next race takes keyboard input normally | | |
+| 63 | In the Development build press `` ` `` and type `ke * EndRace 1` during a race with 300+ points | The summary appears at once (`RACE COMPLETE`); `ke * RestartRace` restarts a race without reloading | | |
+| 64 | SETTINGS: the display button in the packaged game | Switches between a window and fullscreen; Alt+Enter does the same | | |
+| 65 | QUIT from the main menu, then run the Shipping build | Both close cleanly; the Shipping build starts on the main menu too | | |
 
 Escape ends Play-In-Editor before the game sees it, so the pause line uses **P**. There is no cheat command for wrecking the car or running out the clock, so lines 17 to 19 are played for real (from Phase 3 on, two rockets at your own parked car also wreck it); the
 matching functional tests (`FT_DFRespawn_*`, `FT_DFRaceEnd_TimeUpSetsResult`, `FT_DFHUD_SummaryShownAtRaceEnd`) check
-the same rules automatically. The console command `ke * RestartRace` (press the `` ` `` key while playing) is expected
-to call the GameMode's `RestartRace` for a fresh race without reloading; it has not been tried yet, so note whether it
-works.
+the same rules automatically. The console commands `ke * RestartRace` and `ke * EndRace 1` (press the `` ` `` key while playing, in the editor or the
+Development build) were tried on 2026-10-30: the first restarts the race without reloading, the second ends it with
+reason 1 (time up), which shows `RACE COMPLETE` when the score is at least the pass score.
 
 Record the date, the commit hash and who played at the bottom of the file when the list is complete.

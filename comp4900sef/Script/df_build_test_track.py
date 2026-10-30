@@ -116,6 +116,14 @@ def spawn(cls, location, rotation=None, label=None):
     return actor
 
 
+def spawn_light(cls, location, rotation=None, label=None):
+    """A Movable light (Phase 6): nothing in the generated levels needs a lighting build, so no level ever shows
+    "LIGHTING NEEDS TO BE REBUILT", and a rebuilt level never undoes a lighting build someone made by hand."""
+    actor = spawn(cls, location, rotation, label)
+    actor.get_component_by_class(unreal.LightComponentBase).set_mobility(unreal.ComponentMobility.MOVABLE)
+    return actor
+
+
 def spawn_static_mesh(mesh_path, location, rotation=None, scale=None, label=None, material_path=None):
     mesh = eal.load_asset(mesh_path)
     if mesh is None:
@@ -254,7 +262,7 @@ def functional_test_classes():
     classes = []
     for path in sorted(eal.list_assets(TESTS_DIR, recursive=False)):
         name = path.rsplit('/', 1)[1].split('.')[0]
-        if name.startswith('FT_DF'):
+        if name.startswith('FT_DF') and not name.startswith('FT_DFShot'):  # FT_DFShot_*: presentation captures, not tests
             cls = bp_class('%s/%s' % (TESTS_DIR, name))
             if cls:
                 classes.append((name, cls))
@@ -267,8 +275,8 @@ def build(path):
 
     spawn_static_mesh('/Engine/BasicShapes/Cube', vec(5000, 5000, -60), scale=(500, 500, 1),
                       label='Ground', material_path='/Game/VehicleAdv/Materials/MaterialInstances/LandscapeNoHole')
-    spawn(unreal.DirectionalLight, vec(0, 0, 2000), rot(pitch=-45, yaw=30), label='Sun')
-    spawn(unreal.SkyLight, vec(0, 0, 2000), label='SkyLight')
+    spawn_light(unreal.DirectionalLight, vec(0, 0, 2000), rot(pitch=-45, yaw=30), label='Sun')
+    spawn_light(unreal.SkyLight, vec(0, 0, 2000), label='SkyLight')
     spawn(unreal.SkyAtmosphere, vec(0, 0, 0), label='SkyAtmosphere')
     fog = spawn(unreal.ExponentialHeightFog, vec(0, 0, 0), label='HeightFog')
     fog_comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
@@ -333,8 +341,8 @@ def build_menu_level(path):
     open_empty_level(path)
     spawn_static_mesh('/Engine/BasicShapes/Cube', vec(0, 0, -60), scale=(200, 200, 1), label='Ground',
                       material_path='/Game/VehicleAdv/Materials/MaterialInstances/LandscapeNoHole')
-    spawn(unreal.DirectionalLight, vec(0, 0, 2000), rot(pitch=-45, yaw=30), label='Sun')
-    spawn(unreal.SkyLight, vec(0, 0, 2000), label='SkyLight')
+    spawn_light(unreal.DirectionalLight, vec(0, 0, 2000), rot(pitch=-45, yaw=30), label='Sun')
+    spawn_light(unreal.SkyLight, vec(0, 0, 2000), label='SkyLight')
     spawn(unreal.SkyAtmosphere, vec(0, 0, 0), label='SkyAtmosphere')
     fog = spawn(unreal.ExponentialHeightFog, vec(0, 0, 0), label='HeightFog')
     fog_comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)

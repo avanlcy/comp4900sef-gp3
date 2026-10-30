@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from bpgen import CLASS, cls_ref  # noqa: E402
-from df import (BOOL, BP_GI, BP_GM, BP_SAVE, BP_VEHICLE, DIFFICULTY_DELTA, DIFFICULTY_NAMES, FLOAT, GAME_INSTANCE, GAMEPLAY, INT,  # noqa: E402
+from df import (BOOL, BP_GI, BP_GM, BP_SAVE, BP_VEHICLE, DIFFICULTIES, FLOAT, GAME_INSTANCE, GAMEPLAY, INT,  # noqa: E402
                 L_MAIN_MENU, LEVELS, LINEAR_COLOR, MATH, NAME, OBJECT, OUT, PLAYER_CONTROLLER, SAVE_GAME, SM_MASTER, SOUND_CLASS,
                 SOUND_MIX, STRING, SYS, VEHICLES, Blueprint, Graph, Node, Pin, and_bool, as_pin, compare, gen, get_player_controller,
                 is_valid, log_line, math2, native_enum_pin, obj_pin, obj_spec, struct_pin)
@@ -126,8 +126,9 @@ def build_save() -> Blueprint:
     bp.variable("UnlockedLevels", "array<bool>", "", S)
     bp.variable("BestScores", "array<int>", "", S)
     bp.variable("BestRanks", "array<int>", "", S)  # 0 = never placed
-    bp.variable("MasterVolume", "float", "1", S)
-    bp.variable("Difficulty", "int", "1", S)
+    # Phase 6: the settings are Instance Editable so editor tooling can write a save (tools/balance_sim.py sets Difficulty)
+    bp.variable("MasterVolume", "float", "1", S, editable=True)
+    bp.variable("Difficulty", "int", "1", S, editable=True)
     return bp
 
 
@@ -148,6 +149,12 @@ def level_pins(row):
 VEHICLE_OUTPUTS = ["Name:string", "VehicleClass:class:" + VC, "UnlockLevel:int", "Speed:int", "Acceleration:int", "Armor:int", "Boost:int",
                    "Description:string"]
 LEVEL_OUTPUTS = ["Name:string", "MapName:name", "Description:string", "ScoreRequirement:int", "TimeLimit:float", "NPCCount:int"]
+DIFFICULTY_OUTPUTS = ["Name:string", "RivalDelta:int", "SpeedScale:float", "ItemIntervalScale:float"]
+
+
+def difficulty_pins(row):
+    return [Pin("Name", STRING, default=row.name), Pin("RivalDelta", INT, default=str(row.rival_delta)),
+            Pin("SpeedScale", FLOAT, default="%f" % row.speed_scale), Pin("ItemIntervalScale", FLOAT, default="%f" % row.item_interval_scale)]
 
 
 def catalogue_function(bp: Blueprint, name: str, doc: str, outputs, rows, pins_of):
@@ -226,33 +233,28 @@ def build_instance() -> Blueprint:
     leaf(g, (bs, "else"), [Pin("Difficulty", INT, default="1")])
     leaf(g, (bs, "then"), [Pin("Difficulty", INT)], {"Difficulty": save_get(g, "Difficulty", INT)})
 
-    g = bp.function("GetDifficultyName", doc="EASY, NORMAL or HARD.", outputs=["Name:string"], pure=True)
-    d = gi_pure(g, "GetDifficulty", [Pin("Difficulty", INT, "out")])
-    prev = ("entry", "then")
-    for idx, label in ((0, DIFFICULTY_NAMES[0]), (2, DIFFICULTY_NAMES[2])):
-        b = branch_on(g, (int_eq(g, (d, "Difficulty"), idx), "ReturnValue"), prev)
-        leaf(g, (b, "then"), [Pin("Name", STRING, default=label)])
-        prev = (b, "else")
-    leaf(g, prev, [Pin("Name", STRING, default=DIFFICULTY_NAMES[1])])
+    # Phase 6 (spec §3.4): one difficulty table; NORMAL is the out-of-range answer
+    catalogue_function(bp, "GetDifficultyInfo", "One difficulty: name, rival count delta, rivals' speed scale, rivals' item interval scale.",
+                       DIFFICULTY_OUTPUTS, [DIFFICULTIES[1], DIFFICULTIES[0], DIFFICULTIES[2]], difficulty_pins)
 
-    g = bp.function("GetNPCCountFor", doc="Rivals for a level that asks for LevelCount: EASY -1, NORMAL 0, HARD +2, at least 1; 0 stays 0.",
+    def current_difficulty(g):
+        d = gi_pure(g, "GetDifficulty", [Pin("Difficulty", INT, "out")])
+        return gi_pure(g, "GetDifficultyInfo", [Pin("Name", STRING, "out"), Pin("RivalDelta", INT, "out"), Pin("SpeedScale", FLOAT, "out"),
+                                                Pin("ItemIntervalScale", FLOAT, "out")], Index=(d, "Difficulty"))
+
+    g = bp.function("GetDifficultyName", doc="EASY, NORMAL or HARD, from the difficulty table.", outputs=["Name:string"], pure=True)
+    leaf(g, ("entry", "then"), [Pin("Name", STRING)], {"Name": (current_difficulty(g), "Name")})
+
+    g = bp.function("GetNPCCountFor", doc="Rivals for a level that asks for LevelCount: plus the difficulty's rival delta, at least 1; 0 stays 0.",
                     inputs=["LevelCount:int"], outputs=["Count:int"], pure=True)
     some = compare(g, "Greater_IntInt", INT, b="0")
     g.link_entry("LevelCount", some, "A")
     b = branch_on(g, (some, "ReturnValue"), ("entry", "then"))
     g.note(b, "a level with no rivals keeps none on every difficulty")
     leaf(g, (b, "else"), [Pin("Count", INT, default="0")])
-    d = gi_pure(g, "GetDifficulty", [Pin("Difficulty", INT, "out")])
-    hard = g.call_static(MATH, "SelectInt", inputs=[Pin("A", INT, default=str(DIFFICULTY_DELTA[2])), Pin("B", INT, default=str(DIFFICULTY_DELTA[1])), Pin("bPickA", BOOL)],
-                         outputs=[Pin("ReturnValue", INT, "out")], pure=True)
-    g.link(int_eq(g, (d, "Difficulty"), 2), "ReturnValue", hard, "bPickA")
-    delta = g.call_static(MATH, "SelectInt", inputs=[Pin("A", INT, default=str(DIFFICULTY_DELTA[0])), Pin("B", INT), Pin("bPickA", BOOL)],
-                          outputs=[Pin("ReturnValue", INT, "out")], pure=True)
-    g.link(hard, "ReturnValue", delta, "B")
-    g.link(int_eq(g, (d, "Difficulty"), 0), "ReturnValue", delta, "bPickA")
     total = math2(g, "Add_IntInt", INT)
     g.link_entry("LevelCount", total, "A")
-    g.link(delta, "ReturnValue", total, "B")
+    g.link(current_difficulty(g), "RivalDelta", total, "B")
     floor = g.call_static(MATH, "Max", inputs=[Pin("A", INT, default="1"), Pin("B", INT)], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
     g.link(total, "ReturnValue", floor, "B")
     leaf(g, (b, "then"), [Pin("Count", INT)], {"Count": (floor, "ReturnValue")})
@@ -300,12 +302,18 @@ def build_instance() -> Blueprint:
         g.link(c, "then", st, "execute")
         return st
 
-    g = bp.function("LoadProgress", doc="Loads the save slot, or starts a fresh save; pads the arrays.")
+    g = bp.function("LoadProgress", doc="Loads the save slot, or starts a fresh save when there is no file (no read attempted); pads the arrays.")
+    ex = g.call_static(GAMEPLAY, "DoesSaveGameExist", inputs=[Pin("SlotName", STRING), Pin("UserIndex", INT, default="0")],
+                       outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link(g.var_get("SaveSlotName", STRING), "SaveSlotName", ex, "SlotName")
+    g.link_entry("then", ex, "execute")
+    bex = branch_on(g, (ex, "ReturnValue"), (ex, "then"))
+    g.note(bex, "a save file? (a first run has none: no read, no warning)")
     slot = g.var_get("SaveSlotName", STRING)
     ld = g.call_static(GAMEPLAY, "LoadGameFromSlot", inputs=[Pin("SlotName", STRING), Pin("UserIndex", INT, default="0")],
                        outputs=[obj_pin("ReturnValue", SAVE_GAME, "out")])
     g.link(slot, "SaveSlotName", ld, "SlotName")
-    g.link_entry("then", ld, "execute")
+    g.link(bex, "then", ld, "execute")
     c = g.cast(SAVEC)
     g.link(ld, "ReturnValue", c, "Object")
     g.exec(ld, c)
@@ -313,9 +321,11 @@ def build_instance() -> Blueprint:
     g.link(c, as_pin(BP_SAVE), st, "Save")
     g.link(c, "then", st, "execute")
     fresh = new_save(g, (c, "CastFailed"))
+    fresh_none = new_save(g, (bex, "else"))
     ens = g.call_self("EnsureArrays")
     g.exec(st, ens)
     g.exec(fresh, ens)
+    g.exec(fresh_none, ens)
     lg = log_line(g, "progress loaded from slot ", (g.var_get("SaveSlotName", STRING), "SaveSlotName"))
     g.exec(ens, lg)
 
@@ -385,10 +395,10 @@ def build_instance() -> Blueprint:
     g = bp.function("RecordResult", doc="A finished race: best score, best place when passed, the car for first place, the next track when passed; saved.",
                     inputs=["LevelIndex:int", "Score:int", "Rank:int", "bPassed:bool"], outputs=["UnlockedVehicle:int", "bUnlockedLevel:bool"],
                     locals=["Vehicle:int=-1", "bLevel:bool=false"])
-    ok = and_bool(g)
-    g.link(valid(g, save(g)), "ReturnValue", ok, "A")
-    g.link(arr_valid_index(g, save_arr(g, "BestScores", INT), INT, ("entry", "LevelIndex"))[0], "ReturnValue", ok, "B")
-    b = branch_on(g, (ok, "ReturnValue"), ("entry", "then"))
+    bsave = branch_on(g, (valid(g, save(g)), "ReturnValue"), ("entry", "then"))
+    g.note(bsave, "a save loaded? (checked on its own: Blueprint AND reads both sides)")
+    leaf(g, (bsave, "else"), [Pin("UnlockedVehicle", INT, default="-1"), Pin("bUnlockedLevel", BOOL, default="false")])
+    b = branch_on(g, (arr_valid_index(g, save_arr(g, "BestScores", INT), INT, ("entry", "LevelIndex"))[0], "ReturnValue"), (bsave, "then"))
     g.note(b, "a level the catalogue knows?")
     leaf(g, (b, "else"), [Pin("UnlockedVehicle", INT, default="-1"), Pin("bUnlockedLevel", BOOL, default="false")])
     best = g.call_static(MATH, "Max", inputs=[Pin("A", INT), Pin("B", INT)], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
@@ -476,21 +486,32 @@ def build_instance() -> Blueprint:
     count_function("CountUnlockedLevels", "IsLevelUnlocked", "GetLevelCount", "How many tracks are open.")
 
     # ---- settings ----
-    g = bp.function("ApplyAudioSettings", doc="Pushes the master sound mix with the saved volume on the Master sound class.")
-    ok = and_bool(g)
-    g.link(valid(g, save(g)), "ReturnValue", ok, "A")
-    g.link(valid(g, (g.var_get("MasterMix", OBJECT, cls_ref(SOUND_MIX)), "MasterMix")), "ReturnValue", ok, "B")
-    b = branch_on(g, (ok, "ReturnValue"), ("entry", "then"))
+    g = bp.function("ApplyMixVolume", doc="Pushes the master sound mix with this volume on the Master sound class (nothing is saved).", inputs=["Volume:float"])
+    b = branch_on(g, (valid(g, (g.var_get("MasterMix", OBJECT, cls_ref(SOUND_MIX)), "MasterMix")), "ReturnValue"), ("entry", "then"))
     ov = g.call_static(GAMEPLAY, "SetSoundMixClassOverride",
                        inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("InSoundMixModifier", SOUND_MIX), obj_pin("InSoundClass", SOUND_CLASS),
                                Pin("Volume", FLOAT), Pin("Pitch", FLOAT, default="1.0"), Pin("FadeInTime", FLOAT, default="0.2"), Pin("bApplyToChildren", BOOL, default="true")])
     g.link(g.var_get("MasterMix", OBJECT, cls_ref(SOUND_MIX)), "MasterMix", ov, "InSoundMixModifier")
     g.link(g.var_get("MasterClass", OBJECT, cls_ref(SOUND_CLASS)), "MasterClass", ov, "InSoundClass")
-    g.link(save_get(g, "MasterVolume", FLOAT)[0], "MasterVolume", ov, "Volume")
+    g.link_entry("Volume", ov, "Volume")
     g.link(b, "then", ov, "execute")
     push = g.call_static(GAMEPLAY, "PushSoundMixModifier", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("InSoundMixModifier", SOUND_MIX)])
     g.link(g.var_get("MasterMix", OBJECT, cls_ref(SOUND_MIX)), "MasterMix", push, "InSoundMixModifier")
     g.exec(ov, push)
+
+    g = bp.function("ApplyAudioSettings", doc="Pushes the master sound mix with the saved volume on the Master sound class.")
+    b = branch_on(g, (valid(g, save(g)), "ReturnValue"), ("entry", "then"))
+    am = g.call_self("ApplyMixVolume", inputs=[Pin("Volume", FLOAT)])
+    g.link(save_get(g, "MasterVolume", FLOAT)[0], "MasterVolume", am, "Volume")
+    g.link(b, "then", am, "execute")
+
+    g = bp.function("PreviewMasterVolume", doc="Applies a master volume (0-1) while the slider moves, without saving it.", inputs=["Volume:float"])
+    cl = g.call_static(MATH, "FClamp", inputs=[Pin("Value", FLOAT), Pin("Min", FLOAT, default="0.0"), Pin("Max", FLOAT, default="1.0")],
+                       outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("Volume", cl, "Value")
+    pv = g.call_self("ApplyMixVolume", inputs=[Pin("Volume", FLOAT)])
+    g.link(cl, "ReturnValue", pv, "Volume")
+    g.link_entry("then", pv, "execute")
 
     g = bp.function("SetMasterVolume", doc="Saves and applies the master volume (0-1).", inputs=["Volume:float"])
     bs = branch_on(g, (valid(g, save(g)), "ReturnValue"), ("entry", "then"))

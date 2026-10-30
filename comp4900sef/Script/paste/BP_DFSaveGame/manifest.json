@@ -38,14 +38,14 @@
    "type": "float",
    "default": "1",
    "category": "Dead Fire|Save",
-   "editable": false
+   "editable": true
   },
   {
    "name": "Difficulty",
    "type": "int",
    "default": "1",
    "category": "Dead Fire|Save",
-   "editable": false
+   "editable": true
   }
  ],
  "dispatchers": [],

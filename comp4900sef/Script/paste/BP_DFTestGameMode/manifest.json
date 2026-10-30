@@ -10,7 +10,8 @@
  "graphs": [],
  "defaults": {
   "NPCCount": 0,
-  "SaveSlotOverride": "DeadFireTest"
+  "SaveSlotOverride": "DeadFireTest",
+  "CheckpointTimeBonus": 8.0
  },
  "component_defaults": {},
  "requires": []

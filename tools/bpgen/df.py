@@ -384,19 +384,34 @@ VEHICLES = [
 class LevelRow:
     """One track (spec §2.2): display, map, GameMode, pass score, clock, rivals, gates."""
 
-    def __init__(self, index, name, map_path, game_mode, score, time, npcs, gates, description):
+    def __init__(self, index, name, map_path, game_mode, score, time, npcs, gates, description, bonus=8.0):
         self.index, self.name, self.map, self.game_mode = index, name, map_path, game_mode
         self.score, self.time, self.npcs, self.gates, self.description = score, time, npcs, gates, description
+        self.bonus = bonus  # Phase 6: checkpoint time bonus (s per gate), set from the balance runs (spec 2026-10-30 phase 6 §3.3)
 
 
+# bonus: checkpoint time bonus per gate, from docs/superpowers/balance-2026-10-30.md (6 laps / 4 laps at NPC pace)
 LEVELS = [
     LevelRow(0, "PROVING GROUND", L_TEST_TRACK, BP_GM, 300, 120, 3, 4,
-             "The kidney loop you know: four gates, a shortcut behind a rock, crates in the infield."),
+             "The kidney loop you know: four gates, a shortcut behind a rock, crates in the infield.", bonus=3.0),
     LevelRow(1, "SWITCHBACK", L_SWITCHBACK, BP_GM_SWITCHBACK, 400, 150, 4, 5,
-             "Longer and tighter: five gates, an S-bend you must brake for, more rivals, more time."),
+             "Longer and tighter: five gates, an S-bend you must brake for, more rivals, more time.", bonus=2.0),
 ]
-DIFFICULTY_NAMES = ["EASY", "NORMAL", "HARD"]
-DIFFICULTY_DELTA = [-1, 0, 2]
+class DifficultyRow:
+    """One difficulty (Phase 6 spec §3.4): rival count delta, NPC speed scale, NPC item interval scale."""
+
+    def __init__(self, index, name, rival_delta, speed_scale, item_interval_scale):
+        self.index, self.name, self.rival_delta = index, name, rival_delta
+        self.speed_scale, self.item_interval_scale = speed_scale, item_interval_scale
+
+
+DIFFICULTIES = [
+    DifficultyRow(0, "EASY", -1, 0.85, 1.5),
+    DifficultyRow(1, "NORMAL", 0, 1.0, 1.0),
+    DifficultyRow(2, "HARD", 2, 1.1, 0.6),
+]
+DIFFICULTY_NAMES = [d.name for d in DIFFICULTIES]
+DIFFICULTY_DELTA = [d.rival_delta for d in DIFFICULTIES]
 
 
 def game_instance(g: Graph, col=None, row=None) -> Node:

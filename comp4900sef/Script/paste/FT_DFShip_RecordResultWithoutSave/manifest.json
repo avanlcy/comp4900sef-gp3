@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShip_RecordResultWithoutSave",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "RecordResult with no save object records nothing and raises no error.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

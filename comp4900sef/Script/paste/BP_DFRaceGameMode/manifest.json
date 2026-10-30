@@ -22,7 +22,7 @@
   {
    "name": "CheckpointTimeBonus",
    "type": "float",
-   "default": "8",
+   "default": "3",
    "category": "Dead Fire|Race",
    "editable": true
   },
@@ -163,6 +163,13 @@
    "name": "NPCSkillSpread",
    "type": "float",
    "default": "0.1",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NPCSpeedScale",
+   "type": "float",
+   "default": "1",
    "category": "Dead Fire|AI",
    "editable": true
   },
@@ -1899,19 +1906,25 @@
     [
      "entry",
      "then",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_IfThenElse_1",
      "execute"
     ],
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallFunction_3",
+     "DFN_K2Node_CallFunction_6",
      "InByte"
     ],
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallFunction_15",
+     "DFN_K2Node_CallDelegate_0",
+     "Reason"
+    ],
+    [
+     "entry",
+     "Reason",
+     "DFN_K2Node_CallFunction_19",
      "A"
     ],
     [
@@ -1923,7 +1936,7 @@
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallDelegate_0",
+     "DFN_K2Node_CallDelegate_1",
      "Reason"
     ]
    ],
@@ -1965,6 +1978,9 @@
   }
  ],
  "defaults": {
+  "RaceTimeLimit": 120.0,
+  "CheckpointTimeBonus": 3.0,
+  "ScoreRequirement": 300,
   "ExplosionEffect": "/Game/StarterContent/Particles/P_Explosion",
   "ExplosionSound": "/Game/StarterContent/Audio/Explosion_Cue",
   "ExplosiveDamageType": "class:/Game/DeadFire/Blueprints/BP_DFExplosiveDamage",
@@ -1973,6 +1989,7 @@
   "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFPlayerController",
   "GameStateClass": "class:/Game/DeadFire/Blueprints/BP_DFRaceGameState",
   "HUDClass": "class:/Game/DeadFire/Blueprints/BP_DFHUD",
+  "NPCCount": 3,
   "PlayerVehicleClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle"
  },
  "component_defaults": {},

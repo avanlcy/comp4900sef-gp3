@@ -469,7 +469,7 @@
    "class": "/Script/UMG.TextBlock",
    "parent": "Column",
    "props": {
-    "text": "EASY 2, NORMAL 3, HARD 5 RIVALS ON PROVING GROUND",
+    "text": "EASY: 2 slower rivals   NORMAL: 3   HARD: 5 faster, better armed",
     "font_size": 16,
     "color": [
      1,

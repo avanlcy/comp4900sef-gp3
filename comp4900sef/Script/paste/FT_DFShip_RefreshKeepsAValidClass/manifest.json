@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShip_RefreshKeepsAValidClass",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "RefreshPlayerVehicleClass always leaves a valid car class as the pawn class.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

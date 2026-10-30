@@ -51,6 +51,7 @@
 
 
 # Builds
+Builds/
 **/Build/*
 
 # Whitelist PakBlacklist-<BuildConfiguration>.txt files

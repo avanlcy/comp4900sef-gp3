@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShip_FreshSlotLoadsCleanly",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A slot with no file gives a fresh save with the first car and track open.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

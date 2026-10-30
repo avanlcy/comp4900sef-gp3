@@ -195,8 +195,21 @@ FString UDFBlueprintAuthoringLibrary::AddVariable(UBlueprint* BP, FName Name, co
 {
 	FString OutError;
 	if (!BP) { OutError = TEXT("null blueprint"); return TEXT("ERROR: ") + OutError; }
-	if (FBlueprintEditorUtils::FindNewVariableIndex(BP, Name) != INDEX_NONE)
+	const int32 ExistingIndex = FBlueprintEditorUtils::FindNewVariableIndex(BP, Name);
+	if (ExistingIndex != INDEX_NONE)
 	{
+		// An existing variable keeps its type and default (the runner restores defaults), but its Instance Editable flag
+		// and category follow the caller, so a changed `editable=` or category in a generator module reaches the asset.
+		const FBPVariableDescription& Existing = BP->NewVariables[ExistingIndex];
+		const bool bCurrentlyEditable = (Existing.PropertyFlags & CPF_DisableEditOnInstance) == 0;
+		if (bCurrentlyEditable != bInstanceEditable)
+		{
+			FBlueprintEditorUtils::SetBlueprintOnlyEditableFlag(BP, Name, !bInstanceEditable);
+		}
+		if (!Category.IsEmpty() && !Existing.Category.EqualTo(FText::FromString(Category)))
+		{
+			FBlueprintEditorUtils::SetBlueprintVariableCategory(BP, Name, nullptr, FText::FromString(Category), true);
+		}
 		OutError = TEXT("exists");
 		return OutError;
 	}

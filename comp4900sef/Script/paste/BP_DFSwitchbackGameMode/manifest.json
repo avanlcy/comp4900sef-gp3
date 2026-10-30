@@ -11,6 +11,7 @@
  "defaults": {
   "LevelIndex": 1,
   "RaceTimeLimit": 150.0,
+  "CheckpointTimeBonus": 2.0,
   "ScoreRequirement": 400,
   "NPCCount": 4
  },

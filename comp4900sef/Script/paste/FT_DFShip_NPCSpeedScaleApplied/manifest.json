@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShip_NPCSpeedScaleApplied",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "NPCSpeedScale multiplies each spawned rival's speed scale.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

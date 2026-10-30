@@ -10,15 +10,25 @@
 		},
 		{
 			"Name": "PythonScriptPlugin",
-			"Enabled": true
+			"Enabled": true,
+			"WhitelistTargets": [
+				"Editor"
+			]
 		},
 		{
 			"Name": "EditorScriptingUtilities",
-			"Enabled": true
+			"Enabled": true,
+			"WhitelistTargets": [
+				"Editor"
+			]
 		},
 		{
 			"Name": "DFBlueprintAuthoring",
-			"Enabled": true
+			"Enabled": true,
+			"Optional": true,
+			"WhitelistTargets": [
+				"Editor"
+			]
 		}
 	]
 }
