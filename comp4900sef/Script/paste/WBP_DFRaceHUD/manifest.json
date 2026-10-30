@@ -29,6 +29,17 @@
    "locals": []
   },
   {
+   "name": "SetAmber",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "bAmber:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
    "name": "SetRed",
    "inputs": [
     "Target:object:/Script/UMG.TextBlock",
@@ -55,6 +66,17 @@
    "name": "RefreshFoot",
    "inputs": [
     "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "RefreshItems",
+   "inputs": [
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C",
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
    ],
    "outputs": [],
    "pure": false,
@@ -134,6 +156,30 @@
      "Target",
      "DFN_K2Node_CallFunction_1",
      "self"
+    ]
+   ]
+  },
+  {
+   "name": "SetAmber",
+   "file": "SetAmber.txt",
+   "links": [
+    [
+     "entry",
+     "bAmber",
+     "DFN_K2Node_CallFunction_0",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
     ]
    ]
   },
@@ -252,6 +298,66 @@
    ]
   },
   {
+   "name": "RefreshItems",
+   "file": "RefreshItems.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_6",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_10",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_37",
+     "Object"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_15",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_16",
+     "self"
+    ]
+   ]
+  },
+  {
    "name": "RefreshWarning",
    "file": "RefreshWarning.txt",
    "links": [
@@ -295,6 +401,24 @@
      "entry",
      "GM",
      "DFN_K2Node_VariableGet_5",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_6",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_7",
+     "self"
+    ],
+    [
+     "entry",
+     "GM",
+     "DFN_K2Node_CallFunction_26",
      "self"
     ]
    ]
@@ -854,6 +978,190 @@
      0.5
     ],
     "auto_size": true
+   }
+  },
+  {
+   "name": "ItemPanel",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0.5,
+     1,
+     0.5,
+     1
+    ],
+    "alignment": [
+     0.5,
+     1
+    ],
+    "position": [
+     0,
+     -120
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "EffectText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemPanel",
+   "props": {
+    "text": "",
+    "font_size": 22,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ItemRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "ItemPanel",
+   "props": {},
+   "slot": {
+    "h_align": "Center"
+   }
+  },
+  {
+   "name": "Slot0Text",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemRow",
+   "props": {
+    "text": "-",
+    "font_size": 24,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     12,
+     0,
+     12,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Slot1Text",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemRow",
+   "props": {
+    "text": "-",
+    "font_size": 24,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     12,
+     0,
+     12,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Slot2Text",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemRow",
+   "props": {
+    "text": "-",
+    "font_size": 24,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     12,
+     0,
+     12,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ItemHintText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemPanel",
+   "props": {
+    "text": "[Q] USE   [R] NEXT",
+    "font_size": 18,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     4,
+     0,
+     0
+    ]
    }
   }
  ]

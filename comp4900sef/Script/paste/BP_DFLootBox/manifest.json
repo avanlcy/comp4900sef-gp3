@@ -1,0 +1,202 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFLootBox",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Crate",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/StarterContent/Shapes/Shape_Cube",
+    "relative_scale3d": {
+     "vector": [
+      0.8,
+      0.8,
+      0.8
+     ]
+    },
+    "call:set_collision_profile_name": "OverlapAllDynamic",
+    "override_materials": [
+     "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
+    ]
+   }
+  },
+  {
+   "name": "Trigger",
+   "class": "/Script/Engine.SphereComponent",
+   "parent": "Crate",
+   "properties": {
+    "sphere_radius": 150.0,
+    "absolute_scale": true,
+    "call:set_collision_profile_name": "OverlapOnlyPawn"
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "ItemType",
+   "type": "enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+   "default": "NewEnumerator1",
+   "category": "Dead Fire|Loot",
+   "editable": true
+  },
+  {
+   "name": "Charges",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Loot",
+   "editable": true
+  },
+  {
+   "name": "bRandom",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Loot",
+   "editable": true
+  },
+  {
+   "name": "bRespawns",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Loot",
+   "editable": true
+  },
+  {
+   "name": "RespawnSeconds",
+   "type": "float",
+   "default": "30",
+   "category": "Dead Fire|Loot",
+   "editable": true
+  },
+  {
+   "name": "bCollected",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Loot",
+   "editable": false
+  },
+  {
+   "name": "CollectedTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Loot",
+   "editable": false
+  }
+ ],
+ "dispatchers": [
+  {
+   "name": "OnLootCollected",
+   "params": [
+    "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C",
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ]
+  }
+ ],
+ "functions": [
+  {
+   "name": "ResolveCharges",
+   "inputs": [],
+   "outputs": [
+    "Charges:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Pickup",
+   "inputs": [
+    "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Reset",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "ResolveCharges",
+   "file": "ResolveCharges.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "Pickup",
+   "file": "Pickup.txt",
+   "links": [
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallFunction_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallFunction_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_VariableGet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Character",
+     "DFN_K2Node_CallDelegate_0",
+     "Character"
+    ]
+   ]
+  },
+  {
+   "name": "Reset",
+   "file": "Reset.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

@@ -276,3 +276,47 @@ def array_set(g: Graph, elem: Pin, col=None, row=None) -> Node:
 
 def array_clear(g: Graph, elem: Pin, col=None, row=None) -> Node:
     return g.call_array(ARRAY, "Array_Clear", elem, col=col, row=row, pure=False)
+
+
+# ---- Phase 3: items ----
+BP_LOOTBOX = BPS + "/BP_DFLootBox"
+BP_BOMB = BPS + "/BP_DFBomb"
+BP_PROJECTILE = BPS + "/BP_DFProjectile"
+BP_DESTRUCTIBLE = BPS + "/BP_DFDestructible"
+BP_EXPLOSIVE_DAMAGE = BPS + "/BP_DFExplosiveDamage"
+E_ITEM_TYPE = DATA + "/E_DFItemType"
+S_ITEM_STACK = DATA + "/S_DFItemStack"
+ITEM_NONE, ITEM_BOOST, ITEM_SHIELD, ITEM_BOMB, ITEM_GUN, ITEM_RPG = range(6)  # E_DFItemType order
+ITEM_NAMES = ["-", "BOOST", "SHIELD", "BOMB", "GUN", "RPG"]
+PARTICLE_SYSTEM = "/Script/Engine.ParticleSystem"
+SOUND_BASE = "/Script/Engine.SoundBase"
+
+
+def enum_is(g: Graph, src, index: int, col=None, row=None) -> Node:
+    """Pure EqualEqual_ByteByte(enum pin, index) -> bool; src is (node, pin) or ("entry", pin)."""
+    n = g.call_static(MATH, "EqualEqual_ByteByte", inputs=[Pin("A", BYTE), Pin("B", BYTE, default=str(index))],
+                      outputs=[Pin("ReturnValue", BOOL, "out")], pure=True, col=col, row=row)
+    g.link(src[0], src[1], n, "A")
+    return n
+
+
+def get_all_actors_of_class(g: Graph, class_path: str, col=None, row=None) -> Node:
+    """Impure GetAllActorsOfClass(class) -> OutActors (array typed as the class)."""
+    return g.call_static(GAMEPLAY, "GetAllActorsOfClass",
+                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True),
+                                 Pin("ActorClass", CLASS, sub_object=cls_ref(ACTOR), default_object=class_path)],
+                         outputs=[Pin("OutActors", OBJECT, "out", cls_ref(class_path), container="Array")], col=col, row=row)
+
+
+def vec_str(g: Graph, src) -> tuple:
+    n = g.call_static("KismetStringLibrary", "Conv_VectorToString", inputs=[struct_pin("InVec", VECTOR)],
+                      outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
+    g.link(src[0], src[1], n, "InVec")
+    return (n, "ReturnValue")
+
+
+def bool_str(g: Graph, src) -> tuple:
+    n = g.call_static("KismetStringLibrary", "Conv_BoolToString", inputs=[Pin("InBool", BOOL)],
+                      outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
+    g.link(src[0], src[1], n, "InBool")
+    return (n, "ReturnValue")

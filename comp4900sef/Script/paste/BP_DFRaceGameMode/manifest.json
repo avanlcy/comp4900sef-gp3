@@ -115,6 +115,41 @@
    "default": "-1",
    "category": "Dead Fire|Race|State",
    "editable": false
+  },
+  {
+   "name": "ExplosionEffect",
+   "type": "object:/Script/Engine.ParticleSystem",
+   "default": "",
+   "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "ExplosionSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "ExplosiveDamageType",
+   "type": "class:/Script/Engine.DamageType",
+   "default": "",
+   "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "TireBlastDamage",
+   "type": "float",
+   "default": "30",
+   "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "ExplosionImpulse",
+   "type": "float",
+   "default": "800",
+   "category": "Dead Fire|Explosions",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -129,6 +164,20 @@
    "name": "OnRacerRespawned",
    "params": [
     "Racer:object:/Script/Engine.Controller"
+   ]
+  },
+  {
+   "name": "OnItemPickedUp",
+   "params": [
+    "Racer:object:/Script/Engine.Controller",
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ]
+  },
+  {
+   "name": "OnExplosion",
+   "params": [
+    "Location:struct:/Script/CoreUObject.Vector",
+    "Radius:float"
    ]
   }
  ],
@@ -242,6 +291,69 @@
    "name": "NotifyCharacterDied",
    "inputs": [
     "Character:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "SpawnExplosion",
+   "inputs": [
+    "Location:struct:/Script/CoreUObject.Vector",
+    "Damage:float",
+    "Radius:float",
+    "InstigatedBy:object:/Script/Engine.Controller",
+    "Causer:object:/Script/Engine.Actor",
+    "bBlowTires:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Shooter:object:/Script/Engine.Actor"
+   ]
+  },
+  {
+   "name": "SweepItems",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetItemInfo",
+   "inputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ],
+   "outputs": [
+    "Name:string",
+    "BoxCharges:int",
+    "MaxCharges:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GrantItem",
+   "inputs": [
+    "C:object:/Script/Engine.Controller",
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+    "Charges:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "CycleItem",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
    ],
    "outputs": [],
    "pure": false,
@@ -664,6 +776,300 @@
    ]
   },
   {
+   "name": "SpawnExplosion",
+   "file": "SpawnExplosion.txt",
+   "links": [
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_0",
+     "Location"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_1",
+     "Location"
+    ],
+    [
+     "entry",
+     "InstigatedBy",
+     "DFN_K2Node_CallFunction_2",
+     "Object"
+    ],
+    [
+     "entry",
+     "InstigatedBy",
+     "DFN_K2Node_CallFunction_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Damage",
+     "DFN_K2Node_CallFunction_4",
+     "A"
+    ],
+    [
+     "entry",
+     "Damage",
+     "DFN_K2Node_CallFunction_5",
+     "BaseDamage"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_5",
+     "Origin"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_5",
+     "DamageRadius"
+    ],
+    [
+     "entry",
+     "Causer",
+     "DFN_K2Node_CallFunction_5",
+     "DamageCauser"
+    ],
+    [
+     "entry",
+     "InstigatedBy",
+     "DFN_K2Node_CallFunction_5",
+     "InstigatedByController"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_7",
+     "V2"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_9",
+     "B"
+    ],
+    [
+     "entry",
+     "Damage",
+     "DFN_K2Node_CallFunction_10",
+     "BaseDamage"
+    ],
+    [
+     "entry",
+     "InstigatedBy",
+     "DFN_K2Node_CallFunction_10",
+     "EventInstigator"
+    ],
+    [
+     "entry",
+     "Causer",
+     "DFN_K2Node_CallFunction_10",
+     "DamageCauser"
+    ],
+    [
+     "entry",
+     "Causer",
+     "DFN_K2Node_CallFunction_12",
+     "B"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_13",
+     "V2"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_15",
+     "B"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_17",
+     "Origin"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_17",
+     "Radius"
+    ],
+    [
+     "entry",
+     "bBlowTires",
+     "DFN_K2Node_IfThenElse_5",
+     "Condition"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_18",
+     "Point"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallDelegate_0",
+     "Location"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallDelegate_0",
+     "Radius"
+    ]
+   ]
+  },
+  {
+   "name": "SweepItems",
+   "file": "SweepItems.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetItemInfo",
+   "file": "GetItemInfo.txt",
+   "links": [
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_4",
+     "A"
+    ]
+   ]
+  },
+  {
+   "name": "GrantItem",
+   "file": "GrantItem.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_2",
+     "Type"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_3",
+     "Type"
+    ],
+    [
+     "entry",
+     "Charges",
+     "DFN_K2Node_CallFunction_3",
+     "Charges"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_VariableSet_1",
+     "LastPickupType"
+    ],
+    [
+     "entry",
+     "Charges",
+     "DFN_K2Node_CallFunction_5",
+     "InInt"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_6",
+     "Object"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallDelegate_0",
+     "Racer"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallDelegate_0",
+     "Type"
+    ]
+   ]
+  },
+  {
+   "name": "CycleItem",
+   "file": "CycleItem.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
    "name": "GetRespawnTransform",
    "file": "GetRespawnTransform.txt",
    "links": [
@@ -718,7 +1124,7 @@
     [
      "entry",
      "C",
-     "DFN_K2Node_CallFunction_21",
+     "DFN_K2Node_CallFunction_22",
      "C"
     ],
     [
@@ -910,6 +1316,9 @@
   }
  ],
  "defaults": {
+  "ExplosionEffect": "/Game/StarterContent/Particles/P_Explosion",
+  "ExplosionSound": "/Game/StarterContent/Audio/Explosion_Cue",
+  "ExplosiveDamageType": "class:/Game/DeadFire/Blueprints/BP_DFExplosiveDamage",
   "OnFootCharacterClass": "class:/Game/DeadFire/Blueprints/BP_DFCharacter",
   "DefaultPawnClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle",
   "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFPlayerController",

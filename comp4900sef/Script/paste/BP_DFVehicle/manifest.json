@@ -2,7 +2,19 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFVehicle",
  "parent": "/Game/VehicleBP/Sedan/Sedan",
- "components": [],
+ "components": [
+  {
+   "name": "Weapon",
+   "class": "/Game/DeadFire/Components/BPC_DFWeapon.BPC_DFWeapon_C",
+   "parent": "",
+   "properties": {
+    "Damage": 15.0,
+    "Range": 10000.0,
+    "Cooldown": 0.2,
+    "bDebugTrace": false
+   }
+  }
+ ],
  "variables": [
   {
    "name": "MaxHealth",
@@ -108,6 +120,83 @@
    "default": "",
    "category": "Dead Fire|Enter Exit",
    "editable": false
+  },
+  {
+   "name": "WreckHopImpulse",
+   "type": "float",
+   "default": "600",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "WreckSmokeEffect",
+   "type": "object:/Script/Engine.ParticleSystem",
+   "default": "",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "BoostRemaining",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Items",
+   "editable": false
+  },
+  {
+   "name": "ShieldRemaining",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Items",
+   "editable": false
+  },
+  {
+   "name": "BoostDuration",
+   "type": "float",
+   "default": "2",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "BoostKickSpeed",
+   "type": "float",
+   "default": "1200",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "BoostAcceleration",
+   "type": "float",
+   "default": "2500",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "ShieldDuration",
+   "type": "float",
+   "default": "6",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "BombDropOffset",
+   "type": "float",
+   "default": "400",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "MuzzleForward",
+   "type": "float",
+   "default": "300",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "MuzzleUp",
+   "type": "float",
+   "default": "80",
+   "category": "Dead Fire|Items",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -241,6 +330,20 @@
    "locals": []
   },
   {
+   "name": "BlowNearestTire",
+   "inputs": [
+    "Point:struct:/Script/CoreUObject.Vector",
+    "Damage:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Best:int=-1",
+    "BestDist:float=1000000000"
+   ]
+  },
+  {
    "name": "TakeDamageInternal",
    "inputs": [
     "Damage:float",
@@ -347,6 +450,132 @@
    "inputs": [
     "DeltaSeconds:float"
    ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "IsShielded",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ActivateBoost",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ActivateShield",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ClearEffects",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "TickEffects",
+   "inputs": [
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "CanUseItem",
+   "inputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "GetMuzzleLocation",
+   "inputs": [],
+   "outputs": [
+    "Location:struct:/Script/CoreUObject.Vector"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "FireGun",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "FireRPG",
+   "inputs": [],
+   "outputs": [
+    "Projectile:object:/Game/DeadFire/Blueprints/BP_DFProjectile.BP_DFProjectile_C"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ApplyItem",
+   "inputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "DropBomb",
+   "inputs": [],
+   "outputs": [
+    "Bomb:object:/Game/DeadFire/Blueprints/BP_DFBomb.BP_DFBomb_C"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "UseSelectedItem",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ]
+  },
+  {
+   "name": "CycleItem",
+   "inputs": [],
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
@@ -541,6 +770,30 @@
    ]
   },
   {
+   "name": "BlowNearestTire",
+   "file": "BlowNearestTire.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Point",
+     "DFN_K2Node_CallFunction_3",
+     "V2"
+    ],
+    [
+     "entry",
+     "Damage",
+     "DFN_K2Node_CallFunction_6",
+     "Damage"
+    ]
+   ]
+  },
+  {
    "name": "TakeDamageInternal",
    "file": "TakeDamageInternal.txt",
    "links": [
@@ -559,19 +812,19 @@
     [
      "entry",
      "TireIndex",
-     "DFN_K2Node_CallFunction_1",
+     "DFN_K2Node_CallFunction_2",
      "Index"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_1",
+     "DFN_K2Node_CallFunction_2",
      "Damage"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_3",
      "B"
     ],
     [
@@ -589,7 +842,7 @@
     [
      "entry",
      "Instigator",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_6",
      "Killer"
     ]
    ]
@@ -613,7 +866,13 @@
     [
      "entry",
      "Killer",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_6",
+     "InstigatedBy"
+    ],
+    [
+     "entry",
+     "Killer",
+     "DFN_K2Node_CallFunction_7",
      "Killer"
     ]
    ]
@@ -805,10 +1064,228 @@
    ]
   },
   {
+   "name": "IsShielded",
+   "file": "IsShielded.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "ReturnValue"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ActivateBoost",
+   "file": "ActivateBoost.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ActivateShield",
+   "file": "ActivateShield.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ClearEffects",
+   "file": "ClearEffects.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "TickEffects",
+   "file": "TickEffects.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_4",
+     "B"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_6",
+     "B"
+    ]
+   ]
+  },
+  {
+   "name": "CanUseItem",
+   "file": "CanUseItem.txt",
+   "links": [
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "GetMuzzleLocation",
+   "file": "GetMuzzleLocation.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_6",
+     "ReturnValue",
+     "result",
+     "Location"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "FireGun",
+   "file": "FireGun.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_3",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "FireRPG",
+   "file": "FireRPG.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_5",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ApplyItem",
+   "file": "ApplyItem.txt",
+   "links": [
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_4",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_8",
+     "A"
+    ]
+   ]
+  },
+  {
+   "name": "DropBomb",
+   "file": "DropBomb.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_SpawnActorFromClass_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "UseSelectedItem",
+   "file": "UseSelectedItem.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "CycleItem",
+   "file": "CycleItem.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ]
+  },
+  {
    "name": "EventGraph",
    "file": "EventGraph.txt",
    "links": []
   }
  ],
- "defaults": {}
+ "defaults": {
+  "WreckSmokeEffect": "/Game/StarterContent/Particles/P_Smoke"
+ }
 }

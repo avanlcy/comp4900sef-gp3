@@ -33,7 +33,9 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # Fire(Origin, Direction) -> bHit, Hit
-    g = bp.function("Fire", inputs=["Origin:struct:" + VECTOR, "Direction:struct:" + VECTOR],
+    # Fire(Origin, Direction, Instigator) -> bHit, Hit: the caller names the controller credited for the damage (Phase 3:
+    # the character passes its controller, the vehicle its driver's)
+    g = bp.function("Fire", inputs=["Origin:struct:" + VECTOR, "Direction:struct:" + VECTOR, "Instigator:object:" + CONTROLLER],
                     outputs=["bHit:bool", "Hit:struct:" + HIT_RESULT])
     can = g.call_self("CanFire", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     b = g.branch()
@@ -69,9 +71,6 @@ def build() -> Blueprint:
     brk = g.call_static(GAMEPLAY, "BreakHitResult", inputs=[struct_pin("Hit", HIT_RESULT)],
                         outputs=[obj_pin("HitActor", ACTOR, "out")], pure=True)
     g.link(trace, "OutHit", brk, "Hit")
-    owner = g.call_self_native("/Script/Engine.ActorComponent", "GetOwner", outputs=[obj_pin("ReturnValue", ACTOR, "out")], pure=True)
-    inst = g.call_on(ACTOR, "GetInstigatorController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
-    g.link(owner, "ReturnValue", inst, "self")
     dmg = g.var_get("Damage", FLOAT)
     dtc = g.var_get("DamageTypeClass", "class", cls_ref(DAMAGE_TYPE))
     apply = g.call_static(GAMEPLAY, "ApplyPointDamage",
@@ -83,7 +82,7 @@ def build() -> Blueprint:
     g.link(dmg, "Damage", apply, "BaseDamage")
     g.link_entry("Direction", apply, "HitFromDirection")
     g.link(trace, "OutHit", apply, "HitInfo")
-    g.link(inst, "ReturnValue", apply, "EventInstigator")
+    g.link_entry("Instigator", apply, "EventInstigator")
     owner2 = g.call_self_native("/Script/Engine.ActorComponent", "GetOwner", outputs=[obj_pin("ReturnValue", ACTOR, "out")], pure=True)
     g.link(owner2, "ReturnValue", apply, "DamageCauser")
     g.link(dtc, "DamageTypeClass", apply, "DamageTypeClass")

@@ -6,10 +6,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from df import (ACTOR, BOOL, BP_CHARACTER, BP_GM, BP_VEHICLE, BPC_WEAPON, CHAR_MOVE, CONTROLLER, FLOAT, HIT_RESULT,  # noqa: E402
-                MATH, OBJECT, OUT, PRIMITIVE, SCENE_COMP, SPHERE_COMP, TPC, VECTOR, Blueprint, Pin, and_bool, as_pin,
-                cast_to, cls_ref, compare, gen, get_game_mode, is_valid, math2, not_bool, obj_pin, obj_spec, or_bool,
-                struct_pin)
+from df import (ACTOR, BOOL, BP_CHARACTER, BP_EXPLOSIVE_DAMAGE, BP_GM, BP_VEHICLE, BPC_WEAPON, CHAR_MOVE, CONTROLLER,  # noqa: E402
+                FLOAT, HIT_RESULT, MATH, OBJECT, OUT, PAWN, PRIMITIVE, SCENE_COMP, SPHERE_COMP, TPC, VECTOR, Blueprint, Pin,
+                and_bool, as_pin, cast_to, cls_ref, compare, gen, get_game_mode, is_valid, math2, not_bool, obj_pin,
+                obj_spec, or_bool, struct_pin)
 
 CC, VC, GMC, WC = gen(BP_CHARACTER), gen(BP_VEHICLE), gen(BP_GM), gen(BPC_WEAPON)
 CAMERA = "/Script/Engine.CameraComponent"
@@ -181,11 +181,13 @@ def build() -> Blueprint:
     fwd = g.call_on(SCENE_COMP, "GetForwardVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
     g.link(cam2, "FollowCamera", fwd, "self")
     wp = g.var_get("Weapon", OBJECT, cls_ref(WC))
-    fire = g.call_on(WC, "Fire", inputs=[struct_pin("Origin", VECTOR), struct_pin("Direction", VECTOR)],
+    fire = g.call_on(WC, "Fire", inputs=[struct_pin("Origin", VECTOR), struct_pin("Direction", VECTOR), obj_pin("Instigator", CONTROLLER)],
                      outputs=[Pin("bHit", BOOL, "out"), struct_pin("Hit", HIT_RESULT, "out")])
     g.link(wp, "Weapon", fire, "self")
     g.link(loc, "ReturnValue", fire, "Origin")
     g.link(fwd, "ReturnValue", fire, "Direction")
+    my_ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    g.link(my_ctrl, "ReturnValue", fire, "Instigator")
     g.link(b, "else", fire, "execute")
     r = g.function_result([Pin("ReturnValue", BOOL)])
     g.link(fire, "bHit", r, "ReturnValue")
@@ -217,7 +219,11 @@ def build() -> Blueprint:
     g.link(stowed, "bIsStowed", either, "B")
     b = g.branch(col=1, row=1)
     g.link(either, "ReturnValue", b, "Condition")
-    g.exec(ad, b)
+    # Phase 3 (spec §5): explosive damage never hurts the on-foot character; leaving the car is not a death trap
+    ex = cast_to(g, BP_EXPLOSIVE_DAMAGE, col=1, row=0)
+    g.link(ad, "DamageType", ex, "Object")
+    g.exec(ad, ex)
+    g.link(ex, "CastFailed", b, "execute")
     h = g.var_get("Health", FLOAT, col=2, row=2)
     sub = math2(g, "Subtract_FloatFloat", FLOAT, col=3, row=2)
     g.link(h, "Health", sub, "A")
@@ -260,6 +266,17 @@ def build() -> Blueprint:
     fa = g.input_action("Fire", col=0, row=6)
     fire = g.call_self("Fire", outputs=[Pin("ReturnValue", BOOL, "out")], col=1, row=6)
     g.link(fa, "Pressed", fire, "execute")
+    # Phase 3: NextItem cycles the inventory on foot as well (spec §9)
+    ni = g.input_action("NextItem", col=0, row=7)
+    gm2 = get_game_mode(g, col=0, row=8)
+    cast2 = cast_to(g, BP_GM, col=1, row=7)
+    g.link(gm2, "ReturnValue", cast2, "Object")
+    g.link(ni, "Pressed", cast2, "execute")
+    ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True, col=1, row=8)
+    cy = g.call_on(GMC, "CycleItem", inputs=[obj_pin("C", CONTROLLER)], col=2, row=7)
+    g.link(cast2, as_pin(BP_GM), cy, "self")
+    g.link(ctrl, "ReturnValue", cy, "C")
+    g.link(cast2, "then", cy, "execute")
     return bp
 
 

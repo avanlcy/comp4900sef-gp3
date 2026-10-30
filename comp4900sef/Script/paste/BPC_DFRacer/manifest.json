@@ -73,10 +73,205 @@
    "default": "Player",
    "category": "Dead Fire|Race",
    "editable": true
+  },
+  {
+   "name": "Inventory",
+   "type": "array<struct:/Game/DeadFire/Data/S_DFItemStack.S_DFItemStack>",
+   "default": "",
+   "category": "Dead Fire|Items",
+   "editable": false
+  },
+  {
+   "name": "SelectedSlot",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Items",
+   "editable": false
+  },
+  {
+   "name": "MaxSlots",
+   "type": "int",
+   "default": "3",
+   "category": "Dead Fire|Items",
+   "editable": true
+  },
+  {
+   "name": "LastPickupTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Items",
+   "editable": false
+  },
+  {
+   "name": "LastPickupType",
+   "type": "enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+   "default": "",
+   "category": "Dead Fire|Items",
+   "editable": false
   }
  ],
  "dispatchers": [],
- "functions": [],
- "graphs": [],
+ "functions": [
+  {
+   "name": "AddItem",
+   "inputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+    "Charges:int",
+    "MaxCharges:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Index:int=-1",
+    "Old:int=0"
+   ]
+  },
+  {
+   "name": "GetSelected",
+   "inputs": [],
+   "outputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+    "Charges:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ConsumeSelected",
+   "inputs": [],
+   "outputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Taken:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ]
+  },
+  {
+   "name": "CycleSelected",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "ClearInventory",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "AddItem",
+   "file": "AddItem.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_0",
+     "B"
+    ],
+    [
+     "entry",
+     "Charges",
+     "DFN_K2Node_CallFunction_2",
+     "B"
+    ],
+    [
+     "entry",
+     "MaxCharges",
+     "DFN_K2Node_CallFunction_3",
+     "B"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_MakeStruct_0",
+     "{{/Game/DeadFire/Data/S_DFItemStack.Type}}"
+    ],
+    [
+     "entry",
+     "Charges",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ],
+    [
+     "entry",
+     "MaxCharges",
+     "DFN_K2Node_CallFunction_6",
+     "B"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_MakeStruct_1",
+     "{{/Game/DeadFire/Data/S_DFItemStack.Type}}"
+    ]
+   ]
+  },
+  {
+   "name": "GetSelected",
+   "file": "GetSelected.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ConsumeSelected",
+   "file": "ConsumeSelected.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "CycleSelected",
+   "file": "CycleSelected.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "ClearInventory",
+   "file": "ClearInventory.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallArrayFunction_0",
+     "execute"
+    ]
+   ]
+  }
+ ],
  "defaults": {}
 }

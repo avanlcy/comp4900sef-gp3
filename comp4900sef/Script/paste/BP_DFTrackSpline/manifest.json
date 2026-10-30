@@ -21,6 +21,13 @@
    "editable": true
   },
   {
+   "name": "bClosedTrack",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Track",
+   "editable": true
+  },
+  {
    "name": "RoadMesh",
    "type": "object:/Script/Engine.StaticMesh",
    "default": "",
@@ -384,7 +391,7 @@
     [
      "entry",
      "then",
-     "DFN_K2Node_VariableSet_0",
+     "DFN_K2Node_CallFunction_0",
      "execute"
     ]
    ]

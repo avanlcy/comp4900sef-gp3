@@ -7,11 +7,13 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from bpgen import cls_ref  # noqa: E402
 from df import (ACTOR, BOOL, BP_CHARACTER, BP_CHECKPOINT, BP_GM, BP_GS, BP_HUD, BP_PC, BP_TRACK, BP_VEHICLE,  # noqa: E402
-                BPC_RACER, CONTROLLER, E_END_REASON, FLOAT, GAME_MODE_BASE, GAME_STATE_BASE, GAMEPLAY, INT, MATH,
-                OBJECT, OUT, PAWN, PLAYER_CONTROLLER, ROTATOR, S_RESULT, STRING, STRUCT, TRANSFORM, VECTOR, Blueprint,
-                Graph, Node, Pin, and_bool, as_pin, compare, enum_pin, enum_spec, game_time, gen, get_player_controller,
+                BPC_RACER, BYTE, CONTROLLER, E_END_REASON, E_ITEM_TYPE, FLOAT, GAME_MODE_BASE, GAME_STATE_BASE, GAMEPLAY,
+                INT, ITEM_BOMB, ITEM_BOOST, ITEM_GUN, ITEM_NAMES, ITEM_RPG, ITEM_SHIELD, MATH, OBJECT, OUT, PAWN,
+                PLAYER_CONTROLLER, ROTATOR, S_RESULT, STRING, STRUCT, TRANSFORM, VECTOR, Blueprint, Graph, Node, Pin,
+                and_bool, as_pin, compare, enum_is, enum_pin, enum_ref, enum_spec, game_time, gen, get_player_controller,
                 is_valid, math2, member, not_bool, obj_pin, obj_spec, or_bool, struct_path, struct_pin, struct_spec,
-                log_line, name_of, int_str)
+                log_line, name_of, int_str, BP_BOMB, BP_EXPLOSIVE_DAMAGE, BP_PROJECTILE, CLASS, DAMAGE_TYPE, PARTICLE_SYSTEM, PRIMITIVE,
+                SKEL_MESH_COMP, SOUND_BASE, get_all_actors_of_class, native_enum_pin)
 from bpgen import struct_ref  # noqa: E402
 
 GMC, GSC, PCC, VC, CC, CPC, TC, RC, HUDC = (gen(BP_GM), gen(BP_GS), gen(BP_PC), gen(BP_VEHICLE), gen(BP_CHARACTER),
@@ -166,6 +168,17 @@ def build_mode() -> Blueprint:
     bp.variable("RespawnDueTime", "float", "-1", S)
     bp.dispatcher("OnRaceEnded", ["Reason:" + enum_spec(E_END_REASON), "bPassed:bool"])
     bp.dispatcher("OnRacerRespawned", ["Racer:object:" + CONTROLLER])
+    bp.dispatcher("OnItemPickedUp", ["Racer:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE)])
+    X = "Dead Fire|Explosions"
+    bp.variable("ExplosionEffect", "object:" + PARTICLE_SYSTEM, "", X, editable=True)
+    bp.variable("ExplosionSound", "object:" + SOUND_BASE, "", X, editable=True)
+    bp.variable("ExplosiveDamageType", "class:" + DAMAGE_TYPE, "", X, editable=True)
+    bp.variable("TireBlastDamage", "float", "30", X, editable=True)
+    bp.variable("ExplosionImpulse", "float", "800", X, editable=True)
+    bp.default("ExplosionEffect", "/Game/StarterContent/Particles/P_Explosion")
+    bp.default("ExplosionSound", "/Game/StarterContent/Audio/Explosion_Cue")
+    bp.default("ExplosiveDamageType", "class:" + BP_EXPLOSIVE_DAMAGE)
+    bp.dispatcher("OnExplosion", ["Location:struct:" + VECTOR, "Radius:float"])
     bp.default("OnFootCharacterClass", "class:" + BP_CHARACTER)
     bp.default("DefaultPawnClass", "class:" + BP_VEHICLE)
     bp.default("PlayerControllerClass", "class:" + BP_PC)
@@ -512,6 +525,203 @@ def build_mode() -> Blueprint:
     g.link_entry("then", log, "execute")
     g.exec(log, death)
 
+    # ---- Phase 3: explosions (spec 2026-10-30 §5) ----
+    # SpawnExplosion(Location, Damage, Radius, InstigatedBy, Causer, bBlowTires): particle + sound; full radial damage of the
+    # explosive type when Damage > 0; every vehicle in range (but the causer) gets a radial impulse and, if asked, a tire blast.
+    g = bp.function("SpawnExplosion", inputs=["Location:struct:" + VECTOR, "Damage:float", "Radius:float",
+                                              "InstigatedBy:object:" + CONTROLLER, "Causer:object:" + ACTOR, "bBlowTires:bool"],
+                    locals=["Shooter:object:" + ACTOR])
+    fx = g.var_get("ExplosionEffect", OBJECT, cls_ref(PARTICLE_SYSTEM))
+    emit = g.call_static(GAMEPLAY, "SpawnEmitterAtLocation",
+                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("EmitterTemplate", PARTICLE_SYSTEM),
+                                 struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
+                                 struct_pin("Scale", VECTOR, default="1,1,1"), Pin("bAutoDestroy", BOOL, default="true"),
+                                 native_enum_pin("PoolingMethod", "/Script/Engine.EPSCPoolMethod", "None"),
+                                 Pin("bAutoActivateSystem", BOOL, default="true")],
+                         outputs=[obj_pin("ReturnValue", "/Script/Engine.ParticleSystemComponent", "out")])
+    g.link(fx, "ExplosionEffect", emit, "EmitterTemplate")
+    g.link_entry("Location", emit, "Location")
+    g.link_entry("then", emit, "execute")
+    snd = g.var_get("ExplosionSound", OBJECT, cls_ref(SOUND_BASE))
+    play = g.call_static(GAMEPLAY, "PlaySoundAtLocation",
+                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("Sound", SOUND_BASE), struct_pin("Location", VECTOR),
+                                 struct_pin("Rotation", ROTATOR), Pin("VolumeMultiplier", FLOAT, default="1.0"),
+                                 Pin("PitchMultiplier", FLOAT, default="1.0"), Pin("StartTime", FLOAT, default="0.0"),
+                                 obj_pin("AttenuationSettings", "/Script/Engine.SoundAttenuation"),
+                                 obj_pin("ConcurrencySettings", "/Script/Engine.SoundConcurrency"), obj_pin("OwningActor", ACTOR)])
+    g.link(snd, "ExplosionSound", play, "Sound")
+    g.link_entry("Location", play, "Location")
+    g.exec(emit, play)
+    # the shooter's own pawn: a point-blank blast starts inside its hull, and a trace from inside a body reports that body
+    # at distance 0, so it would shield every other victim. It is ignored by the radial damage (no line-of-sight block)
+    # and takes its self-damage directly afterwards (spec §2: your own explosives can hurt you).
+    iv = branch_on(g, (valid(g, ("entry", "InstigatedBy")), "ReturnValue"), (play, "then"))
+    pawn = g.call_on(CONTROLLER, "K2_GetPawn", outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
+    g.link_entry("InstigatedBy", pawn, "self")
+    s_sh = g.local_set("Shooter", OBJECT, sub_object=cls_ref(ACTOR))
+    g.link(pawn, "ReturnValue", s_sh, "Shooter")
+    g.link(iv, "then", s_sh, "execute")
+    shooter = lambda: (g.local_get("Shooter", OBJECT, cls_ref(ACTOR)), "Shooter")
+    gt0 = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link_entry("Damage", gt0, "A")
+    bd = branch_on(g, (gt0, "ReturnValue"))
+    g.link(iv, "else", bd, "execute")
+    g.exec(s_sh, bd)
+    dt = g.var_get("ExplosiveDamageType", CLASS, cls_ref(DAMAGE_TYPE))
+    ignore = g.make_array(obj_pin("e", ACTOR), [None])
+    link(g, shooter(), ignore, "[0]")
+    rad = g.call_static(GAMEPLAY, "ApplyRadialDamage",
+                        inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("BaseDamage", FLOAT), struct_pin("Origin", VECTOR),
+                                Pin("DamageRadius", FLOAT), Pin("DamageTypeClass", CLASS, sub_object=cls_ref(DAMAGE_TYPE)),
+                                Pin("IgnoreActors", OBJECT, sub_object=cls_ref(ACTOR), container="Array"),
+                                obj_pin("DamageCauser", ACTOR), obj_pin("InstigatedByController", CONTROLLER),
+                                Pin("bDoFullDamage", BOOL, default="true"),
+                                native_enum_pin("DamagePreventionChannel", "/Script/Engine.ECollisionChannel", "ECC_Visibility")],
+                        outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link_entry("Damage", rad, "BaseDamage")
+    g.link_entry("Location", rad, "Origin")
+    g.link_entry("Radius", rad, "DamageRadius")
+    g.link(dt, "ExplosiveDamageType", rad, "DamageTypeClass")
+    g.link(ignore, "Array", rad, "IgnoreActors")
+    g.link_entry("Causer", rad, "DamageCauser")
+    g.link_entry("InstigatedBy", rad, "InstigatedByController")
+    g.link(bd, "then", rad, "execute")
+    # self-damage: the shooter's pawn inside the radius takes the full amount, no line-of-sight test. The validity check is
+    # an exec branch of its own: a pure chain is evaluated whole, so GetActorLocation on a null shooter would be a runtime error.
+    bsv = branch_on(g, (valid(g, shooter()), "ReturnValue"), (rad, "then"))
+    sd = g.call_static(MATH, "Vector_Distance", inputs=[struct_pin("V1", VECTOR), struct_pin("V2", VECTOR)],
+                       outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(actor_loc(g, shooter()), "ReturnValue", sd, "V1")
+    g.link_entry("Location", sd, "V2")
+    snear = compare(g, "LessEqual_FloatFloat", FLOAT)
+    g.link(sd, "ReturnValue", snear, "A")
+    g.link_entry("Radius", snear, "B")
+    bs = branch_on(g, (snear, "ReturnValue"), (bsv, "then"))
+    dt2 = g.var_get("ExplosiveDamageType", CLASS, cls_ref(DAMAGE_TYPE))
+    self_dmg = g.call_static(GAMEPLAY, "ApplyDamage",
+                             inputs=[obj_pin("DamagedActor", ACTOR), Pin("BaseDamage", FLOAT), obj_pin("EventInstigator", CONTROLLER),
+                                     obj_pin("DamageCauser", ACTOR), Pin("DamageTypeClass", CLASS, sub_object=cls_ref(DAMAGE_TYPE))],
+                             outputs=[Pin("ReturnValue", FLOAT, "out")])
+    link(g, shooter(), self_dmg, "DamagedActor")
+    g.link_entry("Damage", self_dmg, "BaseDamage")
+    g.link_entry("InstigatedBy", self_dmg, "EventInstigator")
+    g.link_entry("Causer", self_dmg, "DamageCauser")
+    g.link(dt2, "ExplosiveDamageType", self_dmg, "DamageTypeClass")
+    g.link(bs, "then", self_dmg, "execute")
+    cars = get_all_actors_of_class(g, VC)
+    g.link(bd, "else", cars, "execute")
+    g.link(bsv, "else", cars, "execute")
+    g.link(bs, "else", cars, "execute")
+    g.exec(self_dmg, cars)
+    loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(VC)))
+    g.link(cars, "OutActors", loop, "Array")
+    g.link(cars, "then", loop, "Exec")
+    E = (loop, "Array Element")
+    other = g.call_static(MATH, "NotEqual_ObjectObject", inputs=[obj_pin("A", "/Script/CoreUObject.Object"), obj_pin("B", "/Script/CoreUObject.Object")],
+                          outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    link(g, E, other, "A")
+    g.link_entry("Causer", other, "B")
+    dist = g.call_static(MATH, "Vector_Distance", inputs=[struct_pin("V1", VECTOR), struct_pin("V2", VECTOR)],
+                         outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(actor_loc(g, E), "ReturnValue", dist, "V1")
+    g.link_entry("Location", dist, "V2")
+    near = compare(g, "LessEqual_FloatFloat", FLOAT)
+    g.link(dist, "ReturnValue", near, "A")
+    g.link_entry("Radius", near, "B")
+    both = and_bool(g)
+    g.link(other, "ReturnValue", both, "A")
+    g.link(near, "ReturnValue", both, "B")
+    bn = branch_on(g, (both, "ReturnValue"), (loop, "LoopBody"))
+    mesh = get_on(g, VC, "Mesh", OBJECT, E, sub=cls_ref(SKEL_MESH_COMP))
+    kick = call(g, PRIMITIVE, "AddRadialImpulse", (mesh, "Mesh"),
+                inputs=[struct_pin("Origin", VECTOR), Pin("Radius", FLOAT), Pin("Strength", FLOAT),
+                        native_enum_pin("Falloff", "/Script/PhysicsCore.ERadialImpulseFalloff", "RIF_Linear"),
+                        Pin("bVelChange", BOOL, default="true")])
+    g.link_entry("Location", kick, "Origin")
+    g.link_entry("Radius", kick, "Radius")
+    imp = g.var_get("ExplosionImpulse", FLOAT)
+    g.link(imp, "ExplosionImpulse", kick, "Strength")
+    g.link(bn, "then", kick, "execute")
+    bt = branch_on(g, ("entry", "bBlowTires"), (kick, "then"))
+    tbd = g.var_get("TireBlastDamage", FLOAT)
+    blow = call(g, VC, "BlowNearestTire", E, inputs=[struct_pin("Point", VECTOR), Pin("Damage", FLOAT)])
+    g.link_entry("Location", blow, "Point")
+    g.link(tbd, "TireBlastDamage", blow, "Damage")
+    g.link(bt, "then", blow, "execute")
+    fire = g.call_delegate("OnExplosion", [struct_pin("Location", VECTOR), Pin("Radius", FLOAT)])
+    g.link_entry("Location", fire, "Location")
+    g.link_entry("Radius", fire, "Radius")
+    g.link(loop, "Completed", fire, "execute")
+
+    # SweepItems(): remove every live bomb (and, from Task 4, rocket) — RestartRace calls it so a leftover armed bomb never
+    # reaches the next race or the next functional test (spec §4)
+    g = bp.function("SweepItems")
+    prev = ("entry", "then")
+    for cls in (gen(BP_BOMB), gen(BP_PROJECTILE)):
+        found = get_all_actors_of_class(g, cls)
+        g.link(prev[0], prev[1], found, "execute")
+        loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(cls)))
+        g.link(found, "OutActors", loop, "Array")
+        g.link(found, "then", loop, "Exec")
+        kill = call(g, ACTOR, "K2_DestroyActor", (loop, "Array Element"))
+        g.link(loop, "LoopBody", kill, "execute")
+        prev = (loop, "Completed")
+
+    # ---- Phase 3: items (spec 2026-10-30 §2, §4) ----
+    # GetItemInfo(Type) -> Name, BoxCharges, MaxCharges
+    g = bp.function("GetItemInfo", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["Name:string", "BoxCharges:int", "MaxCharges:int"], pure=True)
+    prev = ("entry", "then")
+    for idx, box, cap in ((ITEM_BOOST, 1, 3), (ITEM_SHIELD, 1, 2), (ITEM_BOMB, 1, 3), (ITEM_GUN, 8, 24), (ITEM_RPG, 1, 2)):
+        b = branch_on(g, (enum_is(g, ("entry", "Type"), idx), "ReturnValue"))
+        g.link(prev[0], prev[1], b, "execute")
+        r = g.function_result([Pin("Name", STRING, default=ITEM_NAMES[idx]), Pin("BoxCharges", INT, default=str(box)),
+                               Pin("MaxCharges", INT, default=str(cap))])
+        g.link(b, "then", r, "execute")
+        prev = (b, "else")
+    r0 = g.function_result([Pin("Name", STRING, default="-"), Pin("BoxCharges", INT, default="0"), Pin("MaxCharges", INT, default="0")])
+    g.link(prev[0], prev[1], r0, "execute")
+
+    # GrantItem(C, Type, Charges) -> bool: into the racer's inventory, capped by GetItemInfo; stamps the pickup for the HUD
+    g = bp.function("GrantItem", inputs=["C:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], outputs=["ReturnValue:bool"])
+    r = find_racer(g, ("entry", "C"))
+    b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
+    g.link_entry("then", b, "execute")
+    r_no = ret(g, ReturnValue="false")
+    g.link(b, "else", r_no, "execute")
+    info = g.call_self("GetItemInfo", inputs=[enum_pin("Type", E_ITEM_TYPE)],
+                       outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
+    g.link_entry("Type", info, "Type")
+    add = call(g, RC, "AddItem", (r, "Racer"), inputs=[enum_pin("Type", E_ITEM_TYPE), Pin("Charges", INT), Pin("MaxCharges", INT)],
+               outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link_entry("Type", add, "Type")
+    g.link_entry("Charges", add, "Charges")
+    g.link(info, "MaxCharges", add, "MaxCharges")
+    g.link(b, "then", add, "execute")
+    ba = branch_on(g, (add, "ReturnValue"), (add, "then"))
+    now = game_time(g)
+    st = set_on(g, RC, "LastPickupTime", FLOAT, (r, "Racer"), value=(now, "ReturnValue"))
+    g.link(ba, "then", st, "execute")
+    sty = set_on(g, RC, "LastPickupType", BYTE, (r, "Racer"), value=("entry", "Type"), sub=enum_ref(struct_path(E_ITEM_TYPE)))
+    g.exec(st, sty)
+    log = log_line(g, "pickup ", (info, "Name"), " x", int_str(g, ("entry", "Charges")), " by ", name_of_entry(g, "C"))
+    g.exec(sty, log)
+    fire = g.call_delegate("OnItemPickedUp", [obj_pin("Racer", CONTROLLER), enum_pin("Type", E_ITEM_TYPE)])
+    g.link_entry("C", fire, "Racer")
+    g.link_entry("Type", fire, "Type")
+    g.exec(log, fire)
+    r_yes = ret(g, ReturnValue="true")
+    g.exec(fire, r_yes)
+    r_no2 = ret(g, ReturnValue="false")
+    g.link(ba, "else", r_no2, "execute")
+
+    # CycleItem(C): next inventory slot of C's racer
+    g = bp.function("CycleItem", inputs=["C:object:" + CONTROLLER])
+    r = find_racer(g, ("entry", "C"))
+    b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
+    g.link_entry("then", b, "execute")
+    cy = call(g, RC, "CycleSelected", (r, "Racer"))
+    g.link(b, "then", cy, "execute")
+
     # GetRespawnTransform(C): last gate, else gate 0, else the player start, else identity
     g = bp.function("GetRespawnTransform", inputs=["C:object:" + CONTROLLER], outputs=["Transform:struct:" + TRANSFORM])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
@@ -638,9 +848,11 @@ def build_mode() -> Blueprint:
               (get_on(g, VC, "VehicleMovement", OBJECT, car(), sub=cls_ref("/Script/PhysXVehicles.WheeledVehicleMovementComponent")), "VehicleMovement"),
               inputs=[Pin("bNewHandbrake", BOOL, default="false")])
     g.exec(sld, hb)
+    ce = call(g, VC, "ClearEffects", car())  # Phase 3: no boost or shield carries over a respawn
+    g.exec(hb, ce)
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
-    br = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (hb, "then"))
+    br = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (ce, "then"))
     zero = set_on(g, RC, "OffTrackSeconds", FLOAT, (r, "Racer"), default="0.0")
     g.link(br, "then", zero, "execute")
     fire = g.call_delegate("OnRacerRespawned", [obj_pin("Racer", CONTROLLER)])
@@ -936,10 +1148,11 @@ def build_mode() -> Blueprint:
     s_due = g.var_set("RespawnDueTime", FLOAT, default="-1.0")
     s_pend = g.var_set("PendingRespawnRacer", OBJECT, sub_object=cls_ref(CONTROLLER))
     g.exec(s_res, s_due, s_pend)
+    sweep = g.call_self("SweepItems")
     pc0 = get_player_controller(g)
     s_pl = g.local_set("Player", OBJECT, sub_object=cls_ref(PLAYER_CONTROLLER))
     g.link(pc0, "ReturnValue", s_pl, "Player")
-    g.exec(s_pend, s_pl)
+    g.exec(s_pend, sweep, s_pl)
     player = lambda: (g.local_get("Player", OBJECT, cls_ref(PLAYER_CONTROLLER)), "Player")
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     link(g, player(), r, "C")
@@ -955,7 +1168,8 @@ def build_mode() -> Blueprint:
     g.link(prev[0], prev[1], s_lc, "execute")
     resp = g.call_self("RespawnRacer", inputs=[obj_pin("C", CONTROLLER)])
     link(g, player(), resp, "C")
-    g.exec(s_lc, resp)
+    ci = call(g, RC, "ClearInventory", R_)
+    g.exec(s_lc, ci, resp)
     g.link(br, "else", resp, "execute")
     pawn = call(g, CONTROLLER, "K2_GetPawn", player(), outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
     bpw = branch_on(g, (valid(g, (pawn, "ReturnValue")), "ReturnValue"), (resp, "then"))

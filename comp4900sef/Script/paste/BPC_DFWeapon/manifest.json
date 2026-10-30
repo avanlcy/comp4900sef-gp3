@@ -71,7 +71,8 @@
    "name": "Fire",
    "inputs": [
     "Origin:struct:/Script/CoreUObject.Vector",
-    "Direction:struct:/Script/CoreUObject.Vector"
+    "Direction:struct:/Script/CoreUObject.Vector",
+    "Instigator:object:/Script/Engine.Controller"
    ],
    "outputs": [
     "bHit:bool",
@@ -132,8 +133,14 @@
     [
      "entry",
      "Direction",
-     "DFN_K2Node_CallFunction_8",
+     "DFN_K2Node_CallFunction_6",
      "HitFromDirection"
+    ],
+    [
+     "entry",
+     "Instigator",
+     "DFN_K2Node_CallFunction_6",
+     "EventInstigator"
     ]
    ]
   }

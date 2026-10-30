@@ -34,6 +34,25 @@ PROPS = [
     ('/Game/VehicleAdv/ArenaMesh/BumpWedge', (3000, 5000, 0), 45),
 ]
 
+# Phase 3 (spec 2026-10-30 §3): loot crates off the road (at least MIN_CRATE_DISTANCE from every road centre line, so a car
+# needs the off-track timer to reach one and a character on foot does not), and one parked target car for playtests.
+LOOT_BOXES = [('Boost', (5000, 2500)), ('Shield', (7000, 6500)), ('Bomb', (2500, 8500)),
+              ('Gun', (16500, 5500)), ('RPG', (-6500, 4500)), (None, (3000, 14000))]  # None = random
+MIN_CRATE_DISTANCE = 1500
+TARGET_CAR_DISTANCE = 3000  # cm along the main road from the start line
+TARGET_CAR_OFFSET = 1500    # cm sideways, toward the infield
+
+# Shortcut road (spec 2026-10-30 §7): an open second track from just after gate 1 to just before gate 2, bent toward the
+# middle of the loop, with a destructible rock across it ROCK_DISTANCE in from its entrance.
+SHORTCUT_FROM, SHORTCUT_TO = 0.25, 0.5          # fractions of the main loop (gates 1 and 2 sit at these)
+SHORTCUT_GATE_CLEARANCE = 1500                  # cm after gate 1 / before gate 2
+SHORTCUT_PULL = 0.1                             # how far the middle point moves toward the loop's centroid (more bows it as long as the main road)
+SHORTCUT_Z = -2.0                               # slab top 2 cm under the main road (no flicker at the junctions)
+MIN_SHORTCUT_SAVING = 1000                      # cm shorter than the main road between its junctions, or the builder refuses it
+ROCK_DISTANCE = 1000                            # first distance in from the entrance tried for the rock (then +250 steps)
+ROCK_SCALE = (4.0, 16.0, 4.0)                   # metres along the road, across it, tall (the mesh is a 1 m cube)
+ROCK_CLEARANCE = 900                            # cm from the main centre line for every rock corner (2 m outside the 7 m half-width)
+
 # Functional tests are laid out in rows south of the loop (open ground, away from the road and the infield props);
 # each test spawns its own cars within about 10 m of its actor.
 TEST_ORIGIN = (-4000, -7000, 200)
@@ -110,6 +129,95 @@ def world_settings():
     return settings
 
 
+def item_type_entry(cls, name):
+    """The Python enum entry for E_DFItemType.<name>: the editor wraps a Blueprint enum the first time one of its
+    values is read, so read the class default first."""
+    current = unreal.get_default_object(cls).get_editor_property('ItemType')
+    return getattr(type(current), name.upper())
+
+
+def centroid():
+    return vec(sum(x for x, _ in TRACK_POINTS) / len(TRACK_POINTS), sum(y for _, y in TRACK_POINTS) / len(TRACK_POINTS), 0)
+
+
+def distance_to_spline(spline, loc):
+    closest = spline.find_location_closest_to_world_location(loc, WORLD)
+    return (closest - loc).length()
+
+
+def place_crates(splines):
+    cls = bp_class(BP_DIR + '/BP_DFLootBox')
+    for name, (x, y) in LOOT_BOXES:
+        loc = vec(x, y, 30)
+        for spline in splines:
+            d = distance_to_spline(spline, loc)
+            if d < MIN_CRATE_DISTANCE:
+                raise RuntimeError('crate %s at (%d, %d) is only %.0f cm from a road' % (name, x, y, d))
+        crate = spawn(cls, loc, label='Crate_%s' % (name or 'Random'))
+        if name:
+            crate.set_editor_property('ItemType', item_type_entry(cls, name))
+        else:
+            crate.set_editor_property('bRandom', True)
+    return len(LOOT_BOXES)
+
+
+def build_shortcut(main_spline, length):
+    """Spawns the Shortcut track and its rock; returns (spline, pieces)."""
+    d1 = length * SHORTCUT_FROM + SHORTCUT_GATE_CLEARANCE
+    d2 = length * SHORTCUT_TO - SHORTCUT_GATE_CLEARANCE
+    p1 = main_spline.get_location_at_distance_along_spline(d1, WORLD)
+    p2 = main_spline.get_location_at_distance_along_spline(d2, WORLD)
+    c = centroid()
+    mid = (p1 + p2) * 0.5
+    mid = mid + (c - mid) * SHORTCUT_PULL
+    points = [vec(q.x, q.y, SHORTCUT_Z) for q in (p1, mid, p2)]
+    track = spawn(bp_class(BP_DIR + '/BP_DFTrackSpline'), vec(0, 0, 0), label='Shortcut')
+    track.set_editor_property('bIsMainTrack', False)
+    track.set_editor_property('bClosedTrack', False)  # RebuildTrack applies this flag itself; an instance's SetClosedLoop does not survive the rerun
+    spline = track.get_component_by_class(unreal.SplineComponent)
+    spline.set_spline_points(points, WORLD, True)
+    spline.set_closed_loop(False, True)
+    spline.set_editor_property('spline_has_been_edited', True)
+    track.set_editor_property('RoadWidth', float(track.get_editor_property('RoadWidth')))
+    spline = track.get_component_by_class(unreal.SplineComponent)
+    pieces = track.get_editor_property('GeneratedMeshCount')
+    shortcut_length = spline.get_spline_length()
+    want = max(1, int(math.ceil(shortcut_length / max(100.0, float(track.get_editor_property('PieceLength'))))))
+    if pieces != want or spline.is_closed_loop():
+        raise RuntimeError('shortcut construction failed: %d pieces (expected %d for %.0f cm), closed=%s'
+                           % (pieces, want, shortcut_length, spline.is_closed_loop()))
+    saving = (d2 - d1) - shortcut_length
+    if saving < MIN_SHORTCUT_SAVING:
+        raise RuntimeError('the shortcut saves only %.0f cm against %.0f cm of main road' % (saving, d2 - d1))
+    # the rock: the first distance in from the entrance where all four footprint corners clear the main road
+    half_x, half_y = 50.0 * ROCK_SCALE[0], 50.0 * ROCK_SCALE[1]
+    for rock_distance in range(ROCK_DISTANCE, 3001, 250):
+        t = spline.get_transform_at_distance_along_spline(rock_distance, WORLD)
+        fwd = spline.get_direction_at_distance_along_spline(rock_distance, WORLD)
+        right = spline.get_right_vector_at_distance_along_spline(rock_distance, WORLD)
+        corners = [t.translation + fwd * sx + right * sy for sx in (-half_x, half_x) for sy in (-half_y, half_y)]
+        clearance = min(distance_to_spline(main_spline, c) for c in corners)
+        if clearance >= ROCK_CLEARANCE:
+            break
+    else:
+        raise RuntimeError('no rock position on the shortcut clears the main road by %d cm' % ROCK_CLEARANCE)
+    # Shape_Cube's pivot is at its base: the block stands on the road top
+    rock = spawn(bp_class(BP_DIR + '/BP_DFDestructible'), vec(t.translation.x, t.translation.y, SHORTCUT_Z),
+                 rot(yaw=t.rotation.rotator().yaw), label='Rock')
+    rock.set_actor_scale3d(vec(*ROCK_SCALE))
+    return spline, pieces, saving, rock_distance
+
+
+def place_target_car(spline):
+    t = spline.get_transform_at_distance_along_spline(TARGET_CAR_DISTANCE, WORLD)
+    right = spline.get_right_vector_at_distance_along_spline(TARGET_CAR_DISTANCE, WORLD)
+    c = centroid()
+    a = t.translation + right * TARGET_CAR_OFFSET
+    b = t.translation - right * TARGET_CAR_OFFSET
+    loc = a if (a - c).length() < (b - c).length() else b
+    spawn(bp_class(BP_DIR + '/BP_DFVehicle'), vec(loc.x, loc.y, 30), rot(yaw=t.rotation.rotator().yaw), label='TargetCar')
+
+
 def functional_test_classes():
     classes = []
     for path in sorted(eal.list_assets(TESTS_DIR, recursive=False)):
@@ -158,6 +266,10 @@ def build(path):
     for mesh_path, (x, y, z), yaw in PROPS:
         spawn_static_mesh(mesh_path, vec(x, y, z), rot(yaw=yaw), label=mesh_path.rsplit('/', 1)[-1])
 
+    shortcut, shortcut_pieces, shortcut_saving, rock_distance = build_shortcut(spline, length)
+    crates = place_crates([spline, shortcut])
+    place_target_car(spline)
+
     (x0, y0), (x1, y1) = TRACK_POINTS[0], TRACK_POINTS[1]
     yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
     spawn(unreal.PlayerStart, vec(x0, y0, 30), rot(yaw=yaw), label='PlayerStart')
@@ -173,7 +285,8 @@ def build(path):
 
     if not ell.save_current_level():
         raise RuntimeError('could not save {}'.format(path))
-    return 'track %.0f cm, %d pieces, %d gates, %d tests' % (length, pieces, CHECKPOINT_COUNT, len(tests))
+    return 'track %.0f cm, %d pieces, %d gates, shortcut %.0f cm in %d pieces saving %.0f cm with the rock at %d cm, %d crates, %d tests' % (
+        length, pieces, CHECKPOINT_COUNT, shortcut.get_spline_length(), shortcut_pieces, shortcut_saving, rock_distance, crates, len(tests))
 
 
 def main(maps=None):

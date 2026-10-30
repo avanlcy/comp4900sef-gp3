@@ -1,0 +1,16 @@
+{
+ "kind": "struct",
+ "asset": "/Game/DeadFire/Data/S_DFItemStack",
+ "members": [
+  {
+   "name": "Type",
+   "type": "enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+   "default": ""
+  },
+  {
+   "name": "Charges",
+   "type": "int",
+   "default": "0"
+  }
+ ]
+}

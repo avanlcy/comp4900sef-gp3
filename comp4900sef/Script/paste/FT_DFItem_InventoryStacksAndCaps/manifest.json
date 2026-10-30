@@ -1,0 +1,17 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFItem_InventoryStacksAndCaps",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

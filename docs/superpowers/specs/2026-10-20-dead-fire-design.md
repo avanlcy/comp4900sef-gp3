@@ -93,7 +93,9 @@ Asset prefix `DF`: `BP_DF*` actors, `BPC_DF*` actor components, `WBP_DF*` widget
 | `BP_DFTrackSpline` | `Actor` | Closed spline whose construction script generates road slabs and optional barriers; the racing line for AI and progress/lateral queries | Lau Chun Kit (level/checkpoints) |
 | `BP_DFCheckpoint` | `Actor` | Ordered gate: trigger box + two poles; reports crossings to the GameMode; respawn transform | Lau Chun Kit |
 | `S_DFTireState`, `S_DFRaceResult`, `E_DFRaceEndReason` | struct / enum | Shared data types | Choy Tsz Lok |
-| `BP_DFItemBase`, `BP_DFLootBox` (Phase 3) | `Actor` | Pickups off-track, inventory entries, use-on-vehicle effects | Chong Tsz Ho |
+| `BP_DFLootBox`, `BP_DFBomb`, `BP_DFProjectile` (Phase 3) | `Actor` | Crates collected on foot; the dropped bomb; the rocket. The inventory lives on `BPC_DFRacer`, item use on `BP_DFVehicle`, item names/caps and the explosion rule on the GameMode (`docs/superpowers/specs/2026-10-30-phase3-items-design.md`) | Chong Tsz Ho |
+| `BP_DFDestructible`, `BP_DFExplosiveDamage` (Phase 3) | `Actor`, `DamageType` | Explosives-only rock on a shortcut road; the damage type explosions apply | Lau Chun Kit |
+| `E_DFItemType`, `S_DFItemStack` (Phase 3) | enum / struct | Item types; an inventory stack | Choy Tsz Lok |
 | `BP_DFVehicleAIController` (Phase 4) | `AIController` | NPC drivers following the track spline, item use, attacks | TBD |
 
 Hooks that other Blueprints or later phases listen to are **Event Dispatchers** (`OnVehicleDamaged`, `OnTireBlown`, `OnVehicleDestroyed`, `OnOccupantEntered/Exited`, `OnCharacterDamaged/Died/Revived`, `OnEnteredVehicle/ExitedVehicle`, `OnFired`, `OnRaceEnded`, `OnRacerRespawned`). Tunables are variables with **Instance Editable** on, under a `Dead Fire|...` category. The GameMode references the `BP_DF*` pawn and controller classes, so visual swaps are a class-default change.
@@ -131,7 +133,7 @@ The proposal's week plan maps to these phases. Each phase ends with a working bu
 | **1 — Foundation** (done in C++, superseded) | 6–7 | Vehicle driving + camera + HUD, on-foot character, enter/exit, damage plumbing, hitscan, track spline tool, test track level, input, GameMode/State skeleton |
 | **2 — Race flow** (done in C++, superseded) | 8–9 | Checkpoints, lap detection, timer + time bonus, score for laps/kills, race end + summary, respawn at last checkpoint, death count, UMG HUD |
 | **2B — Blueprint migration** (done 2026-10-22) | 9–10 | Remove the C++ module; rebuild the Phase 1 + 2 feature set in Blueprint on the template Blueprints; Blueprint Functional Tests; playtest checklist. Plan: `docs/superpowers/plans/2026-10-21-blueprint-migration.md` |
-| **3 — Items & damage** | 10–11 | Loot boxes off-track, inventory, item use from vehicle (boost, shield, bomb/mine, gun, RPG), tire penalties, vehicle destruction, destructible rock/waterfall shortcuts |
+| **3 — Items & damage** (done 2026-10-30) | 10–11 | Loot crates off-track (on foot only), three-slot inventory, item use from the car (boost, shield, bomb, gun, RPG), explosions with tire blasts, wreck effects, the explosives-only rock on a shortcut road; 15 more functional tests. Design: `docs/superpowers/specs/2026-10-30-phase3-items-design.md`; plan: `docs/superpowers/plans/2026-10-30-phase3-items.md` |
 | **4 — AI** | 11 | NPC drivers following the spline, avoidance, item use, attacking the player, respawn |
 | **5 — Menus & meta** | 12 | Main menu, vehicle select with stats, level select, unlocks (SaveGame), pause, summary, audio/VFX polish |
 | **6 — Test & ship** | 12–13 | Bug fixing, balance (score, items), packaged Windows build, presentation |

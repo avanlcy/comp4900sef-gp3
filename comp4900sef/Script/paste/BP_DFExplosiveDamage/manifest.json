@@ -1,0 +1,11 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFExplosiveDamage",
+ "parent": "/Script/Engine.DamageType",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {}
+}

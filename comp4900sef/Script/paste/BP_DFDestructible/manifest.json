@@ -1,0 +1,85 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFDestructible",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Rock",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/StarterContent/Shapes/Shape_Cube",
+    "relative_scale3d": {
+     "vector": [
+      3.0,
+      3.0,
+      3.0
+     ]
+    },
+    "call:set_collision_profile_name": "BlockAllDynamic",
+    "override_materials": [
+     "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid"
+    ]
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "Health",
+   "type": "float",
+   "default": "60",
+   "category": "Dead Fire|Destructible",
+   "editable": true
+  },
+  {
+   "name": "bExplosivesOnly",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Destructible",
+   "editable": true
+  },
+  {
+   "name": "bDestroyed",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Destructible",
+   "editable": false
+  }
+ ],
+ "dispatchers": [
+  {
+   "name": "OnDestructibleDestroyed",
+   "params": []
+  }
+ ],
+ "functions": [
+  {
+   "name": "Demolish",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "Demolish",
+   "file": "Demolish.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

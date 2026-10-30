@@ -437,10 +437,9 @@ def track_tests():
     out = []
 
     def main_track(t):
-        all_ = t.static(GAMEPLAY, "GetAllActorsOfClass",
-                        inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("ActorClass", "class", sub_object=cls_ref(ACTOR), default_object=TC)],
-                        outputs=[Pin("OutActors", OBJECT, "out", cls_ref(TC), container="Array")])
-        return t.item((all_, "OutActors"), TC)
+        # Phase 3 adds a shortcut track actor, so the main loop is the one the GameMode flagged, not actor [0]
+        gm = t.game_mode()
+        return t.get(GMC, "MainTrack", OBJECT, gm, sub=cls_ref(TC))
 
     t = T("FT_DFTrack_ClosedLoopGeneratesSegments", "The test track's loop is about 491 m and is laid with road pieces only (no barriers).")
     tr = main_track(t)
@@ -696,6 +695,11 @@ def screenshot_test():
     run in a rendering editor; headless runs produce black images. Sorted last (ZZ) so it runs after the others."""
     t = T("FT_DFZZ_Screenshots", "Captures race HUD, on-foot and summary screenshots (run in the editor for real images).")
     pc, gm, gs, racer, gates = race_context(t)
+    from df import E_ITEM_TYPE, ITEM_BOMB, ITEM_SHIELD  # Phase 3: two items in the inventory so the HUD row shows
+    for item in (ITEM_SHIELD, ITEM_BOMB):
+        gi = t.call(GMC, "GrantItem", gm, inputs=[obj_pin("C", CONTROLLER), enum_pin("Type", E_ITEM_TYPE, default=item), Pin("Charges", INT, default="1")],
+                    outputs=[Pin("ReturnValue", BOOL, "out")])
+        t.link(pc, gi, "C")
 
     def shot():
         t.static("KismetSystemLibrary", "ExecuteConsoleCommand",

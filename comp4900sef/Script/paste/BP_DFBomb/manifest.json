@@ -1,0 +1,155 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFBomb",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Shell",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/StarterContent/Shapes/Shape_Sphere",
+    "relative_scale3d": {
+     "vector": [
+      0.5,
+      0.5,
+      0.5
+     ]
+    },
+    "call:set_collision_profile_name": "OverlapOnlyPawn",
+    "override_materials": [
+     "/Game/VehicleAdv/Materials/MaterialInstances/SolidRed"
+    ]
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "ArmDelay",
+   "type": "float",
+   "default": "1",
+   "category": "Dead Fire|Bomb",
+   "editable": true
+  },
+  {
+   "name": "FuseSeconds",
+   "type": "float",
+   "default": "8",
+   "category": "Dead Fire|Bomb",
+   "editable": true
+  },
+  {
+   "name": "Damage",
+   "type": "float",
+   "default": "60",
+   "category": "Dead Fire|Bomb",
+   "editable": true
+  },
+  {
+   "name": "Radius",
+   "type": "float",
+   "default": "500",
+   "category": "Dead Fire|Bomb",
+   "editable": true
+  },
+  {
+   "name": "bArmed",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Bomb",
+   "editable": false
+  },
+  {
+   "name": "bExploded",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Bomb",
+   "editable": false
+  },
+  {
+   "name": "SpawnTime",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Bomb",
+   "editable": false
+  },
+  {
+   "name": "InstigatorController",
+   "type": "object:/Script/Engine.Controller",
+   "default": "",
+   "category": "Dead Fire|Bomb",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "Arm",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "Detonate",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  },
+  {
+   "name": "PlaceOnGround",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "Arm",
+   "file": "Arm.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "Detonate",
+   "file": "Detonate.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "PlaceOnGround",
+   "file": "PlaceOnGround.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_3",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

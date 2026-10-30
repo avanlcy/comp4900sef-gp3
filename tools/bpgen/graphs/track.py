@@ -124,6 +124,7 @@ def build() -> Blueprint:
     bp.component("Spline", SPLINE_COMP, closed_loop=True)
     T = "Dead Fire|Track"
     bp.variable("bIsMainTrack", "bool", "true", T, editable=True)
+    bp.variable("bClosedTrack", "bool", "true", T, editable=True)  # the loop flag the construction script applies (Phase 3: open shortcuts)
     bp.variable("RoadMesh", "object:" + STATIC_MESH, "", T, editable=True)
     bp.variable("RoadMaterial", "object:" + MATERIAL, "", T, editable=True)
     bp.variable("RoadWidth", "float", "1400", T, editable=True)
@@ -209,10 +210,15 @@ def build() -> Blueprint:
     ucs.link_entry("then", call, "execute")
 
     g = bp.function("RebuildTrack")
+    # the spline's closed-loop flag is not component instance data and reverts to the template on every rebuild, so the
+    # track sets it from its own variable before measuring anything
+    closed = g.var_get("bClosedTrack", BOOL)
+    loop_state = spline_call(g, "SetClosedLoop", inputs=[Pin("bInClosedLoop", BOOL), Pin("bUpdateSpline", BOOL, default="true")], pure=False)
+    g.link(closed, "bClosedTrack", loop_state, "bInClosedLoop")
+    g.link_entry("then", loop_state, "execute")
     z1 = g.var_set("SegmentCount", INT, default="0")
     z2 = g.var_set("GeneratedMeshCount", INT, default="0")
-    g.link_entry("then", z1, "execute")
-    g.exec(z1, z2)
+    g.exec(loop_state, z1, z2)
     npts = spline_call(g, "GetNumberOfSplinePoints", outputs=[Pin("ReturnValue", INT, "out")])
     ge2 = compare(g, "GreaterEqual_IntInt", INT, b="2")
     g.link(npts, "ReturnValue", ge2, "A")

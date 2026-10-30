@@ -8,11 +8,11 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from bpgen import WidgetBlueprint, cls_ref, struct_ref  # noqa: E402
-from df import (BOOL, BP_CHARACTER, BP_GM, BP_GS, BP_HUD, BP_PC, BP_VEHICLE, BPC_RACER, CONTROLLER, FLOAT, GAMEPLAY,  # noqa: E402
-                INT, LINEAR_COLOR, MATH, OBJECT, OUT, PLAYER_CONTROLLER, S_RESULT, S_TIRE, STRING, STRUCT, VECTOR,
-                WBP_HUD, WBP_SUMMARY, Blueprint, Graph, Node, Pin, and_bool, as_pin, compare, enum_pin, game_time, gen,
-                is_valid, math2, member, native_enum_pin, not_bool, obj_pin, obj_spec, struct_path, struct_pin,
-                struct_spec)
+from df import (BOOL, BP_CHARACTER, BP_GM, BP_GS, BP_HUD, BP_PC, BP_VEHICLE, BPC_RACER, CONTROLLER, E_ITEM_TYPE, FLOAT,  # noqa: E402
+                GAMEPLAY, INT, LINEAR_COLOR, MATH, OBJECT, OUT, PLAYER_CONTROLLER, S_ITEM_STACK, S_RESULT, S_TIRE, STRING,
+                STRUCT, VECTOR, WBP_HUD, WBP_SUMMARY, Blueprint, Graph, Node, Pin, and_bool, as_pin, compare, enum_pin,
+                game_time, gen, is_valid, math2, member, native_enum_pin, not_bool, obj_pin, obj_spec, struct_path,
+                struct_pin, struct_spec)
 
 UMG = "/Script/UMG"
 TEXT_BLOCK, PROGRESS, VBOX, HBOX, BUTTON, BORDER, SIZEBOX, WIDGET, USER_WIDGET = (
@@ -23,7 +23,9 @@ GEOMETRY = "/Script/SlateCore.Geometry"
 VIS = "/Script/UMG.ESlateVisibility"
 VC, CC, PCC, GMC, GSC, RC = gen(BP_VEHICLE), gen(BP_CHARACTER), gen(BP_PC), gen(BP_GM), gen(BP_GS), gen(BPC_RACER)
 WHUD, WSUM, HUDC = gen(WBP_HUD), gen(WBP_SUMMARY), gen(BP_HUD)
-TIRE, RESULT = struct_path(S_TIRE), struct_path(S_RESULT)
+TIRE, RESULT, ITEM = struct_path(S_TIRE), struct_path(S_RESULT), struct_path(S_ITEM_STACK)
+ITEM_ENUM = enum_pin("x", E_ITEM_TYPE).sub_object
+PICKUP_FLASH_SECONDS = 1.5
 WHITE, RED, AMBER, SHADOW = [1, 1, 1, 1], [1, 0.15, 0.1, 1], [1, 0.75, 0.2, 1], [0, 0, 0, 0.8]
 
 
@@ -64,6 +66,30 @@ def pick(g, a, b, cond):
             g.link(v[0], v[1], n, pin)
     g.link(cond[0], cond[1], n, "bPickA")
     return (n, "ReturnValue")
+
+
+def one_decimal(g, src):
+    """Seconds as a string with one decimal, rounded up (4.2)."""
+    tenths = math2(g, "Multiply_FloatFloat", FLOAT, b="10.0")
+    g.link(src[0], src[1], tenths, "A")
+    ceil = g.call_static(MATH, "FCeil", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
+    g.link(tenths, "ReturnValue", ceil, "A")
+    tf = g.call_static(MATH, "Conv_IntToFloat", inputs=[Pin("InInt", INT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(ceil, "ReturnValue", tf, "InInt")
+    secs = math2(g, "Divide_FloatFloat", FLOAT, b="10.0")
+    g.link(tf, "ReturnValue", secs, "A")
+    fs = g.call_static("KismetStringLibrary", "Conv_FloatToString", inputs=[Pin("InFloat", FLOAT)], outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
+    g.link(secs, "ReturnValue", fs, "InFloat")
+    return (fs, "ReturnValue")
+
+
+def amber(g, widget: str, cond, prev):
+    w = g.var_get(widget, OBJECT, cls_ref(TEXT_BLOCK))
+    n = g.call_self("SetAmber", inputs=[obj_pin("Target", TEXT_BLOCK), Pin("bAmber", BOOL)])
+    g.link(w, widget, n, "Target")
+    g.link(cond[0], cond[1], n, "bAmber")
+    g.link(prev[0], prev[1], n, "execute")
+    return n
 
 
 def label(g, widget: str, text_src, prev):
@@ -121,6 +147,20 @@ def add_widget_helpers(bp: Blueprint):
         g.link_entry("Target", n, "self")
         g.link(b, out, n, "execute")
 
+    g = bp.function("SetAmber", inputs=["Target:object:" + TEXT_BLOCK, "bAmber:bool"])
+    col = g.call_static(MATH, "SelectColor", inputs=[struct_pin("A", LINEAR_COLOR, default="(R=1.000000,G=0.750000,B=0.200000,A=1.000000)"),
+                                                      struct_pin("B", LINEAR_COLOR, default="(R=1.000000,G=1.000000,B=1.000000,A=1.000000)"),
+                                                      Pin("bPickA", BOOL)],
+                        outputs=[struct_pin("ReturnValue", LINEAR_COLOR, "out")], pure=True)
+    g.link_entry("bAmber", col, "bPickA")
+    sc = g.make_struct(SLATE_COLOR, [struct_pin("SpecifiedColor", LINEAR_COLOR),
+                                     native_enum_pin("ColorUseRule", "/Script/SlateCore.ESlateColorStylingMode", "UseColor_Specified")])
+    g.link(col, "ReturnValue", sc, "SpecifiedColor")
+    st = g.call_on(TEXT_BLOCK, "SetColorAndOpacity", inputs=[struct_pin("InColorAndOpacity", SLATE_COLOR)])
+    g.link_entry("Target", st, "self")
+    g.link(sc, "SlateColor", st, "InColorAndOpacity")
+    g.link_entry("then", st, "execute")
+
     g = bp.function("SetRed", inputs=["Target:object:" + TEXT_BLOCK, "bRed:bool"])
     col = g.call_static(MATH, "SelectColor", inputs=[struct_pin("A", LINEAR_COLOR, default="(R=1.000000,G=0.150000,B=0.100000,A=1.000000)"),
                                                       struct_pin("B", LINEAR_COLOR, default="(R=1.000000,G=1.000000,B=1.000000,A=1.000000)"),
@@ -166,6 +206,13 @@ def build_hud() -> WidgetBlueprint:
               {"anchors": [0.5, 0.72, 0.5, 0.72], "alignment": [0.5, 0.5], "auto_size": True})
     bp.widget("WarningText", TEXT_BLOCK, None, text_props("", 40, AMBER, "Center"),
               {"anchors": [0.5, 0.4, 0.5, 0.4], "alignment": [0.5, 0.5], "auto_size": True})
+    # Phase 3 (spec §9): item row at the bottom centre, effect line above, key hint below
+    bp.widget("ItemPanel", VBOX, None, slot={"anchors": [0.5, 1, 0.5, 1], "alignment": [0.5, 1], "position": [0, -120], "auto_size": True})
+    bp.widget("EffectText", TEXT_BLOCK, "ItemPanel", text_props("", 22, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 4]})
+    bp.widget("ItemRow", HBOX, "ItemPanel", slot={"h_align": "Center"})
+    for i in range(3):
+        bp.widget("Slot%dText" % i, TEXT_BLOCK, "ItemRow", text_props("-", 24), {"padding": [12, 0, 12, 0]})
+    bp.widget("ItemHintText", TEXT_BLOCK, "ItemPanel", text_props("[Q] USE   [R] NEXT", 18, justify="Center"), {"h_align": "Center", "padding": [0, 4, 0, 0]})
     add_widget_helpers(bp)
 
     # RefreshCar(Car): speed, gear, health, tires, exit prompt
@@ -248,6 +295,67 @@ def build_hud() -> WidgetBlueprint:
     g.link(near, "ReturnValue", nv, "Object")
     label(g, "PromptText", pick(g, "[E] Enter vehicle", "", (nv, "ReturnValue")), (near, "then"))
 
+    # RefreshItems(Racer, Car): three slot labels (selected in amber), the effect line and the key hint (spec §9)
+    g = bp.function("RefreshItems", inputs=["Racer:object:" + RC, "Car:" + obj_spec(BP_VEHICLE)])
+    gm_ = g.call_static(GAMEPLAY, "GetGameMode", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
+                        outputs=[obj_pin("ReturnValue", "/Script/Engine.GameModeBase", "out")], pure=True)
+    gm = g.cast(GMC)
+    g.link(gm_, "ReturnValue", gm, "Object")
+    g.link_entry("then", gm, "execute")
+    inv = g.var_get_on(RC, "Inventory", STRUCT, struct_ref(ITEM), container="Array")
+    g.link_entry("Racer", inv, "self")
+    ln = g.call_array("KismetArrayLibrary", "Array_Length", Pin("e", STRUCT, sub_object=struct_ref(ITEM)), outputs=[Pin("ReturnValue", INT, "out")])
+    g.link(inv, "Inventory", ln, "TargetArray")
+    sel = g.var_get_on(RC, "SelectedSlot", INT)
+    g.link_entry("Racer", sel, "self")
+    prev = (gm, "then")
+    for i in range(3):
+        has = compare(g, "Less_IntInt", INT, a=str(i))
+        g.link(ln, "ReturnValue", has, "B")
+        bi = g.branch()
+        g.link(has, "ReturnValue", bi, "Condition")
+        g.link(prev[0], prev[1], bi, "execute")
+        item = g.call_array("KismetArrayLibrary", "Array_Get", Pin("e", STRUCT, sub_object=struct_ref(ITEM)), inputs=[Pin("Index", INT, default=str(i))],
+                            outputs=[Pin("Item", STRUCT, "out", struct_ref(ITEM))])
+        inv_i = g.var_get_on(RC, "Inventory", STRUCT, struct_ref(ITEM), container="Array")
+        g.link_entry("Racer", inv_i, "self")
+        g.link(inv_i, "Inventory", item, "TargetArray")
+        br = g.break_struct(ITEM, [enum_pin(member(S_ITEM_STACK, "Type"), E_ITEM_TYPE, "out"), Pin(member(S_ITEM_STACK, "Charges"), INT, "out")])
+        g.link(item, "Item", br, ITEM.rsplit(".", 1)[1])
+        info = g.call_on(GMC, "GetItemInfo", inputs=[enum_pin("Type", E_ITEM_TYPE)],
+                         outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
+        g.link(gm, as_pin(BP_GM), info, "self")
+        g.link(br, member(S_ITEM_STACK, "Type"), info, "Type")
+        filled = label(g, "Slot%dText" % i, cat(g, (info, "Name"), " x", s_int(g, (br, member(S_ITEM_STACK, "Charges")))), (bi, "then"))
+        empty = label(g, "Slot%dText" % i, cat(g, "-"), (bi, "else"))
+        is_sel = compare(g, "EqualEqual_IntInt", INT, a=str(i))
+        g.link(sel, "SelectedSlot", is_sel, "B")
+        both = and_bool(g)
+        g.link(is_sel, "ReturnValue", both, "A")
+        g.link(has, "ReturnValue", both, "B")
+        am = amber(g, "Slot%dText" % i, (both, "ReturnValue"), (filled, "then"))
+        g.link(empty, "then", am, "execute")
+        prev = (am, "then")
+    cv = is_valid(g)
+    g.link_entry("Car", cv, "Object")
+    hint = shown(g, "ItemHintText", TEXT_BLOCK, (cv, "ReturnValue"), prev)
+    bc = g.branch()
+    g.link(cv, "ReturnValue", bc, "Condition")
+    g.exec(hint, bc)
+    boost = g.var_get_on(VC, "BoostRemaining", FLOAT)
+    g.link_entry("Car", boost, "self")
+    shield = g.var_get_on(VC, "ShieldRemaining", FLOAT)
+    g.link_entry("Car", shield, "self")
+    b_on = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link(boost, "BoostRemaining", b_on, "A")
+    s_on = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link(shield, "ShieldRemaining", s_on, "A")
+    shield_text = cat(g, "SHIELD ", one_decimal(g, (shield, "ShieldRemaining")))
+    with_boost = pick(g, cat(g, "BOOST   ", shield_text), "BOOST", (s_on, "ReturnValue"))
+    without = pick(g, shield_text, "", (s_on, "ReturnValue"))
+    label(g, "EffectText", pick(g, with_boost, without, (b_on, "ReturnValue")), (bc, "then"))
+    label(g, "EffectText", cat(g, ""), (bc, "else"))
+
     # RefreshWarning(PC, GM, Racer): WRECKED > YOU DIED > RETURN TO TRACK n.n > CHECKPOINT +8 s (1.5 s) > nothing
     g = bp.function("RefreshWarning", inputs=["PC:" + obj_spec(BP_PC), "GM:" + obj_spec(BP_GM), "Racer:object:" + RC])
     car = g.var_get_on(PCC, "CurrentVehicle", OBJECT, cls_ref(VC))
@@ -298,7 +406,27 @@ def build_hud() -> WidgetBlueprint:
     bonus = g.var_get_on(GMC, "CheckpointTimeBonus", FLOAT)
     g.link_entry("GM", bonus, "self")
     cp_text = cat(g, "CHECKPOINT  +", s_floor(g, (bonus, "CheckpointTimeBonus")), " s")
-    timers = pick(g, off_text, pick(g, cp_text, "", (recent, "ReturnValue")), (is_off, "ReturnValue"))
+    # Phase 3: PICKED UP <item> for PICKUP_FLASH_SECONDS after a crate (spec §9)
+    lpt = g.var_get_on(RC, "LastPickupTime", FLOAT)
+    g.link_entry("Racer", lpt, "self")
+    since_p = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link(game_time(g), "ReturnValue", since_p, "A")
+    g.link(lpt, "LastPickupTime", since_p, "B")
+    fresh_p = compare(g, "Less_FloatFloat", FLOAT, b="%f" % PICKUP_FLASH_SECONDS)
+    g.link(since_p, "ReturnValue", fresh_p, "A")
+    ever_p = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
+    g.link(lpt, "LastPickupTime", ever_p, "A")
+    recent_p = and_bool(g)
+    g.link(fresh_p, "ReturnValue", recent_p, "A")
+    g.link(ever_p, "ReturnValue", recent_p, "B")
+    lptype = g.var_get_on(RC, "LastPickupType", "byte", ITEM_ENUM)
+    g.link_entry("Racer", lptype, "self")
+    pinfo = g.call_on(GMC, "GetItemInfo", inputs=[enum_pin("Type", E_ITEM_TYPE)],
+                      outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
+    g.link_entry("GM", pinfo, "self")
+    g.link(lptype, "LastPickupType", pinfo, "Type")
+    pickup_text = pick(g, cat(g, "PICKED UP ", (pinfo, "Name")), "", (recent_p, "ReturnValue"))
+    timers = pick(g, off_text, pick(g, cp_text, pickup_text, (recent, "ReturnValue")), (is_off, "ReturnValue"))
     wrecked = g.var_get_on(VC, "bIsDestroyed", BOOL)
     g.link(car, "CurrentVehicle", wrecked, "self")
     label(g, "WarningText", pick(g, "WRECKED", timers, (wrecked, "bIsDestroyed")), (b, "then"))
@@ -371,12 +499,16 @@ def build_hud() -> WidgetBlueprint:
     ch = get_on(g, PCC, "OnFootCharacter", OBJECT, PC, sub=cls_ref(CC))
     g.link(ch[0], ch[1], rf, "Character")
     g.link(bc, "else", rf, "execute")
+    ri = g.call_self("RefreshItems", inputs=[obj_pin("Racer", RC), obj_pin("Car", VC)])
+    g.link(R[0], R[1], ri, "Racer")
+    g.link(car[0], car[1], ri, "Car")
+    g.exec(rc, ri)
+    g.exec(rf, ri)
     rw = g.call_self("RefreshWarning", inputs=[obj_pin("PC", PCC), obj_pin("GM", GMC), obj_pin("Racer", RC)])
     g.link(PC[0], PC[1], rw, "PC")
     g.link(GM[0], GM[1], rw, "GM")
     g.link(R[0], R[1], rw, "Racer")
-    g.exec(rc, rw)
-    g.exec(rf, rw)
+    g.exec(ri, rw)
 
     g = bp.event_graph()
     tick = g.event(USER_WIDGET, "Tick", [struct_pin("MyGeometry", GEOMETRY), Pin("InDeltaTime", FLOAT)], col=0, row=1)

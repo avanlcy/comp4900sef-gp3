@@ -91,7 +91,9 @@ def _compile(bp, what):
 
 
 def _value(v):
-    """JSON default -> Python value for set_editor_property (asset paths are loaded)."""
+    """JSON default -> Python value for set_editor_property (asset paths are loaded; lists element-wise)."""
+    if isinstance(v, list):
+        return [_value(x) for x in v]
     if isinstance(v, dict) and "vector" in v:
         return unreal.Vector(*[float(x) for x in v["vector"]])
     if isinstance(v, str):
@@ -255,7 +257,12 @@ def pass1(m):
         _check(A.add_variable(bp, v["name"], v["type"], v.get("default", ""), v.get("category", ""), v.get("editable", False)), "%s var %s" % (m["asset"], v["name"]))
     for d in m.get("dispatchers", []):
         _check(A.add_event_dispatcher(bp, d["name"], d.get("params", [])), "%s dispatcher %s" % (m["asset"], d["name"]))
+    # a function that already exists is removed and re-added so a changed signature (inputs, outputs, pure) takes effect;
+    # its graph is re-imported in pass 2 anyway and callers resolve it by name
+    existing = set(json.loads(A.describe_blueprint(bp))["functions"])
     for f in m.get("functions", []):
+        if f["name"] in existing:
+            _check(A.remove_function(bp, f["name"]), "%s remove function %s" % (m["asset"], f["name"]))
         _check(A.add_function(bp, f["name"], f.get("inputs", []), f.get("outputs", []), f.get("pure", False), f.get("category", "")), "%s function %s" % (m["asset"], f["name"]))
         for loc in f.get("locals", []):
             lname, _, rest = loc.partition(":")

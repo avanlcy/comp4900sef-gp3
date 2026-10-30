@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from df import OUT  # noqa: E402
 
-MODULES = ["stubs", "data", "weapon", "character", "vehicle", "racer", "track", "checkpoint", "game_mode", "hud", "tests"]
+MODULES = ["stubs", "data", "weapon", "character", "vehicle", "racer", "track", "checkpoint", "game_mode", "hud", "items", "tests", "tests_items"]
 
 
 def load(name):

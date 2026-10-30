@@ -1,0 +1,132 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFProjectile",
+ "parent": "/Script/Engine.Actor",
+ "components": [
+  {
+   "name": "Collision",
+   "class": "/Script/Engine.SphereComponent",
+   "parent": "",
+   "properties": {
+    "sphere_radius": 15.0,
+    "call:set_collision_profile_name": "BlockAllDynamic",
+    "call:set_notify_rigid_body_collision": true
+   }
+  },
+  {
+   "name": "Mesh",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Collision",
+   "properties": {
+    "static_mesh": "/Game/StarterContent/Shapes/Shape_Sphere",
+    "relative_scale3d": {
+     "vector": [
+      0.3,
+      0.3,
+      0.3
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "override_materials": [
+     "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
+    ]
+   }
+  },
+  {
+   "name": "Trail",
+   "class": "/Script/Engine.ParticleSystemComponent",
+   "parent": "Collision",
+   "properties": {
+    "template": "/Game/StarterContent/Particles/P_Fire",
+    "relative_scale3d": {
+     "vector": [
+      0.3,
+      0.3,
+      0.3
+     ]
+    }
+   }
+  },
+  {
+   "name": "Movement",
+   "class": "/Script/Engine.ProjectileMovementComponent",
+   "parent": "",
+   "properties": {
+    "initial_speed": 6000.0,
+    "max_speed": 6000.0,
+    "projectile_gravity_scale": 0.05,
+    "rotation_follows_velocity": true,
+    "should_bounce": false,
+    "initial_velocity_in_local_space": true
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "Damage",
+   "type": "float",
+   "default": "80",
+   "category": "Dead Fire|Rocket",
+   "editable": true
+  },
+  {
+   "name": "Radius",
+   "type": "float",
+   "default": "600",
+   "category": "Dead Fire|Rocket",
+   "editable": true
+  },
+  {
+   "name": "LifeSeconds",
+   "type": "float",
+   "default": "4",
+   "category": "Dead Fire|Rocket",
+   "editable": true
+  },
+  {
+   "name": "InstigatorController",
+   "type": "object:/Script/Engine.Controller",
+   "default": "",
+   "category": "Dead Fire|Rocket",
+   "editable": false
+  },
+  {
+   "name": "bExploded",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Rocket",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "Explode",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": []
+  }
+ ],
+ "graphs": [
+  {
+   "name": "Explode",
+   "file": "Explode.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ]
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": []
+  }
+ ],
+ "defaults": {}
+}

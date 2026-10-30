@@ -1,0 +1,12 @@
+{
+ "kind": "enum",
+ "asset": "/Game/DeadFire/Data/E_DFItemType",
+ "values": [
+  "None",
+  "Boost",
+  "Shield",
+  "Bomb",
+  "Gun",
+  "RPG"
+ ]
+}
