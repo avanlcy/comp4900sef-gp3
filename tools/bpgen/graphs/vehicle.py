@@ -77,7 +77,7 @@ def result_bool(g: Graph, value: str) -> Node:
 
 
 def build() -> Blueprint:
-    bp = Blueprint(BP_VEHICLE, parent=SEDAN)
+    bp = Blueprint(BP_VEHICLE, parent=SEDAN, description="The race car: health and tires, damage, wrecking, enter/exit, item use; driving and cameras come from the Sedan template.")
     bp.component("Weapon", gen(BPC_WEAPON), Damage=15.0, Range=10000.0, Cooldown=0.2, bDebugTrace=False)  # the car's gun (spec §2)
     H, E = "Dead Fire|Health", "Dead Fire|Enter Exit"
     bp.variable("MaxHealth", "float", "100", H, editable=True)
@@ -108,6 +108,12 @@ def build() -> Blueprint:
     bp.variable("BombDropOffset", "float", "400", I, editable=True)
     bp.variable("MuzzleForward", "float", "300", I, editable=True)
     bp.variable("MuzzleUp", "float", "80", I, editable=True)
+    A = "Dead Fire|AI"  # Phase 4: an AI controller's inputs (spec §2.1); the axis events never fire for an AI-possessed pawn
+    bp.variable("bAIControlled", "bool", "false", A)
+    bp.variable("AIThrottle", "float", "0", A)
+    bp.variable("AISteering", "float", "0", A)
+    bp.variable("bAIHandbrake", "bool", "false", A)
+    bp.variable("AimTarget", "object:" + ACTOR, "", A)  # set by an AI for one shot: the gun and the rocket aim at it (spec §3.2)
 
     bp.dispatcher("OnVehicleDamaged", ["Damage:float", "TireIndex:int"])
     bp.dispatcher("OnTireBlown", ["TireIndex:int"])
@@ -116,7 +122,7 @@ def build() -> Blueprint:
     bp.dispatcher("OnOccupantExited", ["Character:" + obj_spec(BP_CHARACTER)])
 
     # ---- InitTires: Tires = four fresh entries ----
-    g = bp.function("InitTires")
+    g = bp.function("InitTires", doc="Four fresh tires at TireMaxHealth.")
     clear = g.call_array("KismetArrayLibrary", "Array_Clear", tire_elem(), pure=False)
     arr = tires_get(g)
     g.link(arr, "Tires", clear, "TargetArray")
@@ -139,7 +145,7 @@ def build() -> Blueprint:
     g.exec(prev, zero)
 
     # ---- GetSpeedKPH ----
-    g = bp.function("GetSpeedKPH", outputs=["KPH:float"], pure=True)
+    g = bp.function("GetSpeedKPH", doc="Absolute forward speed in km/h.", outputs=["KPH:float"], pure=True)
     fwd = mv_call(g, "GetForwardSpeed", outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
     ab = g.call_static(MATH, "Abs", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
     mul = math2(g, "Multiply_FloatFloat", FLOAT, b="0.036")
@@ -149,7 +155,7 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # ---- GetGearString: R / N / number ----
-    g = bp.function("GetGearString", outputs=["Gear:string"], pure=True)
+    g = bp.function("GetGearString", doc="R, N or the gear number for the HUD.", outputs=["Gear:string"], pure=True)
     gear = mv_call(g, "GetCurrentGear", outputs=[Pin("ReturnValue", INT, "out")], pure=True)
     lt = compare(g, "Less_IntInt", INT, b="0")
     eq = compare(g, "EqualEqual_IntInt", INT, b="0")
@@ -172,12 +178,12 @@ def build() -> Blueprint:
     g.link(b2, "else", r_num, "execute")
 
     # ---- GetBlownTireCount / GetThrottleScale / IsBelowExitSpeed / CanBeEntered ----
-    g = bp.function("GetBlownTireCount", outputs=["Count:int"], pure=True)
+    g = bp.function("GetBlownTireCount", doc="How many tires are blown.", outputs=["Count:int"], pure=True)
     c = g.var_get("BlownTireCount", INT)
     g.link_result(c, "BlownTireCount", "Count")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetThrottleScale", outputs=["Scale:float"], pure=True)
+    g = bp.function("GetThrottleScale", doc="BlownTireSpeedScale to the power of the blown tire count.", outputs=["Scale:float"], pure=True)
     base = g.var_get("BlownTireSpeedScale", FLOAT)
     cnt = g.var_get("BlownTireCount", INT)
     conv = g.call_static(MATH, "Conv_IntToFloat", inputs=[Pin("InInt", INT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
@@ -189,7 +195,7 @@ def build() -> Blueprint:
     g.link_result(pw, "ReturnValue", "Scale")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("IsBelowExitSpeed", outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("IsBelowExitSpeed", doc="Slow enough to get out.", outputs=["ReturnValue:bool"], pure=True)
     sp = g.call_self("GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True)
     mx = g.var_get("ExitMaxSpeedKPH", FLOAT)
     lt = compare(g, "Less_FloatFloat", FLOAT)
@@ -198,7 +204,7 @@ def build() -> Blueprint:
     g.link_result(lt, "ReturnValue", "ReturnValue")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("CanBeEntered", outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("CanBeEntered", doc="No occupant and not wrecked.", outputs=["ReturnValue:bool"], pure=True)
     occ = g.var_get("Occupant", OBJECT, cls_ref(CC))
     valid = is_valid(g)
     g.link(occ, "Occupant", valid, "Object")
@@ -214,7 +220,7 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # ---- FindTireIndexForHit(BoneName, ImpactPoint) -> Index ----
-    g = bp.function("FindTireIndexForHit", inputs=["BoneName:name", "ImpactPoint:struct:" + VECTOR],
+    g = bp.function("FindTireIndexForHit", doc="The tire hit: by wheel bone, else the nearest wheel socket within TireHitRadius; -1 for the body.", inputs=["BoneName:name", "ImpactPoint:struct:" + VECTOR],
                     outputs=["Index:int"], locals=["Best:int=-1", "BestDist:float=0"])
     init = g.local_set("BestDist", FLOAT)
     rad = g.var_get("TireHitRadius", FLOAT)
@@ -269,7 +275,7 @@ def build() -> Blueprint:
     g.link_extra(loop2, "Completed", "result", "execute")
 
     # ---- ApplyTireDamage(Index, Damage) ----
-    g = bp.function("ApplyTireDamage", inputs=["Index:int", "Damage:float"])
+    g = bp.function("ApplyTireDamage", doc="Takes health off one tire; at 0 it is blown and the count and OnTireBlown update.", inputs=["Index:int", "Damage:float"])
     get = g.call_array("KismetArrayLibrary", "Array_Get", tire_elem(), inputs=[Pin("Index", INT)],
                        outputs=[Pin("Item", STRUCT, "out", struct_ref_tire())])
     ta = tires_get(g)
@@ -315,7 +321,7 @@ def build() -> Blueprint:
     g.exec(setc, fire)
 
     # ---- BlowNearestTire(Point, Damage): explosion tire blast on the wheel socket nearest the point (spec §5) ----
-    g = bp.function("BlowNearestTire", inputs=["Point:struct:" + VECTOR, "Damage:float"], locals=["Best:int=-1", "BestDist:float=1000000000"])
+    g = bp.function("BlowNearestTire", doc="Explosion tire blast on the wheel nearest the point (skipped when wrecked or shielded).", inputs=["Point:struct:" + VECTOR, "Damage:float"], locals=["Best:int=-1", "BestDist:float=1000000000"])
     dead = g.var_get("bIsDestroyed", BOOL)
     shielded = g.call_self("IsShielded", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     skip = or_bool(g)
@@ -365,7 +371,7 @@ def build() -> Blueprint:
     g.link(bb, "then", apply, "execute")
 
     # ---- TakeDamageInternal(Damage, TireIndex, Instigator) ----
-    g = bp.function("TakeDamageInternal", inputs=["Damage:float", "TireIndex:int", "Instigator:object:" + CONTROLLER])
+    g = bp.function("TakeDamageInternal", doc="Routes damage to a tire or the body (ignored while shielded or wrecked); the body at 0 wrecks the car.", inputs=["Damage:float", "TireIndex:int", "Instigator:object:" + CONTROLLER])
     dead = g.var_get("bIsDestroyed", BOOL)
     bdead = g.branch()
     g.link(dead, "bIsDestroyed", bdead, "Condition")
@@ -409,7 +415,7 @@ def build() -> Blueprint:
     g.link(bdie, "then", kill, "execute")
 
     # ---- DestroyVehicle(Killer) ----
-    g = bp.function("DestroyVehicle", inputs=["Killer:object:" + CONTROLLER])
+    g = bp.function("DestroyVehicle", doc="Wrecks the car once: handbrake, hop, smoke, effects-only explosion, OnVehicleDestroyed, the GameMode notified.", inputs=["Killer:object:" + CONTROLLER])
     dead = g.var_get("bIsDestroyed", BOOL)
     b = g.branch()
     g.link(dead, "bIsDestroyed", b, "Condition")
@@ -470,7 +476,7 @@ def build() -> Blueprint:
     g.exec(boom, notify)
 
     # ---- TeleportAndStop(NewTransform) ----
-    g = bp.function("TeleportAndStop", inputs=["NewTransform:struct:" + TRANSFORM])
+    g = bp.function("TeleportAndStop", doc="Moves the car and zeroes its velocity (respawns and tests).", inputs=["NewTransform:struct:" + TRANSFORM])
     m = mesh(g)
     lin = g.call_on(PRIMITIVE, "SetPhysicsLinearVelocity",
                     inputs=[struct_pin("NewVel", VECTOR, default="0,0,0"), Pin("bAddToCurrent", BOOL, default="false"),
@@ -493,7 +499,7 @@ def build() -> Blueprint:
     g.exec(tp, hb)
 
     # ---- CanExit ----
-    g = bp.function("CanExit", outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("CanExit", doc="An occupant, not wrecked, below the exit speed.", outputs=["ReturnValue:bool"], pure=True)
     occ = g.var_get("Occupant", OBJECT, cls_ref(CC))
     valid = is_valid(g)
     g.link(occ, "Occupant", valid, "Object")
@@ -511,7 +517,7 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # ---- IsExitSpotFree(Location) -> bool : capsule trace at the spot, ignoring self ----
-    g = bp.function("IsExitSpotFree", inputs=["Location:struct:" + VECTOR], outputs=["ReturnValue:bool"])
+    g = bp.function("IsExitSpotFree", doc="Capsule trace at a spot beside the car.", inputs=["Location:struct:" + VECTOR], outputs=["ReturnValue:bool"])
     tr = g.call_static(SYS, "CapsuleTraceSingle",
                        inputs=[Pin("WorldContextObject", OBJECT, hidden=True), struct_pin("Start", VECTOR),
                                struct_pin("End", VECTOR), Pin("Radius", FLOAT, default="42.0"),
@@ -527,7 +533,7 @@ def build() -> Blueprint:
     g.link_extra(tr, "then", "result", "execute")
 
     # ---- FindExitLocation -> bFound, Location : left, right, behind ----
-    g = bp.function("FindExitLocation", outputs=["bFound:bool", "Location:struct:" + VECTOR],
+    g = bp.function("FindExitLocation", doc="Left door, then right, then behind the car.", outputs=["bFound:bool", "Location:struct:" + VECTOR],
                     locals=["Candidate:struct:" + VECTOR])
     prev_exec = ("entry", "then")
     for axis_fn, offset_var, sign in (("GetActorRightVector", "ExitSideOffset", -1.0),
@@ -574,7 +580,7 @@ def build() -> Blueprint:
     g.link(prev_exec[0], prev_exec[1], ret_none, "execute")
 
     # ---- EnterVehicle(Character) -> bool ----
-    g = bp.function("EnterVehicle", inputs=["Character:" + obj_spec(BP_CHARACTER)], outputs=["ReturnValue:bool"])
+    g = bp.function("EnterVehicle", doc="The character gets in: stowed, its controller possesses the car, OnOccupantEntered.", inputs=["Character:" + obj_spec(BP_CHARACTER)], outputs=["ReturnValue:bool"])
     can = g.call_self("CanBeEntered", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     dead = g.call_on(CC, "IsDead", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     g.link_entry("Character", dead, "self")
@@ -632,7 +638,7 @@ def build() -> Blueprint:
     g.exec(f2, r_true)
 
     # ---- ExitVehicle -> bool ----
-    g = bp.function("ExitVehicle", outputs=["ReturnValue:bool"],
+    g = bp.function("ExitVehicle", doc="The driver gets out beside the car and the controller possesses the character.", outputs=["ReturnValue:bool"],
                     locals=["Leaving:" + obj_spec(BP_CHARACTER), "Driver:object:" + CONTROLLER])
     can = g.call_self("CanExit", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     b = g.branch()
@@ -706,7 +712,7 @@ def build() -> Blueprint:
     g.exec(f2, r_true)
 
     # ---- EjectOccupant: un-stow beside the car without possession changes (used by respawn) ----
-    g = bp.function("EjectOccupant", locals=["Leaving:" + obj_spec(BP_CHARACTER)])
+    g = bp.function("EjectOccupant", doc="Puts the occupant beside the car without changing possession (respawn).", locals=["Leaving:" + obj_spec(BP_CHARACTER)])
     occ = g.var_get("Occupant", OBJECT, cls_ref(CC))
     valid = is_valid(g)
     g.link(occ, "Occupant", valid, "Object")
@@ -745,7 +751,7 @@ def build() -> Blueprint:
     g.exec(clearcv, clearo)
 
     # ---- TickDriveOverrides(DeltaSeconds): parked/wrecked cars brake; blown tires cap the throttle ----
-    g = bp.function("TickDriveOverrides", inputs=["DeltaSeconds:float"])
+    g = bp.function("TickDriveOverrides", doc="Per-frame input: parked or wrecked cars brake; blown tires cap the throttle.", inputs=["DeltaSeconds:float"])
     dead = g.var_get("bIsDestroyed", BOOL)
     ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     valid = is_valid(g)
@@ -763,6 +769,27 @@ def build() -> Blueprint:
     hb = set_handbrake(g, "true")
     g.link(b, "then", t0, "execute")
     g.exec(t0, s0, hb)
+    # Phase 4: an AI controller feeds its own throttle, steering and handbrake (spec §2.1)
+    ai = g.var_get("bAIControlled", BOOL)
+    bai = g.branch()
+    g.note(bai, "driven by an AI controller?")
+    g.link(ai, "bAIControlled", bai, "Condition")
+    g.link(b, "else", bai, "execute")
+    at = g.var_get("AIThrottle", FLOAT)
+    scale_ai = g.call_self("GetThrottleScale", outputs=[Pin("Scale", FLOAT, "out")], pure=True)
+    mul_ai = math2(g, "Multiply_FloatFloat", FLOAT)
+    g.link(at, "AIThrottle", mul_ai, "A")
+    g.link(scale_ai, "Scale", mul_ai, "B")
+    th_ai = set_throttle(g)
+    g.link(mul_ai, "ReturnValue", th_ai, "Throttle")
+    g.link(bai, "then", th_ai, "execute")
+    ast = g.var_get("AISteering", FLOAT)
+    st_ai = set_steering(g)
+    g.link(ast, "AISteering", st_ai, "Steering")
+    ahb = g.var_get("bAIHandbrake", BOOL)
+    hb_ai = mv_call(g, "SetHandbrakeInput", inputs=[Pin("bNewHandbrake", BOOL)])
+    g.link(ahb, "bAIHandbrake", hb_ai, "bNewHandbrake")
+    g.exec(th_ai, st_ai, hb_ai)
     axis = g.input_axis_value("MoveForward")
     scale = g.call_self("GetThrottleScale", outputs=[Pin("Scale", FLOAT, "out")], pure=True)
     mul = math2(g, "Multiply_FloatFloat", FLOAT)
@@ -770,10 +797,22 @@ def build() -> Blueprint:
     g.link(scale, "Scale", mul, "B")
     th = set_throttle(g)
     g.link(mul, "ReturnValue", th, "Throttle")
-    g.link(b, "else", th, "execute")
+    g.link(bai, "else", th, "execute")
+
+    # SetAIInput(Throttle, Steering, bHandbrake): what TickDriveOverrides applies while bAIControlled
+    g = bp.function("SetAIInput", inputs=["Throttle:float", "Steering:float", "bHandbrake:bool"],
+                    doc="The AI controller's inputs; TickDriveOverrides applies them every frame while bAIControlled.")
+    s1 = g.var_set("AIThrottle", FLOAT)
+    g.link_entry("Throttle", s1, "AIThrottle")
+    g.link_entry("then", s1, "execute")
+    s2 = g.var_set("AISteering", FLOAT)
+    g.link_entry("Steering", s2, "AISteering")
+    s3 = g.var_set("bAIHandbrake", BOOL)
+    g.link_entry("bHandbrake", s3, "bAIHandbrake")
+    g.exec(s1, s2, s3)
 
     # ---- Phase 3: effects and item use (spec 2026-10-30 §2) ----
-    g = bp.function("IsShielded", outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("IsShielded", doc="A shield is running.", outputs=["ReturnValue:bool"], pure=True)
     sr = g.var_get("ShieldRemaining", FLOAT)
     gt = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
     g.link(sr, "ShieldRemaining", gt, "A")
@@ -781,7 +820,7 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # ActivateBoost: timer + an instant forward kick
-    g = bp.function("ActivateBoost")
+    g = bp.function("ActivateBoost", doc="Starts the boost timer and kicks the car forward.")
     dur = g.var_get("BoostDuration", FLOAT)
     sb = g.var_set("BoostRemaining", FLOAT)
     g.link(dur, "BoostDuration", sb, "BoostRemaining")
@@ -799,20 +838,20 @@ def build() -> Blueprint:
     g.link(kick, "ReturnValue", vel, "NewVel")
     g.exec(sb, vel)
 
-    g = bp.function("ActivateShield")
+    g = bp.function("ActivateShield", doc="Starts the shield timer.")
     dur = g.var_get("ShieldDuration", FLOAT)
     ss = g.var_set("ShieldRemaining", FLOAT)
     g.link(dur, "ShieldDuration", ss, "ShieldRemaining")
     g.link_entry("then", ss, "execute")
 
-    g = bp.function("ClearEffects")
+    g = bp.function("ClearEffects", doc="Ends boost and shield.")
     cb = g.var_set("BoostRemaining", FLOAT, default="0.0")
     cs = g.var_set("ShieldRemaining", FLOAT, default="0.0")
     g.link_entry("then", cb, "execute")
     g.exec(cb, cs)
 
     # TickEffects(DeltaSeconds): sustained boost force; both timers run down to 0
-    g = bp.function("TickEffects", inputs=["DeltaSeconds:float"])
+    g = bp.function("TickEffects", doc="Per-frame boost force; both effect timers run down.", inputs=["DeltaSeconds:float"])
     br_ = g.var_get("BoostRemaining", FLOAT)
     on = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
     g.link(br_, "BoostRemaining", on, "A")
@@ -850,7 +889,7 @@ def build() -> Blueprint:
 
     # CanUseItem(Type): the gun waits for its cooldown (no charge wasted on a dry press); every other item is always usable
     WC = gen(BPC_WEAPON)
-    g = bp.function("CanUseItem", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("CanUseItem", doc="The gun waits for its cooldown; every other item is always usable.", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["ReturnValue:bool"], pure=True)
     b = g.branch()
     g.link(enum_is(g, ("entry", "Type"), ITEM_GUN), "ReturnValue", b, "Condition")
     g.link_entry("then", b, "execute")
@@ -863,7 +902,7 @@ def build() -> Blueprint:
     g.link(b, "else", result_bool(g, "true"), "execute")
 
     # GetMuzzleLocation(): in front of the bumper, above the hood
-    g = bp.function("GetMuzzleLocation", outputs=["Location:struct:" + VECTOR], pure=True)
+    g = bp.function("GetMuzzleLocation", doc="In front of the bumper, above the hood.", outputs=["Location:struct:" + VECTOR], pure=True)
     loc = self_actor_location(g)
     fwd = g.call_self_native(ACTOR, "GetActorForwardVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
     up = g.call_self_native(ACTOR, "GetActorUpVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
@@ -883,17 +922,47 @@ def build() -> Blueprint:
     g.link_result(a2, "ReturnValue", "Location")
     g.link_entry("then", "result", "execute")
 
-    # FireGun() -> bool: one hitscan shot from the muzzle along the car, credited to the driver
-    g = bp.function("FireGun", outputs=["ReturnValue:bool"])
+    # GetAimDirection(): straight ahead, or at an AI's AimTarget (its centre, 60 cm up) for one shot
+    g = bp.function("GetAimDirection", outputs=["Direction:struct:" + VECTOR], pure=True,
+                    doc="Where a shot goes: at AimTarget's centre (60 cm up) when an AI set one, else straight ahead.")
+    at = g.var_get("AimTarget", OBJECT, cls_ref(ACTOR))
+    av = is_valid(g)
+    g.link(at, "AimTarget", av, "Object")
+    b = g.branch()
+    g.link(av, "ReturnValue", b, "Condition")
+    g.link_entry("then", b, "execute")
+    tloc = g.call_on(ACTOR, "K2_GetActorLocation", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(at, "AimTarget", tloc, "self")
+    raised = g.call_static(MATH, "Add_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR, default="0,0,60")],
+                           outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(tloc, "ReturnValue", raised, "A")
+    mz = g.call_self("GetMuzzleLocation", outputs=[struct_pin("Location", VECTOR, "out")], pure=True)
+    diff = g.call_static(MATH, "Subtract_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR)],
+                         outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(raised, "ReturnValue", diff, "A")
+    g.link(mz, "Location", diff, "B")
+    unit = g.call_static(MATH, "Normal", inputs=[struct_pin("A", VECTOR), Pin("Tolerance", FLOAT, default="0.0001")],
+                         outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(diff, "ReturnValue", unit, "A")
+    r_aim = g.function_result([struct_pin("Direction", VECTOR)])
+    g.link(unit, "ReturnValue", r_aim, "Direction")
+    g.link(b, "then", r_aim, "execute")
+    fwd0 = g.call_self_native(ACTOR, "GetActorForwardVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    r_fwd = g.function_result([struct_pin("Direction", VECTOR)])
+    g.link(fwd0, "ReturnValue", r_fwd, "Direction")
+    g.link(b, "else", r_fwd, "execute")
+
+    # FireGun() -> bool: one hitscan shot from the muzzle along the aim direction, credited to the driver
+    g = bp.function("FireGun", doc="One hitscan shot from the muzzle along the aim direction, credited to the driver.", outputs=["ReturnValue:bool"])
     muzzle = g.call_self("GetMuzzleLocation", outputs=[struct_pin("Location", VECTOR, "out")], pure=True)
-    fwd = g.call_self_native(ACTOR, "GetActorForwardVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    fwd = g.call_self("GetAimDirection", outputs=[struct_pin("Direction", VECTOR, "out")], pure=True)
     ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     wp = g.var_get("Weapon", OBJECT, cls_ref(WC))
     shot = g.call_on(WC, "Fire", inputs=[struct_pin("Origin", VECTOR), struct_pin("Direction", VECTOR), obj_pin("Instigator", CONTROLLER)],
                      outputs=[Pin("bHit", BOOL, "out"), struct_pin("Hit", HIT_RESULT, "out")])
     g.link(wp, "Weapon", shot, "self")
     g.link(muzzle, "Location", shot, "Origin")
-    g.link(fwd, "ReturnValue", shot, "Direction")
+    g.link(fwd, "Direction", shot, "Direction")
     g.link(ctrl, "ReturnValue", shot, "Instigator")
     g.link_entry("then", shot, "execute")
     r = g.function_result([Pin("ReturnValue", BOOL)])
@@ -902,7 +971,7 @@ def build() -> Blueprint:
 
     # FireRPG() -> Projectile: a BP_DFProjectile from the muzzle, owned by the car, credited to the driver
     PROJC = gen(BP_PROJECTILE)
-    g = bp.function("FireRPG", outputs=["Projectile:" + obj_spec(BP_PROJECTILE)])
+    g = bp.function("FireRPG", doc="Launches a rocket from the muzzle (short of anything blocking it), credited to the driver.", outputs=["Projectile:" + obj_spec(BP_PROJECTILE)])
     muzzle = g.call_self("GetMuzzleLocation", outputs=[struct_pin("Location", VECTOR, "out")], pure=True)
     # point-blank: when something blocks the way from the car's centre to the muzzle, the rocket starts 25 cm short of it
     # (spawning inside a rock or a car would push the rocket through without a hit)
@@ -937,7 +1006,9 @@ def build() -> Blueprint:
     g.link(short, "ReturnValue", at, "A")
     g.link(muzzle, "Location", at, "B")
     g.link(tr, "ReturnValue", at, "bPickA")
-    rot = g.call_self_native(ACTOR, "K2_GetActorRotation", outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    aim = g.call_self("GetAimDirection", outputs=[struct_pin("Direction", VECTOR, "out")], pure=True)
+    rot = g.call_static(MATH, "MakeRotFromX", inputs=[struct_pin("X", VECTOR)], outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    g.link(aim, "Direction", rot, "X")
     xf = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
                                                         struct_pin("Scale", VECTOR, default="1,1,1")],
                        outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
@@ -960,7 +1031,7 @@ def build() -> Blueprint:
     g.exec(sic, r)
 
     # ApplyItem(Type): the item's effect on this car
-    g = bp.function("ApplyItem", inputs=["Type:" + enum_spec(E_ITEM_TYPE)])
+    g = bp.function("ApplyItem", doc="Runs an item's effect on this car.", inputs=["Type:" + enum_spec(E_ITEM_TYPE)])
     prev = ("entry", "then")
     for idx, fn_name in ((ITEM_BOOST, "ActivateBoost"), (ITEM_SHIELD, "ActivateShield"), (ITEM_BOMB, "DropBomb"),
                          (ITEM_GUN, "FireGun"), (ITEM_RPG, "FireRPG")):
@@ -973,7 +1044,7 @@ def build() -> Blueprint:
 
     # DropBomb() -> Bomb: a BP_DFBomb BombDropOffset behind the car, owned by it, credited to its controller (spec §2, §6)
     BOMBC = gen(BP_BOMB)
-    g = bp.function("DropBomb", outputs=["Bomb:" + obj_spec(BP_BOMB)])
+    g = bp.function("DropBomb", doc="Drops a bomb behind the car, credited to the driver.", outputs=["Bomb:" + obj_spec(BP_BOMB)])
     loc = self_actor_location(g)
     fwd = g.call_self_native(ACTOR, "GetActorForwardVector", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
     off = g.var_get("BombDropOffset", FLOAT)
@@ -1012,7 +1083,7 @@ def build() -> Blueprint:
     g.exec(sic, r)
 
     # UseSelectedItem() -> bool: wrecked / no controller / no racer / nothing selected / cannot use -> false; else consume + apply
-    g = bp.function("UseSelectedItem", outputs=["ReturnValue:bool"], locals=["Racer:object:" + gen(BPC_RACER)])
+    g = bp.function("UseSelectedItem", doc="Consumes and applies the driver's selected item; refused when wrecked, empty or on cooldown.", outputs=["ReturnValue:bool"], locals=["Racer:object:" + gen(BPC_RACER)])
     RC_ = gen(BPC_RACER)
     dead = g.var_get("bIsDestroyed", BOOL)
     b0 = g.branch()
@@ -1067,7 +1138,7 @@ def build() -> Blueprint:
     g.exec(log, result_bool(g, "true"))
 
     # CycleItem(): next slot of the driver's inventory
-    g = bp.function("CycleItem")
+    g = bp.function("CycleItem", doc="Selects the driver's next inventory slot.")
     ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     gm = get_game_mode(g)
     cast = cast_to(g, BP_GM)
@@ -1080,12 +1151,13 @@ def build() -> Blueprint:
 
     # ---- Event graph ----
     g = bp.event_graph()
-    g.comment("Generated by tools/bpgen/graphs/vehicle.py. Driving/cameras live in the Sedan parent.", 0, 0, cols=6, rows=1)
+    g.section("Begin Play: fresh tires")
     bpl = g.begin_play(col=0, row=1)
     par = g.call_parent(gen(SEDAN), "ReceiveBeginPlay", col=1, row=1)
     init = g.call_self("InitTires", col=2, row=1)
     g.exec(bpl, par, init)
 
+    g.section("Tick: drive overrides, then item effects")
     tick = g.tick(col=0, row=2)
     part = g.call_parent(gen(SEDAN), "ReceiveTick", [Pin("DeltaSeconds", FLOAT)], col=1, row=2)
     g.link(tick, "DeltaSeconds", part, "DeltaSeconds")
@@ -1095,6 +1167,7 @@ def build() -> Blueprint:
     g.link(tick, "DeltaSeconds", fx, "DeltaSeconds")
     g.exec(tick, part, ov, fx)
 
+    g.section("Point damage: route by hit bone (tire or body)")
     pd = g.event(ACTOR, "ReceivePointDamage",
                  [Pin("Damage", FLOAT), obj_pin("DamageType", "/Script/Engine.DamageType"), struct_pin("HitLocation", VECTOR),
                   struct_pin("HitNormal", VECTOR), obj_pin("HitComponent", PRIMITIVE), Pin("BoneName", NAME),
@@ -1111,6 +1184,7 @@ def build() -> Blueprint:
     flag = g.var_set("bPointDamageHandled", BOOL, default="true", col=3, row=3)
     g.exec(pd, find, take, flag)
 
+    g.section("Any damage: the body, unless point damage already handled it")
     ad = g.event(ACTOR, "ReceiveAnyDamage",
                  [Pin("Damage", FLOAT), obj_pin("DamageType", "/Script/Engine.DamageType"), obj_pin("InstigatedBy", CONTROLLER),
                   obj_pin("DamageCauser", ACTOR)], col=0, row=4)
@@ -1125,12 +1199,15 @@ def build() -> Blueprint:
     g.link(ad, "InstigatedBy", take2, "Instigator")
     g.link(b, "else", take2, "execute")
 
+    g.section("Interact: get out")
     ia = g.input_action("Interact", col=0, row=6)
     ex = g.call_self("ExitVehicle", outputs=[Pin("ReturnValue", BOOL, "out")], col=1, row=6)
     g.link(ia, "Pressed", ex, "execute")
+    g.section("Use item: the selected item")
     ui = g.input_action("UseItem", col=0, row=7)
     use = g.call_self("UseSelectedItem", outputs=[Pin("ReturnValue", BOOL, "out")], col=1, row=7)
     g.link(ui, "Pressed", use, "execute")
+    g.section("Next item: cycle the inventory")
     ni = g.input_action("NextItem", col=0, row=8)
     cy = g.call_self("CycleItem", col=1, row=8)
     g.link(ni, "Pressed", cy, "execute")

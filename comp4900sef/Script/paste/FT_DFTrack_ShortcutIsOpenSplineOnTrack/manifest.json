@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFTrack_ShortcutIsOpenSplineOnTrack",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The level's shortcut is a second, open track actor with road pieces, counted as on-track, with a rock on it.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

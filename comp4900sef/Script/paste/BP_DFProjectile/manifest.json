@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFProjectile",
  "parent": "/Script/Engine.Actor",
+ "description": "The rocket: flies on its projectile movement and explodes on whatever it hits.",
  "components": [
   {
    "name": "Collision",
@@ -106,7 +107,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Explodes once through the GameMode's explosion rule, then removes the rocket."
   }
  ],
  "graphs": [
@@ -120,12 +122,23 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

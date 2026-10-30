@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFVehicle",
  "parent": "/Game/VehicleBP/Sedan/Sedan",
+ "description": "The race car: health and tires, damage, wrecking, enter/exit, item use; driving and cameras come from the Sedan template.",
  "components": [
   {
    "name": "Weapon",
@@ -197,6 +198,41 @@
    "default": "80",
    "category": "Dead Fire|Items",
    "editable": true
+  },
+  {
+   "name": "bAIControlled",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|AI",
+   "editable": false
+  },
+  {
+   "name": "AIThrottle",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI",
+   "editable": false
+  },
+  {
+   "name": "AISteering",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI",
+   "editable": false
+  },
+  {
+   "name": "bAIHandbrake",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|AI",
+   "editable": false
+  },
+  {
+   "name": "AimTarget",
+   "type": "object:/Script/Engine.Actor",
+   "default": "",
+   "category": "Dead Fire|AI",
+   "editable": false
   }
  ],
  "dispatchers": [
@@ -240,7 +276,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Four fresh tires at TireMaxHealth."
   },
   {
    "name": "GetSpeedKPH",
@@ -250,7 +287,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Absolute forward speed in km/h."
   },
   {
    "name": "GetGearString",
@@ -260,7 +298,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "R, N or the gear number for the HUD."
   },
   {
    "name": "GetBlownTireCount",
@@ -270,7 +309,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "How many tires are blown."
   },
   {
    "name": "GetThrottleScale",
@@ -280,7 +320,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "BlownTireSpeedScale to the power of the blown tire count."
   },
   {
    "name": "IsBelowExitSpeed",
@@ -290,7 +331,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Slow enough to get out."
   },
   {
    "name": "CanBeEntered",
@@ -300,7 +342,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "No occupant and not wrecked."
   },
   {
    "name": "FindTireIndexForHit",
@@ -316,7 +359,8 @@
    "locals": [
     "Best:int=-1",
     "BestDist:float=0"
-   ]
+   ],
+   "doc": "The tire hit: by wheel bone, else the nearest wheel socket within TireHitRadius; -1 for the body."
   },
   {
    "name": "ApplyTireDamage",
@@ -327,7 +371,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Takes health off one tire; at 0 it is blown and the count and OnTireBlown update."
   },
   {
    "name": "BlowNearestTire",
@@ -341,7 +386,8 @@
    "locals": [
     "Best:int=-1",
     "BestDist:float=1000000000"
-   ]
+   ],
+   "doc": "Explosion tire blast on the wheel nearest the point (skipped when wrecked or shielded)."
   },
   {
    "name": "TakeDamageInternal",
@@ -353,7 +399,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Routes damage to a tire or the body (ignored while shielded or wrecked); the body at 0 wrecks the car."
   },
   {
    "name": "DestroyVehicle",
@@ -363,7 +410,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Wrecks the car once: handbrake, hop, smoke, effects-only explosion, OnVehicleDestroyed, the GameMode notified."
   },
   {
    "name": "TeleportAndStop",
@@ -373,7 +421,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Moves the car and zeroes its velocity (respawns and tests)."
   },
   {
    "name": "CanExit",
@@ -383,7 +432,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "An occupant, not wrecked, below the exit speed."
   },
   {
    "name": "IsExitSpotFree",
@@ -395,7 +445,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Capsule trace at a spot beside the car."
   },
   {
    "name": "FindExitLocation",
@@ -408,7 +459,8 @@
    "category": "Dead Fire",
    "locals": [
     "Candidate:struct:/Script/CoreUObject.Vector"
-   ]
+   ],
+   "doc": "Left door, then right, then behind the car."
   },
   {
    "name": "EnterVehicle",
@@ -420,7 +472,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The character gets in: stowed, its controller possesses the car, OnOccupantEntered."
   },
   {
    "name": "ExitVehicle",
@@ -433,7 +486,8 @@
    "locals": [
     "Leaving:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C",
     "Driver:object:/Script/Engine.Controller"
-   ]
+   ],
+   "doc": "The driver gets out beside the car and the controller possesses the character."
   },
   {
    "name": "EjectOccupant",
@@ -443,7 +497,8 @@
    "category": "Dead Fire",
    "locals": [
     "Leaving:object:/Game/DeadFire/Blueprints/BP_DFCharacter.BP_DFCharacter_C"
-   ]
+   ],
+   "doc": "Puts the occupant beside the car without changing possession (respawn)."
   },
   {
    "name": "TickDriveOverrides",
@@ -453,7 +508,21 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Per-frame input: parked or wrecked cars brake; blown tires cap the throttle."
+  },
+  {
+   "name": "SetAIInput",
+   "inputs": [
+    "Throttle:float",
+    "Steering:float",
+    "bHandbrake:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The AI controller's inputs; TickDriveOverrides applies them every frame while bAIControlled."
   },
   {
    "name": "IsShielded",
@@ -463,7 +532,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "A shield is running."
   },
   {
    "name": "ActivateBoost",
@@ -471,7 +541,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Starts the boost timer and kicks the car forward."
   },
   {
    "name": "ActivateShield",
@@ -479,7 +550,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Starts the shield timer."
   },
   {
    "name": "ClearEffects",
@@ -487,7 +559,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Ends boost and shield."
   },
   {
    "name": "TickEffects",
@@ -497,7 +570,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Per-frame boost force; both effect timers run down."
   },
   {
    "name": "CanUseItem",
@@ -509,7 +583,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The gun waits for its cooldown; every other item is always usable."
   },
   {
    "name": "GetMuzzleLocation",
@@ -519,7 +594,19 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "In front of the bumper, above the hood."
+  },
+  {
+   "name": "GetAimDirection",
+   "inputs": [],
+   "outputs": [
+    "Direction:struct:/Script/CoreUObject.Vector"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Where a shot goes: at AimTarget's centre (60 cm up) when an AI set one, else straight ahead."
   },
   {
    "name": "FireGun",
@@ -529,7 +616,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "One hitscan shot from the muzzle along the aim direction, credited to the driver."
   },
   {
    "name": "FireRPG",
@@ -539,7 +627,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Launches a rocket from the muzzle (short of anything blocking it), credited to the driver."
   },
   {
    "name": "ApplyItem",
@@ -549,7 +638,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Runs an item's effect on this car."
   },
   {
    "name": "DropBomb",
@@ -559,7 +649,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Drops a bomb behind the car, credited to the driver."
   },
   {
    "name": "UseSelectedItem",
@@ -571,7 +662,8 @@
    "category": "Dead Fire",
    "locals": [
     "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
-   ]
+   ],
+   "doc": "Consumes and applies the driver's selected item; refused when wrecked, empty or on cooldown."
   },
   {
    "name": "CycleItem",
@@ -579,7 +671,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Selects the driver's next inventory slot."
   }
  ],
  "graphs": [
@@ -593,7 +686,14 @@
      "DFN_K2Node_CallArrayFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "GetSpeedKPH",
@@ -611,7 +711,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1142,
+     0
+    ]
+   }
   },
   {
    "name": "GetGearString",
@@ -623,7 +733,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2057,
+     0
+    ]
+   }
   },
   {
    "name": "GetBlownTireCount",
@@ -641,7 +761,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     488,
+     0
+    ]
+   }
   },
   {
    "name": "GetThrottleScale",
@@ -659,7 +789,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1013,
+     0
+    ]
+   }
   },
   {
    "name": "IsBelowExitSpeed",
@@ -677,7 +817,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     697,
+     0
+    ]
+   }
   },
   {
    "name": "CanBeEntered",
@@ -695,7 +845,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1087,
+     0
+    ]
+   }
   },
   {
    "name": "FindTireIndexForHit",
@@ -731,7 +891,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4355,
+     264
+    ]
+   }
   },
   {
    "name": "ApplyTireDamage",
@@ -767,7 +937,14 @@
      "DFN_K2Node_CallDelegate_0",
      "TireIndex"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "BlowNearestTire",
@@ -791,7 +968,14 @@
      "DFN_K2Node_CallFunction_6",
      "Damage"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "TakeDamageInternal",
@@ -845,7 +1029,14 @@
      "DFN_K2Node_CallFunction_6",
      "Killer"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "DestroyVehicle",
@@ -875,7 +1066,14 @@
      "DFN_K2Node_CallFunction_7",
      "Killer"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "TeleportAndStop",
@@ -893,7 +1091,14 @@
      "DFN_K2Node_CallFunction_2",
      "NewTransform"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "CanExit",
@@ -911,7 +1116,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1115,
+     0
+    ]
+   }
   },
   {
    "name": "IsExitSpotFree",
@@ -947,7 +1162,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     808,
+     0
+    ]
+   }
   },
   {
    "name": "FindExitLocation",
@@ -971,7 +1196,17 @@
      "DFN_K2Node_VariableSet_2",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2607,
+     0
+    ]
+   }
   },
   {
    "name": "EnterVehicle",
@@ -1025,7 +1260,17 @@
      "DFN_K2Node_CallDelegate_1",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     5115,
+     0
+    ]
+   }
   },
   {
    "name": "ExitVehicle",
@@ -1037,7 +1282,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     7137,
+     0
+    ]
+   }
   },
   {
    "name": "EjectOccupant",
@@ -1049,7 +1304,14 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "TickDriveOverrides",
@@ -1061,7 +1323,51 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SetAIInput",
+   "file": "SetAIInput.txt",
+   "links": [
+    [
+     "entry",
+     "Throttle",
+     "DFN_K2Node_VariableSet_0",
+     "AIThrottle"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Steering",
+     "DFN_K2Node_VariableSet_1",
+     "AISteering"
+    ],
+    [
+     "entry",
+     "bHandbrake",
+     "DFN_K2Node_VariableSet_2",
+     "bAIHandbrake"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "IsShielded",
@@ -1079,7 +1385,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     710,
+     0
+    ]
+   }
   },
   {
    "name": "ActivateBoost",
@@ -1091,7 +1407,14 @@
      "DFN_K2Node_VariableSet_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "ActivateShield",
@@ -1103,7 +1426,14 @@
      "DFN_K2Node_VariableSet_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "ClearEffects",
@@ -1115,7 +1445,14 @@
      "DFN_K2Node_VariableSet_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "TickEffects",
@@ -1139,7 +1476,14 @@
      "DFN_K2Node_CallFunction_6",
      "B"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "CanUseItem",
@@ -1157,7 +1501,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1337,
+     0
+    ]
+   }
   },
   {
    "name": "GetMuzzleLocation",
@@ -1175,7 +1529,39 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1179,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetAimDirection",
+   "file": "GetAimDirection.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2066,
+     0
+    ]
+   }
   },
   {
    "name": "FireGun",
@@ -1187,7 +1573,17 @@
      "DFN_K2Node_CallFunction_3",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     954,
+     0
+    ]
+   }
   },
   {
    "name": "FireRPG",
@@ -1199,7 +1595,17 @@
      "DFN_K2Node_CallFunction_5",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4916,
+     0
+    ]
+   }
   },
   {
    "name": "ApplyItem",
@@ -1241,7 +1647,14 @@
      "DFN_K2Node_CallFunction_8",
      "A"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "DropBomb",
@@ -1253,7 +1666,17 @@
      "DFN_K2Node_SpawnActorFromClass_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2787,
+     0
+    ]
+   }
   },
   {
    "name": "UseSelectedItem",
@@ -1265,7 +1688,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     5646,
+     0
+    ]
+   }
   },
   {
    "name": "CycleItem",
@@ -1277,12 +1710,23 @@
      "DFN_K2Node_DynamicCast_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {

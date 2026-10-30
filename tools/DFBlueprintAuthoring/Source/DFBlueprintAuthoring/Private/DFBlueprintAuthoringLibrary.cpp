@@ -619,6 +619,8 @@ FString UDFBlueprintAuthoringLibrary::DescribeGraph(UBlueprint* BP, FName GraphN
 		O->SetStringField(TEXT("name"), N->GetName());
 		O->SetStringField(TEXT("class"), N->GetClass()->GetName());
 		O->SetStringField(TEXT("title"), N->GetNodeTitle(ENodeTitleType::ListView).ToString());
+		O->SetNumberField(TEXT("x"), N->NodePosX);
+		O->SetNumberField(TEXT("y"), N->NodePosY);
 		if (N->bHasCompilerMessage) { O->SetStringField(TEXT("error"), N->ErrorMsg); }
 		TArray<TSharedPtr<FJsonValue>> Pins;
 		for (UEdGraphPin* P : N->Pins)
@@ -728,6 +730,38 @@ UWidget* UDFBlueprintAuthoringLibrary::AddWidget(UBlueprint* BP, FName Name, con
 	Parent->AddChild(W);
 	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WBP);
 	return W;
+}
+
+FString UDFBlueprintAuthoringLibrary::SetNodePosition(UBlueprint* BP, FName GraphName, const FString& NodeId, int32 X, int32 Y)
+{
+	UEdGraph* Graph = FindGraph(BP, GraphName);
+	if (!Graph) { return TEXT("ERROR: graph not found: ") + GraphName.ToString(); }
+	UEdGraphNode* Node = FindNode(Graph, NodeId);
+	if (!Node) { return TEXT("ERROR: node not found: ") + NodeId; }
+	Node->Modify();
+	Node->NodePosX = X;
+	Node->NodePosY = Y;
+	return FString();
+}
+
+FString UDFBlueprintAuthoringLibrary::SetFunctionDescription(UBlueprint* BP, FName FunctionName, const FString& Description)
+{
+	UEdGraph* Graph = FindGraph(BP, FunctionName);
+	if (!Graph) { return TEXT("ERROR: function graph not found: ") + FunctionName.ToString(); }
+	UK2Node_FunctionEntry* Entry = FindEntry(Graph);
+	if (!Entry) { return TEXT("ERROR: no entry node"); }
+	Entry->Modify();
+	Entry->MetaData.ToolTip = FText::FromString(Description);
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
+	return FString();
+}
+
+FString UDFBlueprintAuthoringLibrary::FocusGraph(UBlueprint* BP, FName GraphName)
+{
+	UEdGraph* Graph = FindGraph(BP, GraphName);
+	if (!Graph) { return TEXT("ERROR: graph not found: ") + GraphName.ToString(); }
+	FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(Graph);
+	return FString();
 }
 
 FString UDFBlueprintAuthoringLibrary::Compile(UBlueprint* BP)

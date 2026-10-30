@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFRespawn_DeathLimitEndsRace",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The third death ends the race with game over and no respawn.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

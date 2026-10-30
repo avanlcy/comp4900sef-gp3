@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_SpawnGridAndRanking",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Three NPCs spawn on a track with racers named NPC 1..3; ranks and the HUD position follow their scores; despawn removes them; no main track means no NPCs.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

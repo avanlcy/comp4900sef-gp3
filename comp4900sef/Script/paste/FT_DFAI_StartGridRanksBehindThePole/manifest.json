@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_StartGridRanksBehindThePole",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "With every score 0, NPCs parked on the grid before the start line rank behind the player on the line: the player is first and the HUD reads POS 1 / 4.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

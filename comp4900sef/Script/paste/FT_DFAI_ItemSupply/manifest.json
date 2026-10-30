@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_ItemSupply",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "GrantNPCItems fills one slot of each NPC and none of the player's.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

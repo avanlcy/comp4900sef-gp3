@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFItem_UseConsumesAndRefusesWhenEmpty",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Using the selected item consumes one charge; an empty inventory and a wrecked car refuse.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

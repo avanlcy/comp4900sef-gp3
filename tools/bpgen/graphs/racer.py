@@ -97,7 +97,7 @@ def add_inventory(bp: Blueprint) -> None:
     bp.variable("LastPickupType", enum_spec(E_ITEM_TYPE), "", I)
 
     # AddItem(Type, Charges, MaxCharges) -> bool: stack onto the slot of the same type (capped), else a new slot
-    g = bp.function("AddItem", inputs=["Type:" + enum_spec(E_ITEM_TYPE), "Charges:int", "MaxCharges:int"],
+    g = bp.function("AddItem", doc="Stacks onto the slot of the same type (capped) or takes a free slot; false when nothing was added.", inputs=["Type:" + enum_spec(E_ITEM_TYPE), "Charges:int", "MaxCharges:int"],
                     outputs=["ReturnValue:bool"], locals=["Index:int=-1", "Old:int=0"])
     loop = g.for_each(stack_elem())
     g.link(inventory(g), "Inventory", loop, "Array")
@@ -158,7 +158,7 @@ def add_inventory(bp: Blueprint) -> None:
     g.link(br2, "else", r_no, "execute")
 
     # GetSelected() -> Type, Charges (None / 0 when the selection is empty)
-    g = bp.function("GetSelected", outputs=["Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], pure=True)
+    g = bp.function("GetSelected", doc="The selected stack (None / 0 when empty).", outputs=["Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], pure=True)
     b, sel = selected_in_range(g)
     g.link_entry("then", b, "execute")
     item = inv_get(g, (sel, "SelectedSlot"))
@@ -171,7 +171,7 @@ def add_inventory(bp: Blueprint) -> None:
     g.link(b, "else", r0, "execute")
 
     # ConsumeSelected() -> Type: one charge off the selected stack; an empty stack is removed and the selection reset
-    g = bp.function("ConsumeSelected", outputs=["Type:" + enum_spec(E_ITEM_TYPE)], locals=["Taken:" + enum_spec(E_ITEM_TYPE)])
+    g = bp.function("ConsumeSelected", doc="One charge off the selected stack; an empty stack is removed.", outputs=["Type:" + enum_spec(E_ITEM_TYPE)], locals=["Taken:" + enum_spec(E_ITEM_TYPE)])
     b, sel = selected_in_range(g)
     g.link_entry("then", b, "execute")
     r_none = g.function_result([enum_pin("Type", E_ITEM_TYPE, default=ITEM_NONE)])
@@ -209,7 +209,7 @@ def add_inventory(bp: Blueprint) -> None:
     g.exec(setn, r2)
 
     # CycleSelected(): next slot, wrapping; 0 when empty
-    g = bp.function("CycleSelected")
+    g = bp.function("CycleSelected", doc="Next slot, wrapping.")
     ln = inv_length(g)
     some = compare(g, "Greater_IntInt", INT, b="0")
     g.link(ln, "ReturnValue", some, "A")
@@ -229,8 +229,42 @@ def add_inventory(bp: Blueprint) -> None:
     s0 = g.var_set("SelectedSlot", INT, default="0")
     g.link(b, "else", s0, "execute")
 
+    # Phase 4 (spec §3.2): the AI picks a stack by type
+    g = bp.function("HasType", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["ReturnValue:bool"], pure=True,
+                    doc="Whether the inventory holds a stack of this type.")
+    loop = g.for_each(stack_elem())
+    g.link(inventory(g), "Inventory", loop, "Array")
+    g.link_entry("then", loop, "Exec")
+    br = break_stack(g, (loop, "Array Element"))
+    same = g.call_static(MATH, "EqualEqual_ByteByte", inputs=[Pin("A", "byte"), Pin("B", "byte")], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(br, member(S_ITEM_STACK, "Type"), same, "A")
+    g.link_entry("Type", same, "B")
+    b = g.branch()
+    g.link(same, "ReturnValue", b, "Condition")
+    g.link(loop, "LoopBody", b, "execute")
+    g.link(b, "then", g.function_result([Pin("ReturnValue", BOOL, default="true")]), "execute")
+    g.link(loop, "Completed", g.function_result([Pin("ReturnValue", BOOL, default="false")]), "execute")
+
+    g = bp.function("SelectType", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["ReturnValue:bool"],
+                    doc="Selects the stack of this type; false when the inventory has none.")
+    loop = g.for_each(stack_elem())
+    g.link(inventory(g), "Inventory", loop, "Array")
+    g.link_entry("then", loop, "Exec")
+    br = break_stack(g, (loop, "Array Element"))
+    same = g.call_static(MATH, "EqualEqual_ByteByte", inputs=[Pin("A", "byte"), Pin("B", "byte")], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(br, member(S_ITEM_STACK, "Type"), same, "A")
+    g.link_entry("Type", same, "B")
+    b = g.branch()
+    g.link(same, "ReturnValue", b, "Condition")
+    g.link(loop, "LoopBody", b, "execute")
+    sel = g.var_set("SelectedSlot", INT)
+    g.link(loop, "Array Index", sel, "SelectedSlot")
+    g.link(b, "then", sel, "execute")
+    g.exec(sel, g.function_result([Pin("ReturnValue", BOOL, default="true")]))
+    g.link(loop, "Completed", g.function_result([Pin("ReturnValue", BOOL, default="false")]), "execute")
+
     # ClearInventory()
-    g = bp.function("ClearInventory")
+    g = bp.function("ClearInventory", doc="Empties the inventory.")
     clear = inv_call(g, "Array_Clear", pure=False)
     g.link_entry("then", clear, "execute")
     s0 = g.var_set("SelectedSlot", INT, default="0")
@@ -239,12 +273,14 @@ def add_inventory(bp: Blueprint) -> None:
 
 
 def build_racer() -> Blueprint:
-    bp = Blueprint(BPC_RACER, parent="/Script/Engine.ActorComponent")
+    bp = Blueprint(BPC_RACER, parent="/Script/Engine.ActorComponent", description="Per-racer race state and the item inventory; lives on the controller (player or AI).")
     R = "Dead Fire|Race"
     bp.variable("Score", "int", "0", R, editable=True)
     bp.variable("LapsCompleted", "int", "0", R, editable=True)
     bp.variable("Kills", "int", "0", R, editable=True)
     bp.variable("Deaths", "int", "0", R, editable=True)
+    bp.variable("Rank", "int", "0", R)  # Phase 4: 1-based place written by the GameMode's UpdateRanks (0 before the first pass)
+    bp.variable("RespawnDueTime", "float", "-1", R)  # Phase 4: game time this racer comes back at; -1 = no respawn pending
     bp.variable("NextCheckpointIndex", "int", "1", R, editable=True)
     bp.variable("LastCheckpoint", obj_spec(BP_CHECKPOINT), "", R)
     bp.variable("LastCheckpointTime", "float", "-1", R)
@@ -256,19 +292,20 @@ def build_racer() -> Blueprint:
 
 
 def build_controller() -> Blueprint:
-    bp = Blueprint(BP_PC, parent=PLAYER_CONTROLLER)
+    bp = Blueprint(BP_PC, parent=PLAYER_CONTROLLER, description="The player's controller: possession between car and character; carries the racer.")
     bp.component("Racer", gen(BPC_RACER))
     S = "Dead Fire|State"
     bp.variable("OnFootCharacter", obj_spec(BP_CHARACTER), "", S)
     bp.variable("CurrentVehicle", obj_spec(BP_VEHICLE), "", S)  # the possessed car, empty on foot (HUD)
     bp.variable("LastVehicle", obj_spec(BP_VEHICLE), "", S)  # the last car possessed, kept on foot (respawn)
 
-    g = bp.function("SwitchToPawn", inputs=["NewPawn:object:" + PAWN])
+    g = bp.function("SwitchToPawn", doc="Possesses the given pawn.", inputs=["NewPawn:object:" + PAWN])
     poss = g.call_self_native("/Script/Engine.Controller", "Possess", inputs=[obj_pin("InPawn", PAWN)])
     g.link_entry("NewPawn", poss, "InPawn")
     g.link_entry("then", poss, "execute")
 
     g = bp.event_graph()
+    g.section("Possess: remember the car being driven")
     ev = g.event("/Script/Engine.Controller", "ReceivePossess", [obj_pin("PossessedPawn", PAWN)], col=0, row=0)
     cast = cast_to(g, BP_VEHICLE, col=1, row=0)
     g.link(ev, "PossessedPawn", cast, "Object")

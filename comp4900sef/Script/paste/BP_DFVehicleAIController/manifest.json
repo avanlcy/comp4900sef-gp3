@@ -1,0 +1,1124 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFVehicleAIController",
+ "parent": "/Script/AIModule.AIController",
+ "description": "An NPC driver: follows the main track on its own lane, avoids cars, uses items against the player, and is respawned by the GameMode like any racer.",
+ "components": [
+  {
+   "name": "Racer",
+   "class": "/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C",
+   "parent": "",
+   "properties": {}
+  }
+ ],
+ "variables": [
+  {
+   "name": "bAutoDrive",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "MaxSpeedKPH",
+   "type": "float",
+   "default": "110",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "CornerSpeedKPH",
+   "type": "float",
+   "default": "45",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "SpeedScale",
+   "type": "float",
+   "default": "1",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "LaneOffset",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "LookaheadBase",
+   "type": "float",
+   "default": "1200",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "LookaheadPerKPH",
+   "type": "float",
+   "default": "12",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "CornerLookahead",
+   "type": "float",
+   "default": "2500",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "CornerAngleFull",
+   "type": "float",
+   "default": "60",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "SteerFullLockDegrees",
+   "type": "float",
+   "default": "35",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "BrakeMarginKPH",
+   "type": "float",
+   "default": "10",
+   "category": "Dead Fire|AI|Driving",
+   "editable": true
+  },
+  {
+   "name": "AvoidanceDistance",
+   "type": "float",
+   "default": "1500",
+   "category": "Dead Fire|AI|Avoidance",
+   "editable": true
+  },
+  {
+   "name": "AvoidanceAngle",
+   "type": "float",
+   "default": "20",
+   "category": "Dead Fire|AI|Avoidance",
+   "editable": true
+  },
+  {
+   "name": "AvoidanceOffset",
+   "type": "float",
+   "default": "350",
+   "category": "Dead Fire|AI|Avoidance",
+   "editable": true
+  },
+  {
+   "name": "AvoidInterpSpeed",
+   "type": "float",
+   "default": "3",
+   "category": "Dead Fire|AI|Avoidance",
+   "editable": true
+  },
+  {
+   "name": "StuckSpeedKPH",
+   "type": "float",
+   "default": "5",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "StuckSeconds",
+   "type": "float",
+   "default": "2.5",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "ReverseSeconds",
+   "type": "float",
+   "default": "1.5",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "GiveUpSeconds",
+   "type": "float",
+   "default": "10",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "RecoverDistance",
+   "type": "float",
+   "default": "2000",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "FlipSeconds",
+   "type": "float",
+   "default": "2",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "NoPawnSeconds",
+   "type": "float",
+   "default": "1",
+   "category": "Dead Fire|AI|Recovery",
+   "editable": true
+  },
+  {
+   "name": "bUseItems",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "ItemThinkInterval",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "GunRange",
+   "type": "float",
+   "default": "6000",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "RPGRange",
+   "type": "float",
+   "default": "4000",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "RPGMinRange",
+   "type": "float",
+   "default": "1200",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "AimCone",
+   "type": "float",
+   "default": "0.96",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "BombRange",
+   "type": "float",
+   "default": "1500",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "ShieldHealthFraction",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "BoostMaxSeverity",
+   "type": "float",
+   "default": "0.2",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "bPreferPlayer",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|AI|Items",
+   "editable": true
+  },
+  {
+   "name": "CurrentVehicle",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "Track",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFTrackSpline.BP_DFTrackSpline_C",
+   "default": "",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "Throttle",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "Steering",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "AvoidBias",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "LastSeverity",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "TargetPoint",
+   "type": "struct:/Script/CoreUObject.Vector",
+   "default": "",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "StuckTimer",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "StuckTotal",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "ReverseUntil",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "FlipTimer",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "NoPawnTimer",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "LastKPH",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "StuckStartDistance",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  },
+  {
+   "name": "NextThinkTime",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|AI|State",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "GetTrack",
+   "inputs": [],
+   "outputs": [
+    "Track:object:/Game/DeadFire/Blueprints/BP_DFTrackSpline.BP_DFTrackSpline_C"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The main track from the GameMode, looked up once and cached."
+  },
+  {
+   "name": "ComputeSteering",
+   "inputs": [
+    "FromLocation:struct:/Script/CoreUObject.Vector",
+    "FromYaw:float",
+    "Target:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "Steering:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Steering in [-1, 1] toward a target: the yaw to turn divided by SteerFullLockDegrees, clamped."
+  },
+  {
+   "name": "ComputeTargetSpeed",
+   "inputs": [
+    "Severity:float"
+   ],
+   "outputs": [
+    "KPH:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "MaxSpeedKPH on a straight down to CornerSpeedKPH in a full corner, times this driver's SpeedScale."
+  },
+  {
+   "name": "ComputeThrottle",
+   "inputs": [
+    "SpeedKPH:float",
+    "TargetKPH:float",
+    "Steering:float"
+   ],
+   "outputs": [
+    "Throttle:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "1 below the target speed, -0.5 (brake) more than BrakeMarginKPH above it, 0.2 between; at most 0.3 while steering hard above the corner speed."
+  },
+  {
+   "name": "ComputeTargetPoint",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [
+    "Location:struct:/Script/CoreUObject.Vector",
+    "Severity:float"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Distance:float"
+   ],
+   "doc": "The point to steer at: the track a speed-scaled look-ahead further on, moved onto this driver's lane (plus the avoidance bias); and how sharp the road turns ahead."
+  },
+  {
+   "name": "ComputeAvoidance",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [
+    "Bias:float"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Three traces ahead (straight, left, right): a blocked side pushes the lane the other way; a blocked centre picks the free side."
+  },
+  {
+   "name": "Drive",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One frame of driving: target point and corner ahead, avoidance bias, steering, target speed, throttle, then SetAIInput."
+  },
+  {
+   "name": "UpdateFlip",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [
+    "bRespawned:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A car on its side or roof for FlipSeconds is put back at its gate by the GameMode (no death counted)."
+  },
+  {
+   "name": "UpdateStuck",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [
+    "bReversing:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Not moving while asking for throttle: after StuckSeconds reverse for ReverseSeconds; stuck for GiveUpSeconds in all (the budget only clears after RecoverDistance of progress, or a respawn), ask the GameMode for a respawn."
+  },
+  {
+   "name": "FindTarget",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "MinRange:float",
+    "MaxRange:float",
+    "MinDot:float",
+    "bBehind:bool"
+   ],
+   "outputs": [
+    "Target:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Best:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "BestDist:float=1000000000"
+   ],
+   "doc": "A driven car (not ours, not wrecked) inside the cone ahead (or behind) and the range band: the player's car at once when it qualifies, else the nearest."
+  },
+  {
+   "name": "ThinkItems",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Target:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "doc": "Item rules, first match wins: shield when hurt; rocket, then gun, at a car ahead (aimed); bomb for a car close behind; boost on a straight. Nothing once the race is over."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "GetTrack",
+   "file": "GetTrack.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2093,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeSteering",
+   "file": "ComputeSteering.txt",
+   "links": [
+    [
+     "entry",
+     "FromLocation",
+     "DFN_K2Node_CallFunction_0",
+     "Start"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_0",
+     "Target"
+    ],
+    [
+     "entry",
+     "FromYaw",
+     "DFN_K2Node_CallFunction_2",
+     "B"
+    ],
+    [
+     "DFN_K2Node_CallFunction_5",
+     "ReturnValue",
+     "result",
+     "Steering"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1614,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeTargetSpeed",
+   "file": "ComputeTargetSpeed.txt",
+   "links": [
+    [
+     "entry",
+     "Severity",
+     "DFN_K2Node_CallFunction_0",
+     "Value"
+    ],
+    [
+     "DFN_K2Node_CallFunction_2",
+     "ReturnValue",
+     "result",
+     "KPH"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     962,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeThrottle",
+   "file": "ComputeThrottle.txt",
+   "links": [
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "TargetKPH",
+     "DFN_K2Node_CallFunction_0",
+     "B"
+    ],
+    [
+     "entry",
+     "TargetKPH",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Steering",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ],
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_7",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_10",
+     "ReturnValue",
+     "result",
+     "Throttle"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1818,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeTargetPoint",
+   "file": "ComputeTargetPoint.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_7",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_8",
+     "self"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     6659,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeAvoidance",
+   "file": "ComputeAvoidance.txt",
+   "links": [
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_MakeArray_0",
+     "[0]"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_10",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     6623,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Drive",
+   "file": "Drive.txt",
+   "links": [
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_0",
+     "Car"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_1",
+     "Car"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_2",
+     "DeltaTime"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_6",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_9",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_10",
+     "self"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UpdateFlip",
+   "file": "UpdateFlip.txt",
+   "links": [
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_3",
+     "B"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3875,
+     0
+    ]
+   }
+  },
+  {
+   "name": "UpdateStuck",
+   "file": "UpdateStuck.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_4",
+     "self"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_11",
+     "B"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_13",
+     "B"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_20",
+     "self"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     10323,
+     0
+    ]
+   }
+  },
+  {
+   "name": "FindTarget",
+   "file": "FindTarget.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_2",
+     "B"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_8",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_11",
+     "self"
+    ],
+    [
+     "entry",
+     "MinDot",
+     "DFN_K2Node_CallFunction_13",
+     "B"
+    ],
+    [
+     "entry",
+     "MinDot",
+     "DFN_K2Node_CallFunction_14",
+     "A"
+    ],
+    [
+     "entry",
+     "bBehind",
+     "DFN_K2Node_CallFunction_16",
+     "A"
+    ],
+    [
+     "entry",
+     "bBehind",
+     "DFN_K2Node_CallFunction_18",
+     "A"
+    ],
+    [
+     "entry",
+     "MinRange",
+     "DFN_K2Node_CallFunction_20",
+     "B"
+    ],
+    [
+     "entry",
+     "MaxRange",
+     "DFN_K2Node_CallFunction_21",
+     "B"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     5572,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ThinkItems",
+   "file": "ThinkItems.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_3",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_5",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_11",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_13",
+     "Car"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_16",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_2",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_18",
+     "Car"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_4",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_21",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_5",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_23",
+     "Car"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_26",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_30",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_14",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_37",
+     "self"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

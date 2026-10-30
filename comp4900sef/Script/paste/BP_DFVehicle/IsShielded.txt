@@ -1,17 +1,31 @@
 Begin Object Class=/Script/BlueprintGraph.K2Node_VariableGet Name="DFN_K2Node_VariableGet_0"
    VariableReference=(MemberName="ShieldRemaining",bSelfContext=True)
-   NodePosX=0
-   NodePosY=0
-   NodeGuid=E8A29D05F9934FB6B5485684A773CD47
-   CustomProperties Pin (PinId=80014C0C27CB41D4AB83CF2CFCCE087E,PinName="ShieldRemaining",Direction="EGPD_Output",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,LinkedTo=(DFN_K2Node_CallFunction_0 EE8FCA536B294B34AE0196FC795691E5,),PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
-   CustomProperties Pin (PinId=C1F4177308214CA0A4FB49CFDA9DCF27,PinName="self",PinType.PinCategory="object",PinType.PinSubCategory="self",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,PersistentGuid=00000000000000000000000000000000,bHidden=True,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+   NodePosX=280
+   NodePosY=40
+   NodeWidth=175
+   NodeHeight=68
+   NodeGuid=CA2C1B653AC241568B1CCE0E16FF7393
+   CustomProperties Pin (PinId=695E518C3B464A989DE79006AF2BB044,PinName="ShieldRemaining",Direction="EGPD_Output",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,LinkedTo=(DFN_K2Node_CallFunction_0 7FEB065ECE4E4788B23D84B2D6C701D7,),PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+   CustomProperties Pin (PinId=491C2AB87567471DB24E31ED62075B24,PinName="self",PinType.PinCategory="object",PinType.PinSubCategory="self",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,PersistentGuid=00000000000000000000000000000000,bHidden=True,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
 End Object
 Begin Object Class=/Script/BlueprintGraph.K2Node_CallFunction Name="DFN_K2Node_CallFunction_0"
    FunctionReference=(MemberParent=Class'"/Script/Engine.KismetMathLibrary"',MemberName="Greater_FloatFloat")
-   NodePosX=420
-   NodePosY=0
-   NodeGuid=EB1B8AFF9BEC406FB43FDD4F85AA3619
-   CustomProperties Pin (PinId=EE8FCA536B294B34AE0196FC795691E5,PinName="A",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,LinkedTo=(DFN_K2Node_VariableGet_0 80014C0C27CB41D4AB83CF2CFCCE087E,),PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
-   CustomProperties Pin (PinId=981A3E645961416BB954E9106630FC24,PinName="B",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,DefaultValue="0.0",PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
-   CustomProperties Pin (PinId=40FB96AC38B14BFE9591ECD3C1D80CB4,PinName="ReturnValue",Direction="EGPD_Output",PinType.PinCategory="bool",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+   NodePosX=495
+   NodePosY=40
+   NodeWidth=175
+   NodeHeight=92
+   NodeGuid=ECBF5B5ABC3F46F593E62E382E0EA210
+   CustomProperties Pin (PinId=7FEB065ECE4E4788B23D84B2D6C701D7,PinName="A",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,LinkedTo=(DFN_K2Node_VariableGet_0 695E518C3B464A989DE79006AF2BB044,),PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+   CustomProperties Pin (PinId=A58A6B2E422E4072823078AED9357D07,PinName="B",PinType.PinCategory="float",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,DefaultValue="0.0",PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+   CustomProperties Pin (PinId=D80F2CCD4B574EBFA6DF016227150E0D,PinName="ReturnValue",Direction="EGPD_Output",PinType.PinCategory="bool",PinType.PinSubCategory="",PinType.PinSubCategoryObject=None,PinType.PinSubCategoryMemberReference=(),PinType.PinValueType=(),PinType.ContainerType=None,PinType.bIsReference=False,PinType.bIsConst=False,PinType.bIsWeakPointer=False,PinType.bIsUObjectWrapper=False,PersistentGuid=00000000000000000000000000000000,bHidden=False,bNotConnectable=False,bDefaultValueIsReadOnly=False,bDefaultValueIsIgnored=False,bAdvancedView=False,bOrphanedPin=False,)
+End Object
+Begin Object Class=/Script/UnrealEd.EdGraphNode_Comment Name="DFN_EdGraphNode_Comment_0"
+   NodeComment="A shield is running."
+   CommentColor=(R=0.35,G=0.45,B=0.6,A=1.0)
+   FontSize=18
+   NodePosX=-24
+   NodePosY=-60
+   NodeWidth=958
+   NodeHeight=216
+   NodeGuid=7D034637262F4385B55B5634F5A5CD52
 End Object

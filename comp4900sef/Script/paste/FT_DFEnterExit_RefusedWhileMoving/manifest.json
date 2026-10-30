@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFEnterExit_RefusedWhileMoving",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Exiting a car moving faster than 10 km/h is refused.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

@@ -41,6 +41,14 @@ write anything odd in the notes column.
 | 32 | Fire a rocket at (or leave a bomb beside) the dark block on the shortcut road that leaves the main road just after gate 1, from a few metres back and also with your nose touching it | The block explodes and disappears either way; driving the shortcut shows no `RETURN TO TRACK` countdown and rejoins before gate 2 | | |
 | 33 | On foot, stand next to your own bomb when it goes off | `HEALTH` unchanged | | |
 | 34 | Click **RETRY** | The item row is empty; bombs, rockets and effects are gone (taken crates come back on their own 30 s timer; a demolished block stays open until the level is reloaded) | | |
+| 35 | Phase 4. Press Play and look behind you (or wait a second) | Three NPC Sedans sit on a grid behind the start line, two lanes, one behind the other; HUD shows `POS 1 / 4` | | |
+| 36 | Drive off | The NPCs pull away on their lanes, follow the loop at racing speed, slow for the hairpins and pick up again; none drives off the road for long | | |
+| 37 | Sit still on the start line | `POS` drops to `4 / 4` as they pass; passing one later raises it again; the summary at the end says `Place n of 4` | | |
+| 38 | Park across the road in front of an NPC, or watch one meet the parked target car | It shifts a lane to go round; if it does get pinned it reverses out after a couple of seconds and carries on | | |
+| 39 | Wreck an NPC with two rockets (or shoot it from behind) | It explodes and smokes, `KILLS +1`, `SCORE +50`; about 2 s later it is back at its last gate on its lane and the race goes on (no `GAME OVER` for an NPC's deaths) | | |
+| 40 | Let an NPC follow you for a while after the first 20 s | It shoots you from behind (`CAR` health drops) or fires a rocket; one that is ahead of you drops a bomb in your path now and then; your `SHIELD` still blocks all of it | | |
+| 41 | Get out of your car beside the road and wait for an NPC to pass | The parked car is not shot at; on foot you are never hit | | |
+| 42 | Flip an NPC with a bomb under it (or roll one off the ramp) | Within about 2 s it is set back on its wheels at its gate; stop beside a stopped NPC car, get out and press **E** at it: you drive off in it and the NPC gets a fresh car at its gate a second later | | |
 
 There is no cheat command for wrecking the car or running out the clock, so lines 17 to 19 are played for real (from Phase 3 on, two rockets at your own parked car also wreck it); the
 matching functional tests (`FT_DFRespawn_*`, `FT_DFRaceEnd_TimeUpSetsResult`, `FT_DFHUD_SummaryShownAtRaceEnd`) check

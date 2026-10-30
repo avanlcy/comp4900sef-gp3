@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFPlayerController",
  "parent": "/Script/Engine.PlayerController",
+ "description": "The player's controller: possession between car and character; carries the racer.",
  "components": [
   {
    "name": "Racer",
@@ -43,7 +44,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Possesses the given pawn."
   }
  ],
  "graphs": [
@@ -63,12 +65,23 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

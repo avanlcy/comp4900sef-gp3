@@ -2,6 +2,7 @@
  "kind": "widget",
  "asset": "/Game/DeadFire/UI/WBP_DFRaceHUD",
  "parent": "/Script/UMG.UserWidget",
+ "description": "The in-race HUD.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -15,7 +16,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Sets a text block from a string."
   },
   {
    "name": "SetShown",
@@ -26,7 +28,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Shows or collapses a widget."
   },
   {
    "name": "SetAmber",
@@ -37,7 +40,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Amber or white text."
   },
   {
    "name": "SetRed",
@@ -48,7 +52,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Red or white text."
   },
   {
    "name": "RefreshCar",
@@ -60,7 +65,8 @@
    "category": "Dead Fire",
    "locals": [
     "Tires:string"
-   ]
+   ],
+   "doc": "Speed, gear, health bar, tires and the exit prompt."
   },
   {
    "name": "RefreshFoot",
@@ -70,7 +76,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Character health and the enter prompt."
   },
   {
    "name": "RefreshItems",
@@ -81,7 +88,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The three item slots (selected in amber), the effect line and the key hint."
   },
   {
    "name": "RefreshWarning",
@@ -93,7 +101,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP."
   },
   {
    "name": "Refresh",
@@ -101,7 +110,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Every frame: stats, clock, panels, then the car or foot details."
   }
  ],
  "graphs": [
@@ -127,7 +137,14 @@
      "DFN_K2Node_CallFunction_1",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "SetShown",
@@ -157,7 +174,14 @@
      "DFN_K2Node_CallFunction_1",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "SetAmber",
@@ -181,7 +205,14 @@
      "DFN_K2Node_CallFunction_1",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "SetRed",
@@ -205,7 +236,14 @@
      "DFN_K2Node_CallFunction_1",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RefreshCar",
@@ -259,7 +297,14 @@
      "DFN_K2Node_CallFunction_35",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RefreshFoot",
@@ -295,7 +340,14 @@
      "DFN_K2Node_CallFunction_12",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RefreshItems",
@@ -355,7 +407,14 @@
      "DFN_K2Node_VariableGet_16",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RefreshWarning",
@@ -421,7 +480,14 @@
      "DFN_K2Node_CallFunction_26",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "Refresh",
@@ -433,12 +499,23 @@
      "DFN_K2Node_DynamicCast_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {},
@@ -560,6 +637,36 @@
    "parent": "StatsBox",
    "props": {
     "text": "LIVES 3",
+    "font_size": 26,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "name": "PositionText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "StatsBox",
+   "props": {
+    "text": "POS 1 / 1",
     "font_size": 26,
     "color": [
      1,

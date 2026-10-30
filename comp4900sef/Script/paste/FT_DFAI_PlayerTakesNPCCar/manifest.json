@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_PlayerTakesNPCCar",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The player entering an NPC's car keeps it; the NPC gets another car at its gate after a second, no death counted.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

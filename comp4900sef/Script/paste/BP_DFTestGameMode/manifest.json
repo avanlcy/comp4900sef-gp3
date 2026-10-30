@@ -1,0 +1,14 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/BP_DFTestGameMode",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFRaceGameMode",
+ "description": "The functional-test level's GameMode: BP_DFRaceGameMode with no NPCs (the AI tests spawn their own).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "NPCCount": 0
+ }
+}

@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFExplosion_DamagesKicksAndBlowsTire",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "An explosion damages a car in range for the full amount, blows its nearest tire, spares a character beside it; an effects-only explosion hurts nobody.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

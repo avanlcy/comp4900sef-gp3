@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFProjectile_PointBlankRocketHitsRock",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A rocket fired with the car's nose against a rock explodes on the rock instead of spawning inside it.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

@@ -127,7 +127,7 @@ def get_on(g, cls, var, cat_, obj, sub=None, container=None):
 
 
 def add_text_helpers(bp: Blueprint):
-    g = bp.function("SetLabel", inputs=["Target:object:" + TEXT_BLOCK, "Value:string"])
+    g = bp.function("SetLabel", doc="Sets a text block from a string.", inputs=["Target:object:" + TEXT_BLOCK, "Value:string"])
     t = g.call_static("KismetTextLibrary", "Conv_StringToText", inputs=[Pin("InString", STRING)], outputs=[Pin("ReturnValue", "text", "out")], pure=True)
     g.link_entry("Value", t, "InString")
     st = g.call_on(TEXT_BLOCK, "SetText", inputs=[Pin("InText", "text")])
@@ -138,7 +138,7 @@ def add_text_helpers(bp: Blueprint):
 
 def add_widget_helpers(bp: Blueprint):
     add_text_helpers(bp)
-    g = bp.function("SetShown", inputs=["Target:object:" + WIDGET, "bShown:bool"])
+    g = bp.function("SetShown", doc="Shows or collapses a widget.", inputs=["Target:object:" + WIDGET, "bShown:bool"])
     b = g.branch()
     g.link_entry("bShown", b, "Condition")
     g.link_entry("then", b, "execute")
@@ -147,7 +147,7 @@ def add_widget_helpers(bp: Blueprint):
         g.link_entry("Target", n, "self")
         g.link(b, out, n, "execute")
 
-    g = bp.function("SetAmber", inputs=["Target:object:" + TEXT_BLOCK, "bAmber:bool"])
+    g = bp.function("SetAmber", doc="Amber or white text.", inputs=["Target:object:" + TEXT_BLOCK, "bAmber:bool"])
     col = g.call_static(MATH, "SelectColor", inputs=[struct_pin("A", LINEAR_COLOR, default="(R=1.000000,G=0.750000,B=0.200000,A=1.000000)"),
                                                       struct_pin("B", LINEAR_COLOR, default="(R=1.000000,G=1.000000,B=1.000000,A=1.000000)"),
                                                       Pin("bPickA", BOOL)],
@@ -161,7 +161,7 @@ def add_widget_helpers(bp: Blueprint):
     g.link(sc, "SlateColor", st, "InColorAndOpacity")
     g.link_entry("then", st, "execute")
 
-    g = bp.function("SetRed", inputs=["Target:object:" + TEXT_BLOCK, "bRed:bool"])
+    g = bp.function("SetRed", doc="Red or white text.", inputs=["Target:object:" + TEXT_BLOCK, "bRed:bool"])
     col = g.call_static(MATH, "SelectColor", inputs=[struct_pin("A", LINEAR_COLOR, default="(R=1.000000,G=0.150000,B=0.100000,A=1.000000)"),
                                                       struct_pin("B", LINEAR_COLOR, default="(R=1.000000,G=1.000000,B=1.000000,A=1.000000)"),
                                                       Pin("bPickA", BOOL)],
@@ -182,9 +182,10 @@ def text_props(text, size, color=WHITE, justify="Left"):
 
 # ---------- in-race HUD ----------
 def build_hud() -> WidgetBlueprint:
-    bp = WidgetBlueprint(WBP_HUD)
+    bp = WidgetBlueprint(WBP_HUD, description="The in-race HUD.")
     bp.widget("StatsBox", VBOX, slot={"anchors": [0, 0, 0, 0], "position": [40, 30], "auto_size": True})
-    for name, text in (("ScoreText", "SCORE 0"), ("LapText", "LAPS 0"), ("KillsText", "KILLS 0"), ("LivesText", "LIVES 3")):
+    for name, text in (("ScoreText", "SCORE 0"), ("LapText", "LAPS 0"), ("KillsText", "KILLS 0"), ("LivesText", "LIVES 3"),
+                       ("PositionText", "POS 1 / 1")):  # Phase 4 (spec §5): rank among every racer
         bp.widget(name, TEXT_BLOCK, "StatsBox", text_props(text, 26), {"padding": [0, 0, 0, 2]})
     bp.widget("TimeText", TEXT_BLOCK, None, text_props("2:00", 44, justify="Center"),
               {"anchors": [0.5, 0, 0.5, 0], "alignment": [0.5, 0], "position": [0, 24], "auto_size": True})
@@ -216,7 +217,7 @@ def build_hud() -> WidgetBlueprint:
     add_widget_helpers(bp)
 
     # RefreshCar(Car): speed, gear, health, tires, exit prompt
-    g = bp.function("RefreshCar", inputs=["Car:" + obj_spec(BP_VEHICLE)], locals=["Tires:string"])
+    g = bp.function("RefreshCar", doc="Speed, gear, health bar, tires and the exit prompt.", inputs=["Car:" + obj_spec(BP_VEHICLE)], locals=["Tires:string"])
     car = ("entry", "Car")
     sp = g.call_on(VC, "GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True)
     g.link_entry("Car", sp, "self")
@@ -269,7 +270,7 @@ def build_hud() -> WidgetBlueprint:
     label(g, "PromptText", pick(g, "[E] Exit vehicle", "No room to exit", (find, "bFound")), (find, "then"))
 
     # RefreshFoot(Character): health and the enter prompt
-    g = bp.function("RefreshFoot", inputs=["Character:" + obj_spec(BP_CHARACTER)])
+    g = bp.function("RefreshFoot", doc="Character health and the enter prompt.", inputs=["Character:" + obj_spec(BP_CHARACTER)])
     v = is_valid(g)
     g.link_entry("Character", v, "Object")
     b = g.branch()
@@ -296,7 +297,7 @@ def build_hud() -> WidgetBlueprint:
     label(g, "PromptText", pick(g, "[E] Enter vehicle", "", (nv, "ReturnValue")), (near, "then"))
 
     # RefreshItems(Racer, Car): three slot labels (selected in amber), the effect line and the key hint (spec §9)
-    g = bp.function("RefreshItems", inputs=["Racer:object:" + RC, "Car:" + obj_spec(BP_VEHICLE)])
+    g = bp.function("RefreshItems", doc="The three item slots (selected in amber), the effect line and the key hint.", inputs=["Racer:object:" + RC, "Car:" + obj_spec(BP_VEHICLE)])
     gm_ = g.call_static(GAMEPLAY, "GetGameMode", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
                         outputs=[obj_pin("ReturnValue", "/Script/Engine.GameModeBase", "out")], pure=True)
     gm = g.cast(GMC)
@@ -357,7 +358,7 @@ def build_hud() -> WidgetBlueprint:
     label(g, "EffectText", cat(g, ""), (bc, "else"))
 
     # RefreshWarning(PC, GM, Racer): WRECKED > YOU DIED > RETURN TO TRACK n.n > CHECKPOINT +8 s (1.5 s) > nothing
-    g = bp.function("RefreshWarning", inputs=["PC:" + obj_spec(BP_PC), "GM:" + obj_spec(BP_GM), "Racer:object:" + RC])
+    g = bp.function("RefreshWarning", doc="WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP.", inputs=["PC:" + obj_spec(BP_PC), "GM:" + obj_spec(BP_GM), "Racer:object:" + RC])
     car = g.var_get_on(PCC, "CurrentVehicle", OBJECT, cls_ref(VC))
     g.link_entry("PC", car, "self")
     ch = g.var_get_on(PCC, "OnFootCharacter", OBJECT, cls_ref(CC))
@@ -439,7 +440,7 @@ def build_hud() -> WidgetBlueprint:
     label(g, "WarningText", timers, (bd, "else"))
 
     # Refresh: called every frame from Tick
-    g = bp.function("Refresh")
+    g = bp.function("Refresh", doc="Every frame: stats, clock, panels, then the car or foot details.")
     own = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True)
     pc = g.cast(PCC)
     g.link(own, "ReturnValue", pc, "Object")
@@ -473,6 +474,11 @@ def build_hud() -> WidgetBlueprint:
     dd = get_on(g, RC, "Deaths", INT, R)
     g.link(dd[0], dd[1], lives, "B")
     n = label(g, "LivesText", cat(g, "LIVES ", s_int(g, (lives, "ReturnValue"))), (n, "then"))
+    rank = get_on(g, RC, "Rank", INT, R)
+    place = g.call_static(MATH, "Max", inputs=[Pin("A", INT), Pin("B", INT, default="1")], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
+    g.link(rank[0], rank[1], place, "A")
+    count = get_on(g, GSC, "RacerCount", INT, GS)
+    n = label(g, "PositionText", cat(g, "POS ", s_int(g, (place, "ReturnValue")), " / ", s_int(g, count)), (n, "then"))
     clock = g.call_on(GSC, "GetRemainingTimeString", outputs=[Pin("Text", STRING, "out")], pure=True)
     g.link(GS[0], GS[1], clock, "self")
     n = label(g, "TimeText", (clock, "Text"), (n, "then"))
@@ -511,6 +517,7 @@ def build_hud() -> WidgetBlueprint:
     g.exec(ri, rw)
 
     g = bp.event_graph()
+    g.section("Tick: refresh everything")
     tick = g.event(USER_WIDGET, "Tick", [struct_pin("MyGeometry", GEOMETRY), Pin("InDeltaTime", FLOAT)], col=0, row=1)
     r = g.call_self("Refresh", col=1, row=1)
     g.exec(tick, r)
@@ -519,7 +526,7 @@ def build_hud() -> WidgetBlueprint:
 
 # ---------- summary ----------
 def build_summary() -> WidgetBlueprint:
-    bp = WidgetBlueprint(WBP_SUMMARY)
+    bp = WidgetBlueprint(WBP_SUMMARY, description="The end-of-race summary with Retry and Quit.")
     bp.widget("Backdrop", BORDER, None, {"brush_color": [0, 0, 0, 0.65]}, {"anchors": [0, 0, 1, 1], "position": [0, 0], "size": [0, 0]})
     bp.widget("SummaryBox", VBOX, None, slot={"anchors": [0.5, 0.5, 0.5, 0.5], "alignment": [0.5, 0.5], "auto_size": True})
     bp.widget("TitleText", TEXT_BLOCK, "SummaryBox", text_props("RACE COMPLETE", 60, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 16]})
@@ -533,7 +540,7 @@ def build_summary() -> WidgetBlueprint:
     bp.widget("QuitLabel", TEXT_BLOCK, "QuitButton", text_props("QUIT", 28, [0.05, 0.05, 0.05, 1], "Center"))
     add_text_helpers(bp)
 
-    g = bp.function("ShowResult", inputs=["Result:" + struct_spec(S_RESULT), "ScoreRequirement:int"])
+    g = bp.function("ShowResult", doc="Fills the summary from the race result.", inputs=["Result:" + struct_spec(S_RESULT), "ScoreRequirement:int"])
     br = g.break_struct(RESULT, [enum_pin(member(S_RESULT, "Reason"), "/Game/DeadFire/Data/E_DFRaceEndReason", direction="out"),
                                  Pin(member(S_RESULT, "bPassed"), BOOL), Pin(member(S_RESULT, "Rank"), INT),
                                  Pin(member(S_RESULT, "RacerCount"), INT), Pin(member(S_RESULT, "Score"), INT),
@@ -554,6 +561,7 @@ def build_summary() -> WidgetBlueprint:
                                "    Kills ", s_int(g, m("Kills")), "    Deaths ", s_int(g, m("Deaths"))), (n, "then"))
 
     g = bp.event_graph()
+    g.section("Retry: reload the level")
     retry = g.component_event("RetryButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=1)
     own = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True, col=1, row=2)
     gonly = g.call_static("WidgetBlueprintLibrary", "SetInputMode_GameOnly", inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER)], module="UMG", col=2, row=1)
@@ -568,6 +576,7 @@ def build_summary() -> WidgetBlueprint:
                                                         Pin("bAbsolute", BOOL, default="true"), Pin("Options", STRING, default="")], col=4, row=1)
     g.link(nm, "ReturnValue", op, "LevelName")
     g.exec(lvl, op)
+    g.section("Quit: leave the game")
     quit_ = g.component_event("QuitButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=3)
     own2 = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True, col=1, row=4)
     q = g.call_static("KismetSystemLibrary", "QuitGame", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("SpecificPlayer", PLAYER_CONTROLLER),
@@ -580,7 +589,7 @@ def build_summary() -> WidgetBlueprint:
 
 # ---------- HUD actor ----------
 def build_hud_actor() -> Blueprint:
-    bp = Blueprint(BP_HUD, parent="/Script/Engine.HUD")
+    bp = Blueprint(BP_HUD, parent="/Script/Engine.HUD", description="Creates the race HUD at start and the summary at race end.")
     U = "Dead Fire|HUD"
     bp.variable("HUDWidgetClass", "class:" + USER_WIDGET, "", U, editable=True)
     bp.variable("SummaryWidgetClass", "class:" + USER_WIDGET, "", U, editable=True)
@@ -593,7 +602,7 @@ def build_hud_actor() -> Blueprint:
         return g.call_self_native("/Script/Engine.HUD", "GetOwningPlayerController", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True)
 
     # ShowRaceHUD: summary off, race HUD on (created once)
-    g = bp.function("ShowRaceHUD")
+    g = bp.function("ShowRaceHUD", doc="Summary off, race HUD on (created once).")
     sw = g.var_get("SummaryWidget", OBJECT, cls_ref(WSUM))
     sv = is_valid(g)
     g.link(sw, "SummaryWidget", sv, "Object")
@@ -640,7 +649,7 @@ def build_hud_actor() -> Blueprint:
     g.link(bv, "then", add, "execute")
 
     # ShowSummary: race HUD off, summary on with the result, UI input
-    g = bp.function("ShowSummary")
+    g = bp.function("ShowSummary", doc="Race HUD off, summary on with the result, UI input.")
     hw = g.var_get("HUDWidget", OBJECT, cls_ref(USER_WIDGET))
     hv = is_valid(g)
     g.link(hw, "HUDWidget", hv, "Object")
@@ -710,6 +719,7 @@ def build_hud_actor() -> Blueprint:
     g.link(bi, "then", ui, "execute")
 
     g = bp.event_graph()
+    g.section("Begin Play: show the race HUD")
     bpl = g.begin_play(col=0, row=1)
     show = g.call_self("ShowRaceHUD", col=1, row=1)
     g.exec(bpl, show)

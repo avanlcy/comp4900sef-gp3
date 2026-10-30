@@ -15,6 +15,7 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_CHECKPOINT, BP_GM, BP_GS, BP_HUD, 
                 log_line, name_of, int_str, BP_BOMB, BP_EXPLOSIVE_DAMAGE, BP_PROJECTILE, CLASS, DAMAGE_TYPE, PARTICLE_SYSTEM, PRIMITIVE,
                 SKEL_MESH_COMP, SOUND_BASE, get_all_actors_of_class, native_enum_pin)
 from bpgen import struct_ref  # noqa: E402
+from df import BP_AI, BP_GM_TEST, S_ITEM_STACK, TEXT, enum_value  # noqa: E402  (Phase 4)
 
 GMC, GSC, PCC, VC, CC, CPC, TC, RC, HUDC = (gen(BP_GM), gen(BP_GS), gen(BP_PC), gen(BP_VEHICLE), gen(BP_CHARACTER),
                                            gen(BP_CHECKPOINT), gen(BP_TRACK), gen(BPC_RACER), gen(BP_HUD))
@@ -100,14 +101,15 @@ def ret(g, **values):
 
 # ---------- game state ----------
 def build_state() -> Blueprint:
-    bp = Blueprint(BP_GS, parent=GAME_STATE_BASE)
+    bp = Blueprint(BP_GS, parent=GAME_STATE_BASE, description="Race state shared with the HUD: clock, active flag, result.")
     R = "Dead Fire|Race"
     bp.variable("RemainingTime", "float", "120", R)
     bp.variable("bRaceActive", "bool", "true", R)
     bp.variable("Result", struct_spec(S_RESULT), "", R)
+    bp.variable("RacerCount", "int", "1", R)  # Phase 4: racers in the ranking (the HUD's POS n / m)
 
     # GetRemainingTimeString -> "m:ss"
-    g = bp.function("GetRemainingTimeString", outputs=["Text:string"], pure=True)
+    g = bp.function("GetRemainingTimeString", doc="The clock as m:ss, rounded up.", outputs=["Text:string"], pure=True)
     t = g.var_get("RemainingTime", FLOAT)
     ceil = g.call_static(MATH, "FCeil", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
     g.link(t, "RemainingTime", ceil, "A")
@@ -147,7 +149,7 @@ def build_state() -> Blueprint:
 
 # ---------- game mode ----------
 def build_mode() -> Blueprint:
-    bp = Blueprint(BP_GM, parent=GAME_MODE_BASE)
+    bp = Blueprint(BP_GM, parent=GAME_MODE_BASE, description="Every race rule: clock, gates, laps, kills, deaths, respawn, off-track, ranking, race end, items, explosions.")
     R = "Dead Fire|Race"
     bp.variable("OnFootCharacterClass", "class:" + CC, "", R, editable=True)
     bp.variable("RaceTimeLimit", "float", "120", R, editable=True)
@@ -164,8 +166,6 @@ def build_mode() -> Blueprint:
     bp.variable("Checkpoints", "array<%s>" % obj_spec(BP_CHECKPOINT), "", S)
     bp.variable("Tracks", "array<%s>" % obj_spec(BP_TRACK), "", S)
     bp.variable("MainTrack", obj_spec(BP_TRACK), "", S)
-    bp.variable("PendingRespawnRacer", "object:" + CONTROLLER, "", S)
-    bp.variable("RespawnDueTime", "float", "-1", S)
     bp.dispatcher("OnRaceEnded", ["Reason:" + enum_spec(E_END_REASON), "bPassed:bool"])
     bp.dispatcher("OnRacerRespawned", ["Racer:object:" + CONTROLLER])
     bp.dispatcher("OnItemPickedUp", ["Racer:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE)])
@@ -184,12 +184,22 @@ def build_mode() -> Blueprint:
     bp.default("PlayerControllerClass", "class:" + BP_PC)
     bp.default("GameStateClass", "class:" + BP_GS)
     bp.default("HUDClass", "class:" + BP_HUD)
+    A = "Dead Fire|AI"  # Phase 4 (spec 2026-10-30 phase 4 §4)
+    bp.variable("NPCCount", "int", "3", A, editable=True)
+    bp.variable("NPCRowSpacing", "float", "800", A, editable=True)
+    bp.variable("NPCColumnOffset", "float", "350", A, editable=True)
+    bp.variable("NPCSkillSpread", "float", "0.1", A, editable=True)
+    bp.variable("RankInterval", "float", "0.5", A, editable=True)
+    bp.variable("AIItemInterval", "float", "20", A, editable=True)  # 0 = NPCs get no items (spec §3.1)
+    bp.variable("NextAIItemTime", "float", "-1", S)
+    bp.variable("RacerControllers", "array<object:%s>" % CONTROLLER, "", S)
+    bp.variable("NextRankTime", "float", "0", S)
 
     race_state = lambda g: (g.var_get("RaceState", OBJECT, cls_ref(GSC)), "RaceState")
     racer_out = "Racer:object:" + RC
 
     # FindRacer(C) -> Racer (pure; None when C has no BPC_DFRacer)
-    g = bp.function("FindRacer", inputs=["C:object:" + CONTROLLER], outputs=[racer_out], pure=True)
+    g = bp.function("FindRacer", doc="The racer component on a controller, or none.", inputs=["C:object:" + CONTROLLER], outputs=[racer_out], pure=True)
     v = g.call_static("KismetSystemLibrary", "IsValid", inputs=[obj_pin("Object", "/Script/CoreUObject.Object")],
                       outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     g.link_entry("C", v, "Object")
@@ -211,7 +221,7 @@ def build_mode() -> Blueprint:
     g.link(cast, "CastFailed", none, "execute")
 
     # RegisterCheckpoint(Checkpoint): add once, keep sorted by CheckpointIndex (bubble pass; n is small)
-    g = bp.function("RegisterCheckpoint", inputs=["Checkpoint:" + obj_spec(BP_CHECKPOINT)])
+    g = bp.function("RegisterCheckpoint", doc="Adds a gate once and keeps the list sorted by CheckpointIndex.", inputs=["Checkpoint:" + obj_spec(BP_CHECKPOINT)])
     arr = g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array")
     has = g.call_array(ARR, "Array_Contains", Pin("e", OBJECT, sub_object=cls_ref(CPC)),
                        inputs=[Pin("ItemToFind", OBJECT, sub_object=cls_ref(CPC))], outputs=[Pin("ReturnValue", BOOL, "out")])
@@ -262,7 +272,7 @@ def build_mode() -> Blueprint:
     g.link(bs, "then", sw, "execute")
 
     # CollectLevelActors: every checkpoint and track in the level; MainTrack = first with bIsMainTrack
-    g = bp.function("CollectLevelActors")
+    g = bp.function("CollectLevelActors", doc="Finds every gate and track in the level; the first track flagged bIsMainTrack becomes MainTrack.")
     allcp = g.call_static(GAMEPLAY, "GetAllActorsOfClass",
                           inputs=[Pin("WorldContextObject", OBJECT, hidden=True),
                                   Pin("ActorClass", "class", sub_object=cls_ref(ACTOR), default_object=CPC)],
@@ -299,7 +309,7 @@ def build_mode() -> Blueprint:
     g.link(bm, "then", smt, "execute")
 
     # AddScore(C, Points)
-    g = bp.function("AddScore", inputs=["C:object:" + CONTROLLER, "Points:int"])
+    g = bp.function("AddScore", doc="Adds points to a controller's racer.", inputs=["C:object:" + CONTROLLER, "Points:int"])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
@@ -312,7 +322,7 @@ def build_mode() -> Blueprint:
     g.link(b, "then", s, "execute")
 
     # GrantCheckpointTimeBonus(C): players only
-    g = bp.function("GrantCheckpointTimeBonus", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("GrantCheckpointTimeBonus", doc="Adds CheckpointTimeBonus to the clock; players only.", inputs=["C:object:" + CONTROLLER])
     pc = g.cast(PLAYER_CONTROLLER)
     g.link_entry("C", pc, "Object")
     g.link_entry("then", pc, "execute")
@@ -326,7 +336,7 @@ def build_mode() -> Blueprint:
     g.link(pc, "then", sett, "execute")
 
     # NotifyLapCompleted(C)
-    g = bp.function("NotifyLapCompleted", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("NotifyLapCompleted", doc="A lap: +1 lap, PointsPerLap, next gate back to 1.", inputs=["C:object:" + CONTROLLER])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
@@ -342,7 +352,7 @@ def build_mode() -> Blueprint:
     g.exec(sc, nxt)
 
     # NotifyCheckpointPassed(C): Next = (Next + 1) mod Count (Count 0 -> Next + 1), then the time bonus
-    g = bp.function("NotifyCheckpointPassed", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("NotifyCheckpointPassed", doc="Advances the racer's next gate (wrapping) and grants the time bonus.", inputs=["C:object:" + CONTROLLER])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
@@ -372,7 +382,7 @@ def build_mode() -> Blueprint:
     g.exec(setn, bonus)
 
     # NotifyCheckpointReached(Racer, Checkpoint) -> bool
-    g = bp.function("NotifyCheckpointReached", inputs=["Racer:object:" + CONTROLLER, "Checkpoint:" + obj_spec(BP_CHECKPOINT)],
+    g = bp.function("NotifyCheckpointReached", doc="A car crossed a gate: credited only when it is the racer's next gate and the race is active.", inputs=["Racer:object:" + CONTROLLER, "Checkpoint:" + obj_spec(BP_CHECKPOINT)],
                     outputs=["ReturnValue:bool"])
     active = get_on(g, GSC, "bRaceActive", BOOL, race_state(g))
     rsv = valid(g, race_state(g))
@@ -422,37 +432,27 @@ def build_mode() -> Blueprint:
     g.exec(passed, yes)
 
     # HandleRacerDeath(C): count a life, game over at MaxDeaths, else schedule the respawn
-    g = bp.function("HandleRacerDeath", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("HandleRacerDeath", doc="Counts a life; a player at MaxDeaths ends the race, otherwise a respawn is scheduled after RespawnDelay.", inputs=["C:object:" + CONTROLLER])
     active = get_on(g, GSC, "bRaceActive", BOOL, race_state(g))
     rsv = valid(g, race_state(g))
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     rv = valid(g, (r, "Racer"))
-    # one incident, one life: ignore a second death while this racer's respawn is pending
-    pend = g.var_get("PendingRespawnRacer", OBJECT, cls_ref(CONTROLLER))
-    same = g.call_static(MATH, "EqualEqual_ObjectObject", inputs=[obj_pin("A", "/Script/CoreUObject.Object"), obj_pin("B", "/Script/CoreUObject.Object")],
-                         outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
-    g.link(pend, "PendingRespawnRacer", same, "A")
-    g.link_entry("C", same, "B")
-    due = g.var_get("RespawnDueTime", FLOAT)
-    sched = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
-    g.link(due, "RespawnDueTime", sched, "A")
-    dup = and_bool(g)
-    g.link(same, "ReturnValue", dup, "A")
-    g.link(sched, "ReturnValue", dup, "B")
-    nodup = not_bool(g)
-    g.link(dup, "ReturnValue", nodup, "A")
-    c1, c2, c3 = and_bool(g), and_bool(g), and_bool(g)
+    c1, c2 = and_bool(g), and_bool(g)
     g.link(rsv, "ReturnValue", c1, "A")
     g.link(active, "bRaceActive", c1, "B")
     g.link(c1, "ReturnValue", c2, "A")
     g.link(rv, "ReturnValue", c2, "B")
-    g.link(c2, "ReturnValue", c3, "A")
-    g.link(nodup, "ReturnValue", c3, "B")
-    b = branch_on(g, (c3, "ReturnValue"))
+    b = branch_on(g, (c2, "ReturnValue"))
     g.link_entry("then", b, "execute")
+    # one incident, one life: ignore a second death while this racer's own respawn is pending (per racer, Phase 4)
+    rdt = get_on(g, RC, "RespawnDueTime", FLOAT, (r, "Racer"))
+    pending = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
+    g.link(rdt, "RespawnDueTime", pending, "A")
+    bdup = branch_on(g, (pending, "ReturnValue"), (b, "then"))
+    g.note(bdup, "a respawn already pending for this racer?")
     d = add_int_on(g, RC, "Deaths", (r, "Racer"), delta="1")
-    g.link(b, "then", d, "execute")
+    g.link(bdup, "else", d, "execute")
     mx = g.var_get("MaxDeaths", INT)
     ge = compare(g, "GreaterEqual_IntInt", INT)
     g.link(d, "Output_Get", ge, "A")
@@ -460,22 +460,24 @@ def build_mode() -> Blueprint:
     log = log_line(g, "death of ", name_of_entry(g, "C"), ", deaths now ", int_str(g, (d, "Output_Get")))
     g.exec(d, log)
     bl = branch_on(g, (ge, "ReturnValue"), (log, "then"))
+    g.note(bl, "no lives left?")
+    # only a player's death limit ends the race; an NPC always comes back (Phase 4)
+    pcc = g.cast(PLAYER_CONTROLLER)
+    g.link_entry("C", pcc, "Object")
+    g.link(bl, "then", pcc, "execute")
     end = g.call_self("EndRace", inputs=[enum_pin("Reason", E_END_REASON, default=DEATH_LIMIT)])
-    g.link(bl, "then", end, "execute")
-    sp = g.var_set("PendingRespawnRacer", OBJECT, sub_object=cls_ref(CONTROLLER))
-    g.link_entry("C", sp, "PendingRespawnRacer")
-    g.link(bl, "else", sp, "execute")
+    g.link(pcc, "then", end, "execute")
     now = game_time(g)
     delay = g.var_get("RespawnDelay", FLOAT)
     at = math2(g, "Add_FloatFloat", FLOAT)
     g.link(now, "ReturnValue", at, "A")
     g.link(delay, "RespawnDelay", at, "B")
-    sd = g.var_set("RespawnDueTime", FLOAT)
-    g.link(at, "ReturnValue", sd, "RespawnDueTime")
-    g.exec(sp, sd)
+    sd = set_on(g, RC, "RespawnDueTime", FLOAT, (r, "Racer"), value=(at, "ReturnValue"))
+    g.link(bl, "else", sd, "execute")
+    g.link(pcc, "CastFailed", sd, "execute")
 
     # NotifyVehicleDestroyed(Victim, Killer)
-    g = bp.function("NotifyVehicleDestroyed", inputs=["Victim:" + obj_spec(BP_VEHICLE), "Killer:object:" + CONTROLLER])
+    g = bp.function("NotifyVehicleDestroyed", doc="A car was wrecked: credit the killer (+PointsPerKill) and count the victim's death.", inputs=["Victim:" + obj_spec(BP_VEHICLE), "Killer:object:" + CONTROLLER])
     vc = g.call_on(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     g.link_entry("Victim", vc, "self")
     last = g.var_get_on(VC, "LastDriver", OBJECT, cls_ref(CONTROLLER))
@@ -516,7 +518,7 @@ def build_mode() -> Blueprint:
     g.link(bk, "else", death, "execute")
 
     # NotifyCharacterDied(Character)
-    g = bp.function("NotifyCharacterDied", inputs=["Character:" + obj_spec(BP_CHARACTER)])
+    g = bp.function("NotifyCharacterDied", doc="The on-foot character died: count its controller's death.", inputs=["Character:" + obj_spec(BP_CHARACTER)])
     oc = g.var_get_on(CC, "OwningController", OBJECT, cls_ref(CONTROLLER))
     g.link_entry("Character", oc, "self")
     death = g.call_self("HandleRacerDeath", inputs=[obj_pin("C", CONTROLLER)])
@@ -528,7 +530,7 @@ def build_mode() -> Blueprint:
     # ---- Phase 3: explosions (spec 2026-10-30 §5) ----
     # SpawnExplosion(Location, Damage, Radius, InstigatedBy, Causer, bBlowTires): particle + sound; full radial damage of the
     # explosive type when Damage > 0; every vehicle in range (but the causer) gets a radial impulse and, if asked, a tire blast.
-    g = bp.function("SpawnExplosion", inputs=["Location:struct:" + VECTOR, "Damage:float", "Radius:float",
+    g = bp.function("SpawnExplosion", doc="The explosion rule: effects, full radial damage inside the radius, a shove and a tire blast for every car caught.", inputs=["Location:struct:" + VECTOR, "Damage:float", "Radius:float",
                                               "InstigatedBy:object:" + CONTROLLER, "Causer:object:" + ACTOR, "bBlowTires:bool"],
                     locals=["Shooter:object:" + ACTOR])
     fx = g.var_get("ExplosionEffect", OBJECT, cls_ref(PARTICLE_SYSTEM))
@@ -655,7 +657,7 @@ def build_mode() -> Blueprint:
 
     # SweepItems(): remove every live bomb (and, from Task 4, rocket) — RestartRace calls it so a leftover armed bomb never
     # reaches the next race or the next functional test (spec §4)
-    g = bp.function("SweepItems")
+    g = bp.function("SweepItems", doc="Removes every live bomb and rocket (RestartRace).")
     prev = ("entry", "then")
     for cls in (gen(BP_BOMB), gen(BP_PROJECTILE)):
         found = get_all_actors_of_class(g, cls)
@@ -669,7 +671,7 @@ def build_mode() -> Blueprint:
 
     # ---- Phase 3: items (spec 2026-10-30 §2, §4) ----
     # GetItemInfo(Type) -> Name, BoxCharges, MaxCharges
-    g = bp.function("GetItemInfo", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["Name:string", "BoxCharges:int", "MaxCharges:int"], pure=True)
+    g = bp.function("GetItemInfo", doc="Item name, charges per crate and cap per racer, in one place.", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["Name:string", "BoxCharges:int", "MaxCharges:int"], pure=True)
     prev = ("entry", "then")
     for idx, box, cap in ((ITEM_BOOST, 1, 3), (ITEM_SHIELD, 1, 2), (ITEM_BOMB, 1, 3), (ITEM_GUN, 8, 24), (ITEM_RPG, 1, 2)):
         b = branch_on(g, (enum_is(g, ("entry", "Type"), idx), "ReturnValue"))
@@ -682,7 +684,7 @@ def build_mode() -> Blueprint:
     g.link(prev[0], prev[1], r0, "execute")
 
     # GrantItem(C, Type, Charges) -> bool: into the racer's inventory, capped by GetItemInfo; stamps the pickup for the HUD
-    g = bp.function("GrantItem", inputs=["C:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], outputs=["ReturnValue:bool"])
+    g = bp.function("GrantItem", doc="Puts an item into a controller's inventory (capped) and stamps the pickup for the HUD.", inputs=["C:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], outputs=["ReturnValue:bool"])
     r = find_racer(g, ("entry", "C"))
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
     g.link_entry("then", b, "execute")
@@ -715,7 +717,7 @@ def build_mode() -> Blueprint:
     g.link(ba, "else", r_no2, "execute")
 
     # CycleItem(C): next inventory slot of C's racer
-    g = bp.function("CycleItem", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("CycleItem", doc="Selects the next inventory slot of a controller's racer.", inputs=["C:object:" + CONTROLLER])
     r = find_racer(g, ("entry", "C"))
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
     g.link_entry("then", b, "execute")
@@ -723,7 +725,7 @@ def build_mode() -> Blueprint:
     g.link(b, "then", cy, "execute")
 
     # GetRespawnTransform(C): last gate, else gate 0, else the player start, else identity
-    g = bp.function("GetRespawnTransform", inputs=["C:object:" + CONTROLLER], outputs=["Transform:struct:" + TRANSFORM])
+    g = bp.function("GetRespawnTransform", doc="Where a racer comes back: its last gate, else gate 0, else the player start.", inputs=["C:object:" + CONTROLLER], outputs=["Transform:struct:" + TRANSFORM])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     lc = g.var_get_on(RC, "LastCheckpoint", OBJECT, cls_ref(CPC))
@@ -765,7 +767,7 @@ def build_mode() -> Blueprint:
     g.link(b4, "else", r4, "execute")
 
     # RespawnRacer(C): put the racer back in a car at the respawn point (players; AI respawn is Phase 4)
-    g = bp.function("RespawnRacer", inputs=["C:object:" + CONTROLLER],
+    g = bp.function("RespawnRacer", doc="Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed.", inputs=["C:object:" + CONTROLLER],
                     locals=["Car:" + obj_spec(BP_VEHICLE), "SpawnAt:struct:" + TRANSFORM])
     pc = g.cast(PCC)
     g.link_entry("C", pc, "Object")
@@ -844,6 +846,70 @@ def build_mode() -> Blueprint:
     g.link_entry("C", sld, "LastDriver")
     g.exec(poss, sld)
     g.link(bp_, "else", sld, "execute")
+    # ---- Phase 4 (spec §4.3): an NPC comes back at its gate, shifted onto its lane; its car is teleported, or replaced and
+    # possessed BEFORE the wreck is destroyed (a controller without a PlayerState dies with its possessed pawn) ----
+    AIC_ = gen(BP_AI)
+    aic = g.cast(AIC_)
+    g.link_entry("C", aic, "Object")
+    g.link(pc, "CastFailed", aic, "execute")
+    AI_ = (aic, as_pin(BP_AI))
+    tra = g.call_self("GetRespawnTransform", inputs=[obj_pin("C", CONTROLLER)], outputs=[struct_pin("Transform", TRANSFORM, "out")])
+    g.link_entry("C", tra, "C")
+    g.link(aic, "then", tra, "execute")
+    brk = g.call_static(MATH, "BreakTransform", inputs=[struct_pin("InTransform", TRANSFORM)],
+                        outputs=[struct_pin("Location", VECTOR, "out"), struct_pin("Rotation", ROTATOR, "out"), struct_pin("Scale", VECTOR, "out")], pure=True)
+    g.link(tra, "Transform", brk, "InTransform")
+    right = g.call_static(MATH, "GetRightVector", inputs=[struct_pin("InRot", ROTATOR)], outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(brk, "Rotation", right, "InRot")
+    lane = get_on(g, AIC_, "LaneOffset", FLOAT, AI_)
+    shift = g.call_static(MATH, "Multiply_VectorFloat", inputs=[struct_pin("A", VECTOR), Pin("B", FLOAT)], outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(right, "ReturnValue", shift, "A")
+    g.link(lane, "LaneOffset", shift, "B")
+    on_lane = g.call_static(MATH, "Add_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR)], outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(brk, "Location", on_lane, "A")
+    g.link(shift, "ReturnValue", on_lane, "B")
+    mka = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR), struct_pin("Scale", VECTOR, default="1,1,1")],
+                        outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
+    g.link(on_lane, "ReturnValue", mka, "Location")
+    g.link(brk, "Rotation", mka, "Rotation")
+    s_at_ai = g.local_set("SpawnAt", STRUCT, sub_object=struct_ref(TRANSFORM))
+    g.link(mka, "ReturnValue", s_at_ai, "SpawnAt")
+    g.exec(tra, s_at_ai)
+    pawn_ai = call(g, CONTROLLER, "K2_GetPawn", AI_, outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
+    vca = g.cast(VC)
+    g.link(pawn_ai, "ReturnValue", vca, "Object")
+    g.exec(s_at_ai, vca)
+    s_car_ai = g.local_set("Car", OBJECT, sub_object=cls_ref(VC))
+    g.link(vca, as_pin(BP_VEHICLE), s_car_ai, "Car")
+    g.link(vca, "then", s_car_ai, "execute")
+    s_car_none = g.local_set("Car", OBJECT, sub_object=cls_ref(VC))
+    g.link(vca, "CastFailed", s_car_none, "execute")
+    bva = branch_on(g, (valid(g, car()), "ReturnValue"))
+    g.note(bva, "does the NPC still have a car?")
+    g.exec(s_car_ai, bva)
+    g.exec(s_car_none, bva)
+    destroyed_ai = get_on(g, VC, "bIsDestroyed", BOOL, car())
+    bda = branch_on(g, (destroyed_ai, "bIsDestroyed"), (bva, "then"))
+    g.note(bda, "wrecked? then a fresh car")
+    tpa = call(g, VC, "TeleportAndStop", car(), inputs=[struct_pin("NewTransform", TRANSFORM)])
+    link(g, spawn_at(), tpa, "NewTransform")
+    g.link(bda, "else", tpa, "execute")
+    spa = g.spawn_actor(VC)
+    link(g, spawn_at(), spa, "SpawnTransform")
+    g.link(bda, "then", spa, "execute")
+    g.link(bva, "else", spa, "execute")
+    possa = call(g, CONTROLLER, "Possess", AI_, inputs=[obj_pin("InPawn", PAWN)])
+    g.link(spa, "ReturnValue", possa, "InPawn")
+    g.exec(spa, possa)
+    bwa = branch_on(g, (valid(g, car()), "ReturnValue"), (possa, "then"))
+    killa = call(g, ACTOR, "K2_DestroyActor", car())
+    g.link(bwa, "then", killa, "execute")
+    s_new_ai = g.local_set("Car", OBJECT, sub_object=cls_ref(VC))
+    g.link(spa, "ReturnValue", s_new_ai, "Car")
+    g.exec(killa, s_new_ai)
+    g.link(bwa, "else", s_new_ai, "execute")
+    g.link(tpa, "then", sld, "execute")
+    g.link(s_new_ai, "then", sld, "execute")
     hb = call(g, "/Script/PhysXVehicles.WheeledVehicleMovementComponent", "SetHandbrakeInput",
               (get_on(g, VC, "VehicleMovement", OBJECT, car(), sub=cls_ref("/Script/PhysXVehicles.WheeledVehicleMovementComponent")), "VehicleMovement"),
               inputs=[Pin("bNewHandbrake", BOOL, default="false")])
@@ -861,7 +927,7 @@ def build_mode() -> Blueprint:
     g.link(br, "else", fire, "execute")
 
     # IsOnAnyTrack(Location) -> bool: within RoadWidth/2 + OffTrackMargin of any track; true when the level has none
-    g = bp.function("IsOnAnyTrack", inputs=["Location:struct:" + VECTOR], outputs=["ReturnValue:bool"])
+    g = bp.function("IsOnAnyTrack", doc="True within RoadWidth/2 + OffTrackMargin of any track (or when the level has no track).", inputs=["Location:struct:" + VECTOR], outputs=["ReturnValue:bool"])
     arr = g.var_get("Tracks", OBJECT, cls_ref(TC), container="Array")
     n = g.call_array(ARR, "Array_Length", Pin("e", OBJECT, sub_object=cls_ref(TC)), outputs=[Pin("ReturnValue", INT, "out")])
     g.link(arr, "Tracks", n, "TargetArray")
@@ -895,7 +961,7 @@ def build_mode() -> Blueprint:
     g.link(loop, "Completed", no, "execute")
 
     # TickRacer(C, DeltaSeconds): progress along the main track and the off-track timer (driving only)
-    g = bp.function("TickRacer", inputs=["C:object:" + CONTROLLER, "DeltaSeconds:float"])
+    g = bp.function("TickRacer", doc="Per-frame racer upkeep: progress along the main track and the off-track timer while driving.", inputs=["C:object:" + CONTROLLER, "DeltaSeconds:float"])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     R_ = (r, "Racer")
@@ -921,17 +987,9 @@ def build_mode() -> Blueprint:
     on_foot = set_on(g, RC, "OffTrackSeconds", FLOAT, R_, default="0.0")
     g.link(vc, "CastFailed", on_foot, "execute")
     wrecked = get_on(g, VC, "bIsDestroyed", BOOL, V)
-    pend = g.var_get("PendingRespawnRacer", OBJECT, cls_ref(CONTROLLER))
-    same = g.call_static(MATH, "EqualEqual_ObjectObject", inputs=[obj_pin("A", "/Script/CoreUObject.Object"), obj_pin("B", "/Script/CoreUObject.Object")],
-                         outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
-    g.link(pend, "PendingRespawnRacer", same, "A")
-    g.link_entry("C", same, "B")
-    due = g.var_get("RespawnDueTime", FLOAT)
-    sched = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
-    g.link(due, "RespawnDueTime", sched, "A")
-    waiting = and_bool(g)
-    g.link(same, "ReturnValue", waiting, "A")
-    g.link(sched, "ReturnValue", waiting, "B")
+    rdt = get_on(g, RC, "RespawnDueTime", FLOAT, R_)
+    waiting = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
+    g.link(rdt, "RespawnDueTime", waiting, "A")
     skip = or_bool(g)
     g.link(wrecked, "bIsDestroyed", skip, "A")
     g.link(waiting, "ReturnValue", skip, "B")
@@ -962,7 +1020,89 @@ def build_mode() -> Blueprint:
     g.exec(zero3, resp)
 
     # IsRacerAhead(A, B) -> bool: score, then laps, then distance along the main track
-    g = bp.function("IsRacerAhead", inputs=["A:object:" + RC, "B:object:" + RC], outputs=["ReturnValue:bool"], pure=True)
+    # RankDistance(Racer) -> Distance (Phase 4): the ranking tiebreak, as progress from the start line (gate 0) so neither the
+    # spline's origin nor gate 1's position matters. A racer still waiting for gate 1 but already past gate 1's progress is behind
+    # the line (the NPC grid, or someone who reversed over it), not about to finish: it counts as negative progress.
+    g = bp.function("RankDistance", inputs=["Racer:object:" + RC], outputs=["Distance:float"], pure=True,
+                    doc="Ranking tiebreak: progress from the start line (gate 0); a racer still waiting for gate 1 but already past gate 1's progress (the grid before the line) counts as behind the line. Raw spline distance without a track or gates.")
+    d = g.var_get_on(RC, "DistanceAlongTrack", FLOAT)
+    g.link_entry("Racer", d, "self")
+    nx = g.var_get_on(RC, "NextCheckpointIndex", INT)
+    g.link_entry("Racer", nx, "self")
+    mt = g.var_get("MainTrack", OBJECT, cls_ref(TC))
+    MT_ = (mt, "MainTrack")
+    gates = g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array")
+    ngates = g.call_array(ARR, "Array_Length", Pin("e", OBJECT, sub_object=cls_ref(CPC)), outputs=[Pin("ReturnValue", INT, "out")])
+    g.link(gates, "Checkpoints", ngates, "TargetArray")
+    some = compare(g, "Greater_IntInt", INT, b="0")
+    g.link(ngates, "ReturnValue", some, "A")
+    ok = and_bool(g)
+    g.link(valid(g, MT_), "ReturnValue", ok, "A")
+    g.link(some, "ReturnValue", ok, "B")
+    bok = branch_on(g, (ok, "ReturnValue"))
+    g.link_entry("then", bok, "execute")
+    g.note(bok, "a main track and a start gate?")
+    r_raw = g.function_result([Pin("Distance", FLOAT)])
+    g.link(d, "DistanceAlongTrack", r_raw, "Distance")
+    g.link(bok, "else", r_raw, "execute")
+
+    def gate_distance(index_default=None, index_src=None):
+        get = g.call_array(ARR, "Array_Get", Pin("e", OBJECT, sub_object=cls_ref(CPC)), inputs=[Pin("Index", INT, default=index_default)],
+                           outputs=[Pin("Item", OBJECT, "out", cls_ref(CPC))])
+        g.link(g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array"), "Checkpoints", get, "TargetArray")
+        if index_src is not None:
+            g.link(index_src[0], index_src[1], get, "Index")
+        loc = call(g, ACTOR, "K2_GetActorLocation", (get, "Item"), outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+        dist = call(g, TC, "GetDistanceAlongTrack", MT_, inputs=[struct_pin("WorldLocation", VECTOR)], outputs=[Pin("Distance", FLOAT, "out")], pure=True)
+        g.link(loc, "ReturnValue", dist, "WorldLocation")
+        return dist
+
+    d0 = gate_distance(index_default="0")
+    nm1 = math2(g, "Subtract_IntInt", INT, b="1")
+    g.link(ngates, "ReturnValue", nm1, "A")
+    idx1 = math2(g, "Min", INT, a="1")  # gate 1, or gate 0 again on a one-gate track (then the half-lap rule below applies)
+    g.link(nm1, "ReturnValue", idx1, "B")
+    d1 = gate_distance(index_src=(idx1, "ReturnValue"))
+    L = call(g, TC, "GetTrackLength", MT_, outputs=[Pin("Length", FLOAT, "out")], pure=True)
+    rel = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link(d, "DistanceAlongTrack", rel, "A")
+    g.link(d0, "Distance", rel, "B")
+    p = call(g, TC, "WrapDistance", MT_, inputs=[Pin("Distance", FLOAT)], outputs=[Pin("Wrapped", FLOAT, "out")], pure=True)
+    g.link(rel, "ReturnValue", p, "Distance")
+    rel1 = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link(d1, "Distance", rel1, "A")
+    g.link(d0, "Distance", rel1, "B")
+    p1raw = call(g, TC, "WrapDistance", MT_, inputs=[Pin("Distance", FLOAT)], outputs=[Pin("Wrapped", FLOAT, "out")], pure=True)
+    g.link(rel1, "ReturnValue", p1raw, "Distance")
+    half = math2(g, "Multiply_FloatFloat", FLOAT, b="0.5")
+    g.link(L, "Length", half, "A")
+    two = compare(g, "GreaterEqual_IntInt", INT, b="2")
+    g.link(ngates, "ReturnValue", two, "A")
+    p1 = g.call_static(MATH, "SelectFloat", inputs=[Pin("A", FLOAT), Pin("B", FLOAT), Pin("bPickA", BOOL)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(p1raw, "Wrapped", p1, "A")
+    g.link(half, "ReturnValue", p1, "B")
+    g.link(two, "ReturnValue", p1, "bPickA")
+    first_gate = compare(g, "EqualEqual_IntInt", INT, b="1")
+    g.link(nx, "NextCheckpointIndex", first_gate, "A")
+    past = compare(g, "Greater_FloatFloat", FLOAT)
+    g.link(p, "Wrapped", past, "A")
+    g.link(p1, "ReturnValue", past, "B")
+    behind = and_bool(g)
+    g.link(first_gate, "ReturnValue", behind, "A")
+    g.link(past, "ReturnValue", behind, "B")
+    bb = branch_on(g, (behind, "ReturnValue"), (bok, "then"))
+    g.note(bb, "waiting for gate 1 but already past it: behind the line")
+    minus = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link(p, "Wrapped", minus, "A")
+    g.link(L, "Length", minus, "B")
+    r_behind = g.function_result([Pin("Distance", FLOAT)])
+    g.link(minus, "ReturnValue", r_behind, "Distance")
+    g.link(bb, "then", r_behind, "execute")
+    r_plain = g.function_result([Pin("Distance", FLOAT)])
+    g.link(p, "Wrapped", r_plain, "Distance")
+    g.link(bb, "else", r_plain, "execute")
+
+    g = bp.function("IsRacerAhead", doc="Ranking order: score, then laps, then RankDistance (progress past the start line).", inputs=["A:object:" + RC, "B:object:" + RC], outputs=["ReturnValue:bool"], pure=True)
 
     def field(var, cat, who):
         n = g.var_get_on(RC, var, cat)
@@ -971,7 +1111,13 @@ def build_mode() -> Blueprint:
 
     sa, sb = field("Score", INT, "A"), field("Score", INT, "B")
     la, lb = field("LapsCompleted", INT, "A"), field("LapsCompleted", INT, "B")
-    da, db = field("DistanceAlongTrack", FLOAT, "A"), field("DistanceAlongTrack", FLOAT, "B")
+
+    def rank_dist(who):
+        n = g.call_self("RankDistance", inputs=[obj_pin("Racer", RC)], outputs=[Pin("Distance", FLOAT, "out")], pure=True)
+        g.link_entry(who, n, "Racer")
+        return n
+
+    da, db = rank_dist("A"), rank_dist("B")
 
     def cmp(fn, cat, a, b, var):
         n = compare(g, fn, cat)
@@ -981,7 +1127,7 @@ def build_mode() -> Blueprint:
 
     s_gt, s_eq = cmp("Greater_IntInt", INT, sa, sb, "Score"), cmp("EqualEqual_IntInt", INT, sa, sb, "Score")
     l_gt, l_eq = cmp("Greater_IntInt", INT, la, lb, "LapsCompleted"), cmp("EqualEqual_IntInt", INT, la, lb, "LapsCompleted")
-    d_gt = cmp("Greater_FloatFloat", FLOAT, da, db, "DistanceAlongTrack")
+    d_gt = cmp("Greater_FloatFloat", FLOAT, da, db, "Distance")
     leq_and_d = and_bool(g)
     g.link(l_eq, "ReturnValue", leq_and_d, "A")
     g.link(d_gt, "ReturnValue", leq_and_d, "B")
@@ -998,15 +1144,12 @@ def build_mode() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # GetRankedRacers -> array of racers, best first
-    g = bp.function("GetRankedRacers", outputs=["Racers:array<object:%s>" % RC], locals=["Ranked:array<object:%s>" % RC])
-    allc = g.call_static(GAMEPLAY, "GetAllActorsOfClass",
-                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True),
-                                 Pin("ActorClass", "class", sub_object=cls_ref(ACTOR), default_object=CONTROLLER)],
-                         outputs=[Pin("OutActors", OBJECT, "out", cls_ref(CONTROLLER), container="Array")])
-    g.link_entry("then", allc, "execute")
+    g = bp.function("GetRankedRacers", doc="Every racer in the level, best first.", outputs=["Racers:array<object:%s>" % RC], locals=["Ranked:array<object:%s>" % RC])
+    # Phase 4: the registered racers (player and NPCs), not every controller in the level
+    allc = g.var_get("RacerControllers", OBJECT, cls_ref(CONTROLLER), container="Array")
     loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(CONTROLLER)))
-    g.link(allc, "OutActors", loop, "Array")
-    g.link(allc, "then", loop, "Exec")
+    g.link(allc, "RacerControllers", loop, "Array")
+    g.link_entry("then", loop, "Exec")
     fr = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link(loop, "Array Element", fr, "C")
     bv = branch_on(g, (valid(g, (fr, "Racer")), "ReturnValue"), (loop, "LoopBody"))
@@ -1049,8 +1192,291 @@ def build_mode() -> Blueprint:
     g.link(ranked(), "Ranked", out, "Racers")
     g.link(outer, "Completed", out, "execute")
 
+    # ---- Phase 4: NPC racers (spec 2026-10-30 phase 4 §4) ----
+    AIC = gen(BP_AI)
+
+    def ctrl_elem():
+        return Pin("e", OBJECT, sub_object=cls_ref(CONTROLLER))
+
+    def racers_arr(g):
+        return g.var_get("RacerControllers", OBJECT, cls_ref(CONTROLLER), container="Array")
+
+    # IsPlayer(C) -> bool
+    g = bp.function("IsPlayer", inputs=["C:object:" + CONTROLLER], outputs=["ReturnValue:bool"],
+                    doc="True for a player controller (the death limit and the time bonus are players-only rules).")
+    pcc = g.cast(PLAYER_CONTROLLER)
+    g.link_entry("C", pcc, "Object")
+    g.link_entry("then", pcc, "execute")
+    g.link(pcc, "then", ret(g, ReturnValue="true"), "execute")
+    g.link(pcc, "CastFailed", ret(g, ReturnValue="false"), "execute")
+
+    # RegisterRacer(C): once, then refresh the ranks
+    g = bp.function("RegisterRacer", inputs=["C:object:" + CONTROLLER],
+                    doc="Adds a controller with a racer to the ranked list, once, and refreshes the ranks.")
+    r = find_racer(g, ("entry", "C"))
+    b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
+    g.link_entry("then", b, "execute")
+    add = g.call_array(ARR, "Array_AddUnique", ctrl_elem(), inputs=[Pin("NewItem", OBJECT, sub_object=cls_ref(CONTROLLER))],
+                       outputs=[Pin("ReturnValue", INT, "out")], pure=False)
+    g.link(racers_arr(g), "RacerControllers", add, "TargetArray")
+    g.link_entry("C", add, "NewItem")
+    g.link(b, "then", add, "execute")
+    ur = g.call_self("UpdateRanks")
+    g.exec(add, ur)
+
+    # UnregisterRacer(C)
+    g = bp.function("UnregisterRacer", inputs=["C:object:" + CONTROLLER], doc="Removes a controller from the ranked list.")
+    rm = g.call_array(ARR, "Array_RemoveItem", ctrl_elem(), inputs=[Pin("Item", OBJECT, sub_object=cls_ref(CONTROLLER))],
+                      outputs=[Pin("ReturnValue", BOOL, "out")], pure=False)
+    g.link(racers_arr(g), "RacerControllers", rm, "TargetArray")
+    g.link_entry("C", rm, "Item")
+    g.link_entry("then", rm, "execute")
+
+    # UpdateRanks(): Rank on every racer, RacerCount on the GameState
+    g = bp.function("UpdateRanks", doc="Writes each racer's 1-based Rank and the GameState's RacerCount from GetRankedRacers.")
+    ranked = g.call_self("GetRankedRacers", outputs=[Pin("Racers", OBJECT, "out", cls_ref(RC), container="Array")])
+    g.link_entry("then", ranked, "execute")
+    loop = g.for_each(racer_elem())
+    g.link(ranked, "Racers", loop, "Array")
+    g.link(ranked, "then", loop, "Exec")
+    place = math2(g, "Add_IntInt", INT, b="1")
+    g.link(loop, "Array Index", place, "A")
+    sr = set_on(g, RC, "Rank", INT, (loop, "Array Element"), value=(place, "ReturnValue"))
+    g.link(loop, "LoopBody", sr, "execute")
+    bgs = branch_on(g, (valid(g, race_state(g)), "ReturnValue"), (loop, "Completed"))  # RegisterRacer may run before BeginPlay
+    count = g.call_array(ARR, "Array_Length", racer_elem(), outputs=[Pin("ReturnValue", INT, "out")])
+    g.link(ranked, "Racers", count, "TargetArray")
+    sc = set_on(g, GSC, "RacerCount", INT, race_state(g), value=(count, "ReturnValue"))
+    g.link(bgs, "then", sc, "execute")
+
+    # SpawnNPCs(Count): a grid behind the start line, alternating lanes, one AI controller per car
+    g = bp.function("SpawnNPCs", inputs=["Count:int"],
+                    locals=["Car:" + obj_spec(BP_VEHICLE), "AI:" + obj_spec(BP_AI), "SpawnAt:struct:" + TRANSFORM, "Side:float", "StartDistance:float"],
+                    doc="Spawns Count NPC cars with their controllers on a grid behind the start line, alternating lanes, and registers their racers.")
+    mt = g.var_get("MainTrack", OBJECT, cls_ref(TC))
+    MT = (mt, "MainTrack")
+    some = compare(g, "Greater_IntInt", INT, b="0")
+    g.link_entry("Count", some, "A")
+    ok = and_bool(g)
+    g.link(valid(g, MT), "ReturnValue", ok, "A")
+    g.link(some, "ReturnValue", ok, "B")
+    b = branch_on(g, (ok, "ReturnValue"))
+    g.note(b, "a main track, and at least one NPC asked for?")
+    g.link_entry("then", b, "execute")
+    arr = g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array")
+    cnt = g.call_array(ARR, "Array_Length", Pin("e", OBJECT, sub_object=cls_ref(CPC)), outputs=[Pin("ReturnValue", INT, "out")])
+    g.link(arr, "Checkpoints", cnt, "TargetArray")
+    has = compare(g, "Greater_IntInt", INT, b="0")
+    g.link(cnt, "ReturnValue", has, "A")
+    bh = branch_on(g, (has, "ReturnValue"), (b, "then"))
+    g.note(bh, "gate 0 marks the start line; without gates, distance 0")
+    arr2 = g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array")
+    first = g.call_array(ARR, "Array_Get", Pin("e", OBJECT, sub_object=cls_ref(CPC)), inputs=[Pin("Index", INT, default="0")],
+                         outputs=[Pin("Item", OBJECT, "out", cls_ref(CPC))])
+    g.link(arr2, "Checkpoints", first, "TargetArray")
+    d0 = call(g, TC, "GetDistanceAlongTrack", MT, inputs=[struct_pin("WorldLocation", VECTOR)], outputs=[Pin("Distance", FLOAT, "out")], pure=True)
+    g.link(actor_loc(g, (first, "Item")), "ReturnValue", d0, "WorldLocation")
+    s_d0 = g.local_set("StartDistance", FLOAT)
+    g.link(d0, "Distance", s_d0, "StartDistance")
+    g.link(bh, "then", s_d0, "execute")
+    s_zero = g.local_set("StartDistance", FLOAT, default="0.0")
+    g.link(bh, "else", s_zero, "execute")
+    loop = g.for_loop()
+    last = math2(g, "Subtract_IntInt", INT, b="1")
+    g.link_entry("Count", last, "A")
+    g.link(last, "ReturnValue", loop, "LastIndex")
+    g.link(s_d0, "then", loop, "execute")
+    g.link(s_zero, "then", loop, "execute")
+    # row k sits NPCRowSpacing * (k + 1) behind the line, wrapped around the loop
+    i1 = math2(g, "Add_IntInt", INT, b="1")
+    g.link(loop, "Index", i1, "A")
+    i1f = g.call_static(MATH, "Conv_IntToFloat", inputs=[Pin("InInt", INT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(i1, "ReturnValue", i1f, "InInt")
+    rs = g.var_get("NPCRowSpacing", FLOAT)
+    back = math2(g, "Multiply_FloatFloat", FLOAT)
+    g.link(rs, "NPCRowSpacing", back, "A")
+    g.link(i1f, "ReturnValue", back, "B")
+    sd = g.local_get("StartDistance", FLOAT)
+    raw = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link(sd, "StartDistance", raw, "A")
+    g.link(back, "ReturnValue", raw, "B")
+    wd = call(g, TC, "WrapDistance", MT, inputs=[Pin("Distance", FLOAT)], outputs=[Pin("Wrapped", FLOAT, "out")], pure=True)
+    g.link(raw, "ReturnValue", wd, "Distance")
+    xf = call(g, TC, "GetTransformAtDistance", MT, inputs=[Pin("Distance", FLOAT)], outputs=[struct_pin("Transform", TRANSFORM, "out")], pure=True)
+    g.link(wd, "Wrapped", xf, "Distance")
+    brk = g.call_static(MATH, "BreakTransform", inputs=[struct_pin("InTransform", TRANSFORM)],
+                        outputs=[struct_pin("Location", VECTOR, "out"), struct_pin("Rotation", ROTATOR, "out"), struct_pin("Scale", VECTOR, "out")], pure=True)
+    g.link(xf, "Transform", brk, "InTransform")
+    right = g.call_static(MATH, "GetRightVector", inputs=[struct_pin("InRot", ROTATOR)], outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(brk, "Rotation", right, "InRot")
+    # even rows take the left lane (-NPCColumnOffset), odd rows the right
+    rem = math2(g, "Percent_IntInt", INT, b="2")
+    g.link(loop, "Index", rem, "A")
+    even = compare(g, "EqualEqual_IntInt", INT, b="0")
+    g.link(rem, "ReturnValue", even, "A")
+    off = g.var_get("NPCColumnOffset", FLOAT)
+    neg = math2(g, "Multiply_FloatFloat", FLOAT, b="-1.0")
+    g.link(off, "NPCColumnOffset", neg, "A")
+    side = g.call_static(MATH, "SelectFloat", inputs=[Pin("A", FLOAT), Pin("B", FLOAT), Pin("bPickA", BOOL)],
+                         outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(neg, "ReturnValue", side, "A")
+    g.link(off, "NPCColumnOffset", side, "B")
+    g.link(even, "ReturnValue", side, "bPickA")
+    s_side = g.local_set("Side", FLOAT)
+    g.link(side, "ReturnValue", s_side, "Side")
+    g.link(loop, "LoopBody", s_side, "execute")
+    side_v = g.local_get("Side", FLOAT)
+    lateral = g.call_static(MATH, "Multiply_VectorFloat", inputs=[struct_pin("A", VECTOR), Pin("B", FLOAT)],
+                            outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(right, "ReturnValue", lateral, "A")
+    g.link(side_v, "Side", lateral, "B")
+    loc1 = g.call_static(MATH, "Add_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR)],
+                         outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(brk, "Location", loc1, "A")
+    g.link(lateral, "ReturnValue", loc1, "B")
+    loc2 = g.call_static(MATH, "Add_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR, default="0,0,50")],
+                         outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(loc1, "ReturnValue", loc2, "A")
+    mk = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
+                                                        struct_pin("Scale", VECTOR, default="1,1,1")],
+                       outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
+    g.link(loc2, "ReturnValue", mk, "Location")
+    g.link(brk, "Rotation", mk, "Rotation")
+    s_at = g.local_set("SpawnAt", STRUCT, sub_object=struct_ref(TRANSFORM))
+    g.link(mk, "ReturnValue", s_at, "SpawnAt")
+    g.exec(s_side, s_at)
+    at = lambda: (g.local_get("SpawnAt", STRUCT, struct_ref(TRANSFORM)), "SpawnAt")
+    sp_car = g.spawn_actor(VC)
+    link(g, at(), sp_car, "SpawnTransform")
+    g.exec(s_at, sp_car)
+    s_car = g.local_set("Car", OBJECT, sub_object=cls_ref(VC))
+    g.link(sp_car, "ReturnValue", s_car, "Car")
+    g.exec(sp_car, s_car)
+    sp_ai = g.spawn_actor(AIC)
+    link(g, at(), sp_ai, "SpawnTransform")
+    g.exec(s_car, sp_ai)
+    s_ai = g.local_set("AI", OBJECT, sub_object=cls_ref(AIC))
+    g.link(sp_ai, "ReturnValue", s_ai, "AI")
+    g.exec(sp_ai, s_ai)
+    AI = lambda: (g.local_get("AI", OBJECT, cls_ref(AIC)), "AI")
+    lane = set_on(g, AIC, "LaneOffset", FLOAT, AI(), value=(g.local_get("Side", FLOAT), "Side"))
+    g.exec(s_ai, lane)
+    spread = g.var_get("NPCSkillSpread", FLOAT)
+    rnd = g.call_static(MATH, "RandomFloatInRange", inputs=[Pin("Min", FLOAT, default="0.0"), Pin("Max", FLOAT)],
+                        outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(spread, "NPCSkillSpread", rnd, "Max")
+    skill = math2(g, "Subtract_FloatFloat", FLOAT, a="1.0")
+    g.link(rnd, "ReturnValue", skill, "B")
+    ss = set_on(g, AIC, "SpeedScale", FLOAT, AI(), value=(skill, "ReturnValue"))
+    g.exec(lane, ss)
+    poss = call(g, CONTROLLER, "Possess", AI(), inputs=[obj_pin("InPawn", PAWN)])
+    link(g, (g.local_get("Car", OBJECT, cls_ref(VC)), "Car"), poss, "InPawn")
+    g.exec(ss, poss)
+    r = find_racer(g, AI())
+    bv = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (poss, "then"))
+    name = g.call_static("KismetStringLibrary", "Concat_StrStr", inputs=[Pin("A", STRING, default="NPC "), Pin("B", STRING)],
+                         outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
+    link(g, int_str(g, (i1, "ReturnValue")), name, "B")
+    txt = g.call_static("KismetTextLibrary", "Conv_StringToText", inputs=[Pin("InString", STRING)], outputs=[Pin("ReturnValue", TEXT, "out")], pure=True)
+    g.link(name, "ReturnValue", txt, "InString")
+    sn = set_on(g, RC, "RacerName", TEXT, (r, "Racer"), value=(txt, "ReturnValue"))
+    g.link(bv, "then", sn, "execute")
+    reg = g.call_self("RegisterRacer", inputs=[obj_pin("C", CONTROLLER)])
+    link(g, AI(), reg, "C")
+    g.exec(sn, reg)
+    g.link(bv, "else", reg, "execute")
+    log = log_line(g, "npc spawned ", (name, "ReturnValue"))
+    g.exec(reg, log)
+
+    # DespawnNPCs(): a Blueprint cannot destroy a controller (AController::K2_DestroyActor is a no-op in UE 4.27), but a
+    # controller without a PlayerState destroys itself when its pawn is destroyed (PawnPendingDestroy). So: unregister,
+    # then destroy the car; a controller that has no car gets a throwaway pawn to die with. Never touch the controller after.
+    g = bp.function("DespawnNPCs", locals=["Pawn:object:" + PAWN],
+                    doc="Takes every NPC out of the ranking and destroys its car; the controller dies with its pawn (Blueprints cannot destroy a controller directly).")
+    found = get_all_actors_of_class(g, AIC)
+    g.link_entry("then", found, "execute")
+    loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(AIC)))
+    g.link(found, "OutActors", loop, "Array")
+    g.link(found, "then", loop, "Exec")
+    E = (loop, "Array Element")
+    unreg = g.call_self("UnregisterRacer", inputs=[obj_pin("C", CONTROLLER)])
+    link(g, E, unreg, "C")
+    g.link(loop, "LoopBody", unreg, "execute")
+    pawn = call(g, CONTROLLER, "K2_GetPawn", E, outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
+    s_pawn = g.local_set("Pawn", OBJECT, sub_object=cls_ref(PAWN))
+    g.link(pawn, "ReturnValue", s_pawn, "Pawn")
+    g.exec(unreg, s_pawn)
+    pawn_v = lambda: (g.local_get("Pawn", OBJECT, cls_ref(PAWN)), "Pawn")
+    bv = branch_on(g, (valid(g, pawn_v()), "ReturnValue"), (s_pawn, "then"))
+    g.note(bv, "has a car? destroying it takes the controller with it")
+    killp = call(g, ACTOR, "K2_DestroyActor", pawn_v())
+    g.link(bv, "then", killp, "execute")
+    # no car: a throwaway pawn, possessed and destroyed at once, ends the controller the same way
+    xf = call(g, ACTOR, "GetTransform", E, outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
+    dummy = g.spawn_actor("/Script/Engine.DefaultPawn")
+    g.link(xf, "ReturnValue", dummy, "SpawnTransform")
+    g.link(bv, "else", dummy, "execute")
+    poss = call(g, CONTROLLER, "Possess", E, inputs=[obj_pin("InPawn", PAWN)])
+    g.link(dummy, "ReturnValue", poss, "InPawn")
+    g.exec(dummy, poss)
+    killd = call(g, ACTOR, "K2_DestroyActor", (dummy, "ReturnValue"))
+    g.exec(poss, killd)
+    ur = g.call_self("UpdateRanks")
+    g.link(loop, "Completed", ur, "execute")
+
+    # GrantNPCItems(): every NPC with a free slot gets a random item with that type's crate charges (spec §3.1)
+    g = bp.function("GrantNPCItems", locals=["Type:" + enum_spec(E_ITEM_TYPE)],
+                    doc="Every NPC with a free inventory slot gets a random item (Boost..RPG) with that type's crate charges.")
+    loop = g.for_each(ctrl_elem())
+    g.link(racers_arr(g), "RacerControllers", loop, "Array")
+    g.link_entry("then", loop, "Exec")
+    E = (loop, "Array Element")
+    aic = g.cast(AIC)
+    link(g, E, aic, "Object")
+    g.link(loop, "LoopBody", aic, "execute")
+    r = find_racer(g, E)
+    bv = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (aic, "then"))
+    inv = g.var_get_on(RC, "Inventory", STRUCT, struct_ref(struct_path(S_ITEM_STACK)), container="Array")
+    link(g, (r, "Racer"), inv, "self")
+    ln = g.call_array(ARR, "Array_Length", Pin("e", STRUCT, sub_object=struct_ref(struct_path(S_ITEM_STACK))), outputs=[Pin("ReturnValue", INT, "out")])
+    g.link(inv, "Inventory", ln, "TargetArray")
+    mx = get_on(g, RC, "MaxSlots", INT, (r, "Racer"))
+    room = compare(g, "Less_IntInt", INT)
+    g.link(ln, "ReturnValue", room, "A")
+    g.link(mx, "MaxSlots", room, "B")
+    broom = branch_on(g, (room, "ReturnValue"), (bv, "then"))
+    g.note(broom, "a free slot?")
+    roll = g.call_static(MATH, "RandomIntegerInRange", inputs=[Pin("Min", INT, default="1"), Pin("Max", INT, default="5")],
+                         outputs=[Pin("ReturnValue", INT, "out")], pure=True)
+    ITEM_ENUM_ = enum_pin("x", E_ITEM_TYPE).sub_object
+    prev = (broom, "then")
+    give = None
+    for idx in (ITEM_BOOST, ITEM_SHIELD, ITEM_BOMB, ITEM_GUN):
+        eq = compare(g, "EqualEqual_IntInt", INT, b=str(idx))
+        g.link(roll, "ReturnValue", eq, "A")
+        bi = branch_on(g, (eq, "ReturnValue"), prev)
+        st = g.local_set("Type", "byte", default=enum_value(idx), sub_object=ITEM_ENUM_)
+        g.link(bi, "then", st, "execute")
+        if give is None:
+            give = g.call_self("GrantItem", inputs=[obj_pin("C", CONTROLLER), enum_pin("Type", E_ITEM_TYPE), Pin("Charges", INT)],
+                               outputs=[Pin("ReturnValue", BOOL, "out")])
+        g.exec(st, give)
+        prev = (bi, "else")
+    st = g.local_set("Type", "byte", default=enum_value(ITEM_RPG), sub_object=ITEM_ENUM_)
+    g.link(prev[0], prev[1], st, "execute")
+    g.exec(st, give)
+    chosen = g.local_get("Type", "byte", sub_object=ITEM_ENUM_)
+    info = g.call_self("GetItemInfo", inputs=[enum_pin("Type", E_ITEM_TYPE)],
+                       outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
+    g.link(chosen, "Type", info, "Type")
+    link(g, E, give, "C")
+    g.link(chosen, "Type", give, "Type")
+    g.link(info, "BoxCharges", give, "Charges")
+    log = log_line(g, "npc item ", (info, "Name"), " to ", name_of(g, E))
+    g.exec(give, log)
+
     # EndRace(Reason)
-    g = bp.function("EndRace", inputs=["Reason:" + enum_spec(E_END_REASON)], locals=["Player:object:" + PLAYER_CONTROLLER])
+    g = bp.function("EndRace", doc="Ends the race: result, ranking, player input off, summary.", inputs=["Reason:" + enum_spec(E_END_REASON)], locals=["Player:object:" + PLAYER_CONTROLLER])
     active = get_on(g, GSC, "bRaceActive", BOOL, race_state(g))
     ok = and_bool(g)
     g.link(valid(g, race_state(g)), "ReturnValue", ok, "A")
@@ -1063,13 +1489,19 @@ def build_mode() -> Blueprint:
     g.link(b, "then", log, "execute")
     off = set_on(g, GSC, "bRaceActive", BOOL, race_state(g), default="false")
     g.exec(log, off)
-    nodue = g.var_set("RespawnDueTime", FLOAT, default="-1.0")
-    nopend = g.var_set("PendingRespawnRacer", OBJECT, sub_object=cls_ref(CONTROLLER))
-    g.exec(off, nodue, nopend)
+    # every pending respawn is cancelled (per racer, Phase 4)
+    rloop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(CONTROLLER)))
+    rarr = g.var_get("RacerControllers", OBJECT, cls_ref(CONTROLLER), container="Array")
+    g.link(rarr, "RacerControllers", rloop, "Array")
+    g.link(off, "then", rloop, "Exec")
+    rr = find_racer(g, (rloop, "Array Element"))
+    brr = branch_on(g, (valid(g, (rr, "Racer")), "ReturnValue"), (rloop, "LoopBody"))
+    clr = set_on(g, RC, "RespawnDueTime", FLOAT, (rr, "Racer"), default="-1.0")
+    g.link(brr, "then", clr, "execute")
     pc0 = get_player_controller(g)
     spl = g.local_set("Player", OBJECT, sub_object=cls_ref(PLAYER_CONTROLLER))
     g.link(pc0, "ReturnValue", spl, "Player")
-    g.exec(nopend, spl)
+    g.link(rloop, "Completed", spl, "execute")
     player = lambda: (g.local_get("Player", OBJECT, cls_ref(PLAYER_CONTROLLER)), "Player")
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     link(g, player(), r, "C")
@@ -1131,7 +1563,7 @@ def build_mode() -> Blueprint:
 
     # RestartRace: a clean race without reloading the level (functional tests share one play session; also usable
     # for a future in-game "restart"): clock, result, racer stats, pending respawn, player back in a car at the start.
-    g = bp.function("RestartRace", locals=["Player:object:" + PLAYER_CONTROLLER])
+    g = bp.function("RestartRace", doc="A clean race without reloading the level: clock, result, racer stats, items swept, player back on the line.", locals=["Player:object:" + PLAYER_CONTROLLER])
     log = log_line(g, "race restart")
     g.link_entry("then", log, "execute")
     s_act = set_on(g, GSC, "bRaceActive", BOOL, race_state(g), default="true")
@@ -1145,14 +1577,12 @@ def build_mode() -> Blueprint:
                                    Pin(member(S_RESULT, "Kills"), INT, default="0"), Pin(member(S_RESULT, "Deaths"), INT, default="0")])
     s_res = set_on(g, GSC, "Result", STRUCT, race_state(g), value=(blank, RESULT.rsplit(".", 1)[1]), sub=struct_ref(RESULT))
     g.exec(s_time, s_res)
-    s_due = g.var_set("RespawnDueTime", FLOAT, default="-1.0")
-    s_pend = g.var_set("PendingRespawnRacer", OBJECT, sub_object=cls_ref(CONTROLLER))
-    g.exec(s_res, s_due, s_pend)
     sweep = g.call_self("SweepItems")
     pc0 = get_player_controller(g)
     s_pl = g.local_set("Player", OBJECT, sub_object=cls_ref(PLAYER_CONTROLLER))
     g.link(pc0, "ReturnValue", s_pl, "Player")
-    g.exec(s_pend, sweep, s_pl)
+    desp = g.call_self("DespawnNPCs")  # Phase 4: every race gets fresh NPCs
+    g.exec(s_res, desp, sweep, s_pl)
     player = lambda: (g.local_get("Player", OBJECT, cls_ref(PLAYER_CONTROLLER)), "Player")
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     link(g, player(), r, "C")
@@ -1160,7 +1590,8 @@ def build_mode() -> Blueprint:
     br = branch_on(g, (valid(g, R_), "ReturnValue"), (s_pl, "then"))
     prev = (br, "then")
     for var, cat, val in (("Score", INT, "0"), ("LapsCompleted", INT, "0"), ("Kills", INT, "0"), ("Deaths", INT, "0"),
-                          ("NextCheckpointIndex", INT, "1"), ("LastCheckpointTime", FLOAT, "-1.0"), ("OffTrackSeconds", FLOAT, "0.0")):
+                          ("NextCheckpointIndex", INT, "1"), ("LastCheckpointTime", FLOAT, "-1.0"), ("OffTrackSeconds", FLOAT, "0.0"),
+                          ("Rank", INT, "0"), ("RespawnDueTime", FLOAT, "-1.0")):
         n = set_on(g, RC, var, cat, R_, default=val)
         g.link(prev[0], prev[1], n, "execute")
         prev = (n, "then")
@@ -1188,10 +1619,23 @@ def build_mode() -> Blueprint:
     g.exec(gmode, hc)
     reset_hud = call(g, HUDC, "ShowRaceHUD", (hc, as_pin(BP_HUD)))
     g.link(hc, "then", reset_hud, "execute")
+    npcs = g.var_get("NPCCount", INT)
+    spawn = g.call_self("SpawnNPCs", inputs=[Pin("Count", INT)])
+    g.link(npcs, "NPCCount", spawn, "Count")
+    g.exec(reset_hud, spawn)
+    g.link(hc, "CastFailed", spawn, "execute")
+    ranks = g.call_self("UpdateRanks")
+    g.exec(spawn, ranks)
+    first_item = math2(g, "Add_FloatFloat", FLOAT)
+    g.link(game_time(g), "ReturnValue", first_item, "A")
+    g.link(g.var_get("AIItemInterval", FLOAT), "AIItemInterval", first_item, "B")
+    s_nat = g.var_set("NextAIItemTime", FLOAT)
+    g.link(first_item, "ReturnValue", s_nat, "NextAIItemTime")
+    g.exec(ranks, s_nat)
 
     # ---- event graph ----
     g = bp.event_graph()
-    g.comment("Generated by tools/bpgen/graphs/game_mode.py. All race rules live in the functions.", 0, 0, cols=6, rows=1)
+    g.section("Begin Play: find the GameState, start the clock, collect gates and tracks")
     bpl = g.begin_play(col=0, row=1)
     par = g.call_parent(GAME_MODE_BASE, "ReceiveBeginPlay", col=1, row=1)
     gs = g.call_static(GAMEPLAY, "GetGameState", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
@@ -1210,8 +1654,19 @@ def build_mode() -> Blueprint:
     collect = g.call_self("CollectLevelActors", col=6, row=1)
     g.exec(sact, collect)
     g.link(cgs, "CastFailed", collect, "execute")
+    npcs = g.var_get("NPCCount", INT)
+    spawn = g.call_self("SpawnNPCs", inputs=[Pin("Count", INT)])
+    g.link(npcs, "NPCCount", spawn, "Count")
+    g.exec(collect, spawn)
+    first_item = math2(g, "Add_FloatFloat", FLOAT)
+    g.link(game_time(g), "ReturnValue", first_item, "A")
+    g.link(g.var_get("AIItemInterval", FLOAT), "AIItemInterval", first_item, "B")
+    s_nat = g.var_set("NextAIItemTime", FLOAT)
+    g.link(first_item, "ReturnValue", s_nat, "NextAIItemTime")
+    g.exec(spawn, s_nat)
 
     # HandleStartingNewPlayer: the parent spawns and possesses the car; then the on-foot character rides in it
+    g.section("New player: the parent spawns the car; spawn the character and put it inside")
     hs = g.event(GAME_MODE_BASE, "HandleStartingNewPlayer", [obj_pin("NewPlayer", PLAYER_CONTROLLER)], col=0, row=4)
     hpar = g.call_parent(GAME_MODE_BASE, "HandleStartingNewPlayer", [obj_pin("NewPlayer", PLAYER_CONTROLLER)], col=1, row=4)
     g.link(hs, "NewPlayer", hpar, "NewPlayer")
@@ -1257,8 +1712,12 @@ def build_mode() -> Blueprint:
     g.link(pcc, "CastFailed", enter, "execute")
     sld = set_on(g, VC, "LastDriver", OBJECT, V, value=(hs, "NewPlayer"), sub=cls_ref(CONTROLLER))
     g.exec(enter, sld)
+    reg = g.call_self("RegisterRacer", inputs=[obj_pin("C", CONTROLLER)])  # Phase 4: the player joins the ranking
+    g.link(hs, "NewPlayer", reg, "C")
+    g.exec(sld, reg)
 
     # Tick: clock, per-racer tick, pending respawn
+    g.section("Tick: clock, each racer's progress and off-track timer, pending respawns")
     tk = g.tick(col=0, row=7)
     rs = g.var_get("RaceState", OBJECT, cls_ref(GSC), col=0, row=8)
     act = get_on(g, GSC, "bRaceActive", BOOL, (rs, "RaceState"))
@@ -1279,35 +1738,89 @@ def build_mode() -> Blueprint:
     bt = branch_on(g, (le0, "ReturnValue"), (st, "then"))
     tu = g.call_self("EndRace", inputs=[enum_pin("Reason", E_END_REASON, default=TIME_UP)])
     g.link(bt, "then", tu, "execute")
-    pc0 = get_player_controller(g)
+    # Phase 4: every registered racer (player and NPCs) is ticked
+    racers = g.var_get("RacerControllers", OBJECT, cls_ref(CONTROLLER), container="Array")
+    loopr = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(CONTROLLER)))
+    g.link(racers, "RacerControllers", loopr, "Array")
+    g.link(bt, "else", loopr, "Exec")
     trk = g.call_self("TickRacer", inputs=[obj_pin("C", CONTROLLER), Pin("DeltaSeconds", FLOAT)])
-    g.link(pc0, "ReturnValue", trk, "C")
+    g.link(loopr, "Array Element", trk, "C")
     g.link(tk, "DeltaSeconds", trk, "DeltaSeconds")
-    g.link(bt, "else", trk, "execute")
-    due = g.var_get("RespawnDueTime", FLOAT)
+    g.link(loopr, "LoopBody", trk, "execute")
+    # a racer whose respawn is due comes back (per racer, Phase 4)
+    rr = find_racer(g, (loopr, "Array Element"))
+    brr = branch_on(g, (valid(g, (rr, "Racer")), "ReturnValue"), (trk, "then"))
+    rdt = get_on(g, RC, "RespawnDueTime", FLOAT, (rr, "Racer"))
     sched = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
-    g.link(due, "RespawnDueTime", sched, "A")
+    g.link(rdt, "RespawnDueTime", sched, "A")
     now = game_time(g)
     reached = compare(g, "GreaterEqual_FloatFloat", FLOAT)
     g.link(now, "ReturnValue", reached, "A")
-    g.link(due, "RespawnDueTime", reached, "B")
+    g.link(rdt, "RespawnDueTime", reached, "B")
     go = and_bool(g)
     g.link(sched, "ReturnValue", go, "A")
     g.link(reached, "ReturnValue", go, "B")
-    br = branch_on(g, (go, "ReturnValue"), (trk, "then"))
-    who = g.var_get("PendingRespawnRacer", OBJECT, cls_ref(CONTROLLER))
-    cdue = g.var_set("RespawnDueTime", FLOAT, default="-1.0")
+    br = branch_on(g, (go, "ReturnValue"), (brr, "then"))
+    g.note(br, "this racer's respawn is due?")
+    cdue = set_on(g, RC, "RespawnDueTime", FLOAT, (rr, "Racer"), default="-1.0")
     g.link(br, "then", cdue, "execute")
     resp = g.call_self("RespawnRacer", inputs=[obj_pin("C", CONTROLLER)])
-    g.link(who, "PendingRespawnRacer", resp, "C")
+    g.link(loopr, "Array Element", resp, "C")
     g.exec(cdue, resp)
-    cpend = g.var_set("PendingRespawnRacer", OBJECT, sub_object=cls_ref(CONTROLLER))
-    g.exec(resp, cpend)
+    # Phase 4: ranks every RankInterval
+    nrt = g.var_get("NextRankTime", FLOAT)
+    now2 = game_time(g)
+    rank_due = compare(g, "GreaterEqual_FloatFloat", FLOAT)
+    g.link(now2, "ReturnValue", rank_due, "A")
+    g.link(nrt, "NextRankTime", rank_due, "B")
+    brank = branch_on(g, (rank_due, "ReturnValue"))
+    g.note(brank, "time for a ranking pass?")
+    g.link(loopr, "Completed", brank, "execute")
+    ranks = g.call_self("UpdateRanks")
+    g.link(brank, "then", ranks, "execute")
+    interval = g.var_get("RankInterval", FLOAT)
+    nxt = math2(g, "Add_FloatFloat", FLOAT)
+    g.link(now2, "ReturnValue", nxt, "A")
+    g.link(interval, "RankInterval", nxt, "B")
+    snrt = g.var_set("NextRankTime", FLOAT)
+    g.link(nxt, "ReturnValue", snrt, "NextRankTime")
+    g.exec(ranks, snrt)
+    # Phase 4: NPC item supply every AIItemInterval (0 = off)
+    nat = g.var_get("NextAIItemTime", FLOAT)
+    aii = g.var_get("AIItemInterval", FLOAT)
+    supply_on = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link(aii, "AIItemInterval", supply_on, "A")
+    item_due = compare(g, "GreaterEqual_FloatFloat", FLOAT)
+    g.link(now2, "ReturnValue", item_due, "A")
+    g.link(nat, "NextAIItemTime", item_due, "B")
+    both_i = and_bool(g)
+    g.link(supply_on, "ReturnValue", both_i, "A")
+    g.link(item_due, "ReturnValue", both_i, "B")
+    bitem = branch_on(g, (both_i, "ReturnValue"))
+    g.note(bitem, "time to hand the NPCs an item?")
+    g.exec(snrt, bitem)
+    g.link(brank, "else", bitem, "execute")
+    give = g.call_self("GrantNPCItems")
+    g.link(bitem, "then", give, "execute")
+    nxt_i = math2(g, "Add_FloatFloat", FLOAT)
+    g.link(now2, "ReturnValue", nxt_i, "A")
+    g.link(aii, "AIItemInterval", nxt_i, "B")
+    s_nat2 = g.var_set("NextAIItemTime", FLOAT)
+    g.link(nxt_i, "ReturnValue", s_nat2, "NextAIItemTime")
+    g.exec(give, s_nat2)
+    return bp
+
+
+def build_test_mode() -> Blueprint:
+    """BP_DFTestGameMode: the functional-test level's GameMode, BP_DFRaceGameMode with NPCCount 0 (spec §4.1)."""
+    bp = Blueprint(BP_GM_TEST, parent=BP_GM,
+                   description="The functional-test level's GameMode: BP_DFRaceGameMode with no NPCs (the AI tests spawn their own).")
+    bp.default("NPCCount", 0)
     return bp
 
 
 def build():
-    return [build_state(), build_mode()]
+    return [build_state(), build_mode(), build_test_mode()]
 
 
 if __name__ == "__main__":

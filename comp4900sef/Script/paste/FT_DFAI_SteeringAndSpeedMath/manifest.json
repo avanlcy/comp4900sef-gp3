@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_SteeringAndSpeedMath",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Steering turns toward the target and saturates at the lock angle; the target speed drops with corner severity; throttle follows the speed error and the hard-steer cap.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

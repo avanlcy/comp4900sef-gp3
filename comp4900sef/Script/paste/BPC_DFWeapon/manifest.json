@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Components/BPC_DFWeapon",
  "parent": "/Script/Engine.ActorComponent",
+ "description": "Hitscan weapon component: damage, range, cooldown.",
  "components": [],
  "variables": [
   {
@@ -65,7 +66,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The cooldown has passed."
   },
   {
    "name": "Fire",
@@ -80,7 +82,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "A hitscan shot: trace, point damage credited to Instigator, OnFired."
   }
  ],
  "graphs": [
@@ -100,7 +103,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     948,
+     0
+    ]
+   }
   },
   {
    "name": "Fire",
@@ -142,7 +155,17 @@
      "DFN_K2Node_CallFunction_6",
      "EventInstigator"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3353,
+     0
+    ]
+   }
   }
  ],
  "defaults": {}

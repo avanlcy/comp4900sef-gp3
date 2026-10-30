@@ -27,9 +27,9 @@ class T:
     """One functional test: a Blueprint plus a linear exec chain on its Start Test event."""
 
     def __init__(self, name: str, doc: str):
-        self.bp = Blueprint("%s/%s" % (TESTS, name), parent=FT)
+        self.bp = Blueprint("%s/%s" % (TESTS, name), parent=FT, description=doc)
         self.g = self.bp.event_graph()
-        self.g.comment(doc, 0, 0, cols=8, rows=1)
+        self.g.section(doc)
         start = self.g.event(FT, "ReceiveStartTest", col=0, row=1)
         self.prev = (start, "then")
 
@@ -707,7 +707,11 @@ def screenshot_test():
                          obj_pin("SpecificPlayer", "/Script/Engine.PlayerController")])
         t.delay(1.0)
 
+    # Phase 4: three NPCs on the grid behind the player (POS 1 / 4 on the line), then driving past into the chase camera's view
+    t.call(GMC, "SpawnNPCs", gm, inputs=[Pin("Count", INT, default="3")])
     t.delay(1.0)
+    shot()
+    t.delay(4.0)
     shot()
     car = t.get(PCC, "CurrentVehicle", OBJECT, pc, sub=cls_ref(VC))
     t.call(VC, "ExitVehicle", car, outputs=[Pin("ReturnValue", BOOL, "out")])
@@ -716,6 +720,7 @@ def screenshot_test():
     t.call(GMC, "EndRace", gm, inputs=[enum_pin("Reason", "/Game/DeadFire/Data/E_DFRaceEndReason", default=1)])
     t.delay(0.5)
     shot()
+    t.call(GMC, "DespawnNPCs", gm)
     t.call(GMC, "RestartRace", gm)
     return [t.finish()]
 

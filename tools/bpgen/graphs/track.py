@@ -120,7 +120,7 @@ def add_piece(g: Graph, prev, s_src, e_src, mesh_var: str, material_var: str, of
 
 
 def build() -> Blueprint:
-    bp = Blueprint(BP_TRACK, parent="/Script/Engine.Actor")
+    bp = Blueprint(BP_TRACK, parent="/Script/Engine.Actor", description="A spline whose construction script lays the road; progress and off-road queries; the AI racing line.")
     bp.component("Spline", SPLINE_COMP, closed_loop=True)
     T = "Dead Fire|Track"
     bp.variable("bIsMainTrack", "bool", "true", T, editable=True)
@@ -146,22 +146,22 @@ def build() -> Blueprint:
     bp.default("BarrierMaterial", "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange")
 
     # ---- queries ----
-    g = bp.function("GetSegmentCount", outputs=["Count:int"], pure=True)
+    g = bp.function("GetSegmentCount", doc="Road pieces laid by the last rebuild.", outputs=["Count:int"], pure=True)
     v = g.var_get("SegmentCount", INT)
     g.link_result(v, "SegmentCount", "Count")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetGeneratedMeshCount", outputs=["Count:int"], pure=True)
+    g = bp.function("GetGeneratedMeshCount", doc="Spline mesh components laid by the last rebuild.", outputs=["Count:int"], pure=True)
     v = g.var_get("GeneratedMeshCount", INT)
     g.link_result(v, "GeneratedMeshCount", "Count")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetTrackLength", outputs=["Length:float"], pure=True)
+    g = bp.function("GetTrackLength", doc="Length of the spline in cm.", outputs=["Length:float"], pure=True)
     n = spline_call(g, "GetSplineLength", outputs=[Pin("ReturnValue", FLOAT, "out")])
     g.link_result(n, "ReturnValue", "Length")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetDistanceAlongTrack", inputs=["WorldLocation:struct:" + VECTOR], outputs=["Distance:float"], pure=True)
+    g = bp.function("GetDistanceAlongTrack", doc="Progress along the spline of the point nearest a location.", inputs=["WorldLocation:struct:" + VECTOR], outputs=["Distance:float"], pure=True)
     key = spline_call(g, "FindInputKeyClosestToWorldLocation", inputs=[struct_pin("WorldLocation", VECTOR)],
                       outputs=[Pin("ReturnValue", FLOAT, "out")])
     g.link_entry("WorldLocation", key, "WorldLocation")
@@ -170,7 +170,7 @@ def build() -> Blueprint:
     g.link_result(d, "ReturnValue", "Distance")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetLateralDistanceFromTrack", inputs=["WorldLocation:struct:" + VECTOR], outputs=["Distance:float"], pure=True)
+    g = bp.function("GetLateralDistanceFromTrack", doc="How far a location is from the spline, sideways.", inputs=["WorldLocation:struct:" + VECTOR], outputs=["Distance:float"], pure=True)
     p = spline_call(g, "FindLocationClosestToWorldLocation",
                     inputs=[struct_pin("WorldLocation", VECTOR), native_enum_pin("CoordinateSpace", SPACE, "World")],
                     outputs=[struct_pin("ReturnValue", VECTOR, "out")])
@@ -182,7 +182,7 @@ def build() -> Blueprint:
     g.link_result(d, "ReturnValue", "Distance")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("IsOnRoad", inputs=["WorldLocation:struct:" + VECTOR], outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("IsOnRoad", doc="Within RoadWidth/2 of the spline.", inputs=["WorldLocation:struct:" + VECTOR], outputs=["ReturnValue:bool"], pure=True)
     lat = g.call_self("GetLateralDistanceFromTrack", inputs=[struct_pin("WorldLocation", VECTOR)], outputs=[Pin("Distance", FLOAT, "out")], pure=True)
     g.link_entry("WorldLocation", lat, "WorldLocation")
     w = g.var_get("RoadWidth", FLOAT)
@@ -193,7 +193,43 @@ def build() -> Blueprint:
     g.link_result(le, "ReturnValue", "ReturnValue")
     g.link_entry("then", "result", "execute")
 
-    g = bp.function("GetTransformAtDistance", inputs=["Distance:float"], outputs=["Transform:struct:" + TRANSFORM], pure=True)
+    # Phase 4 (spec §2.2): a distance brought into [0, length): modulo on a closed track, clamped on an open one
+    g = bp.function("WrapDistance", inputs=["Distance:float"], outputs=["Wrapped:float"], pure=True,
+                    doc="A distance brought into [0, length): modulo on a closed track, clamped on an open one.")
+    length = spline_call(g, "GetSplineLength", outputs=[Pin("ReturnValue", FLOAT, "out")])
+    closed = g.var_get("bClosedTrack", BOOL)
+    b = g.branch()
+    g.link(closed, "bClosedTrack", b, "Condition")
+    g.link_entry("then", b, "execute")
+    ratio = div(g, ("entry", "Distance"), (length, "ReturnValue"))
+    fl = g.call_static(MATH, "FFloor", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
+    g.link(ratio, "ReturnValue", fl, "A")
+    flf = g.call_static(MATH, "Conv_IntToFloat", inputs=[Pin("InInt", INT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(fl, "ReturnValue", flf, "InInt")
+    turns = mul(g, (length, "ReturnValue"), b_src=(flf, "ReturnValue"))
+    wrapped = math2(g, "Subtract_FloatFloat", FLOAT)
+    g.link_entry("Distance", wrapped, "A")
+    g.link(turns, "ReturnValue", wrapped, "B")
+    r1 = g.function_result([Pin("Wrapped", FLOAT)])
+    g.link(wrapped, "ReturnValue", r1, "Wrapped")
+    g.link(b, "then", r1, "execute")
+    clamped = g.call_static(MATH, "FClamp", inputs=[Pin("Value", FLOAT), Pin("Min", FLOAT, default="0.0"), Pin("Max", FLOAT)],
+                            outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("Distance", clamped, "Value")
+    g.link(length, "ReturnValue", clamped, "Max")
+    r2 = g.function_result([Pin("Wrapped", FLOAT)])
+    g.link(clamped, "ReturnValue", r2, "Wrapped")
+    g.link(b, "else", r2, "execute")
+
+    g = bp.function("GetDirectionAtDistance", inputs=["Distance:float"], outputs=["Direction:struct:" + VECTOR], pure=True,
+                    doc="Unit direction of the spline at a distance, in world space (the AI's corner look-ahead).")
+    d = spline_call(g, "GetDirectionAtDistanceAlongSpline", inputs=[Pin("Distance", FLOAT), native_enum_pin("CoordinateSpace", SPACE, "World")],
+                    outputs=[struct_pin("ReturnValue", VECTOR, "out")])
+    g.link_entry("Distance", d, "Distance")
+    g.link_result(d, "ReturnValue", "Direction")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("GetTransformAtDistance", doc="World transform on the spline at a distance.", inputs=["Distance:float"], outputs=["Transform:struct:" + TRANSFORM], pure=True)
     t = spline_call(g, "GetTransformAtDistanceAlongSpline",
                     inputs=[Pin("Distance", FLOAT), native_enum_pin("CoordinateSpace", SPACE, "World"), Pin("bUseScale", BOOL, default="false")],
                     outputs=[struct_pin("ReturnValue", TRANSFORM, "out")])
@@ -209,7 +245,7 @@ def build() -> Blueprint:
     call = ucs.call_self("RebuildTrack")
     ucs.link_entry("then", call, "execute")
 
-    g = bp.function("RebuildTrack")
+    g = bp.function("RebuildTrack", doc="Lays one road slab per PieceLength along the spline, plus optional barriers.")
     # the spline's closed-loop flag is not component instance data and reverts to the template on every rebuild, so the
     # track sets it from its own variable before measuring anything
     closed = g.var_get("bClosedTrack", BOOL)

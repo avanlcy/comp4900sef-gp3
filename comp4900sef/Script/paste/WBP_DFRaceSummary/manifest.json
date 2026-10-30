@@ -2,6 +2,7 @@
  "kind": "widget",
  "asset": "/Game/DeadFire/UI/WBP_DFRaceSummary",
  "parent": "/Script/UMG.UserWidget",
+ "description": "The end-of-race summary with Retry and Quit.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -15,7 +16,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Sets a text block from a string."
   },
   {
    "name": "ShowResult",
@@ -26,7 +28,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Fills the summary from the race result."
   }
  ],
  "graphs": [
@@ -52,7 +55,14 @@
      "DFN_K2Node_CallFunction_1",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "ShowResult",
@@ -76,12 +86,23 @@
      "DFN_K2Node_CallFunction_12",
      "InInt"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {},

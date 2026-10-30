@@ -201,10 +201,23 @@ def _input_copy(p: "Pin", defaults: dict) -> "Pin":
 
 
 class Graph:
-    """One graph (event graph or function body) of one Blueprint."""
+    """One graph (event graph or function body) of one Blueprint.
 
-    COL_W = 420
-    ROW_H = 260
+    Node positions are computed by layout() when the text is written (see the layout contract in the plan
+    docs/superpowers/plans/2026-10-30-phase4-ai.md, Task 1a): exec flow left to right, one row per branch, pure inputs
+    left of and below their consumer, titled comment boxes per section, nothing overlapping.
+    """
+
+    COL_GAP = 80        # between an exec column's right edge and the next column's pure band
+    ROW_GAP = 60        # between rows
+    SECTION_GAP = 100   # extra space between two sections' rows
+    PURE_DX = 40        # between pure depth columns
+    PURE_DY = 40        # a consumer's first pure input starts this far below the consumer's top
+    PURE_GAP = 24       # between stacked pure nodes
+    PAD = 24            # comment box padding
+    TITLE_H = 36        # comment box title bar
+    ROOT_CLASSES = ("K2Node_Event", "K2Node_CustomEvent", "K2Node_InputAction", "K2Node_ComponentBoundEvent",
+                    "K2Node_InputAxisEvent")
 
     def __init__(self, blueprint: str, graph: str, setup: Optional[List[str]] = None):
         self.blueprint = blueprint  # asset name, e.g. BP_DFVehicle
@@ -214,7 +227,12 @@ class Graph:
         self.manual: List[str] = []  # human-readable list of the extra links (for the fallback paste)
         self.extra_links: List[Tuple[str, str, str, str]] = []  # (node id, pin, node id, pin); ids may be "entry"/"result"
         self.setup = setup or []
-        self._auto = 0
+        self.sections: Dict[str, str] = {}  # root node name -> section title
+        self._pending_section: Optional[str] = None
+        self.doc: Optional[str] = None  # a function graph's description: one section around the whole body
+        self.entry_pins = 1  # exec + inputs on the pre-existing entry node (size estimate)
+        self.result_pins = 0  # exec + outputs on the pre-existing result node; 0 = the function has no result node
+        self._layout_info: Optional[Dict[str, Optional[List[int]]]] = None
 
     # ---- plumbing ----
     def _add(self, cls_short: str, props: List[str], pins: List[Pin], col: Optional[int], row: Optional[int],
@@ -224,12 +242,23 @@ class Graph:
         # "DFN_" prefix: never collides with engine-created nodes (K2Node_FunctionEntry_0 ...); the runner replaces it
         # with a per-run token so a re-apply never collides with removed-but-not-yet-collected nodes either.
         node = Node("/Script/%s.%s" % (module, cls_short), "DFN_%s_%d" % (cls_short, n), props, pins)
-        if col is None:
-            col, row = self._auto % 6, self._auto // 6
-            self._auto += 1
-        node.x, node.y = col * self.COL_W, (row or 0) * self.ROW_H
+        # col/row are accepted for compatibility and ignored: layout() places every node
+        if self._pending_section is not None and (cls_short in self.ROOT_CLASSES or any(p.category == EXEC for p in pins)):
+            self.sections[node.name] = self._pending_section
+            self._pending_section = None
+        self._layout_info = None
         self.nodes.append(node)
         return node
+
+    def section(self, title: str) -> None:
+        """Titles the section that starts with the next event (or exec node) created: a comment box around that
+        event's whole chain in the editor."""
+        self._pending_section = title
+
+    def note(self, node: Node, text: str) -> None:
+        """A comment bubble shown above the node in the editor."""
+        node.props = [p for p in node.props if not p.startswith("NodeComment=") and not p.startswith("bCommentBubbleVisible=")]
+        node.props += ['NodeComment="%s"' % escape(text), "bCommentBubbleVisible=True"]
 
     def link(self, a, a_pin: str, b, b_pin: str) -> None:
         """Link two pins. Either side may be "entry" / "result" (the function's pre-existing terminators): those
@@ -528,14 +557,312 @@ class Graph:
                                              container=p.container) for p in outputs]
         return self._add("K2Node_FunctionResult", [], pins, col, row)
 
-    def comment(self, text: str, col: int, row: int, cols: int = 3, rows: int = 1) -> Node:
-        node = self._add("EdGraphNode_Comment", ['NodeComment="%s"' % escape(text), "CommentColor=(R=0.2,G=0.8,B=0.2,A=1.0)"],
-                         [], col, row, module="UnrealEd")
-        node.width, node.height = cols * self.COL_W, rows * self.ROW_H
+    def _comment_box(self, text: str, x: int, y: int, width: int, height: int) -> Node:
+        node = self._add("EdGraphNode_Comment", ['NodeComment="%s"' % escape(text), "CommentColor=(R=0.35,G=0.45,B=0.6,A=1.0)",
+                                                 "FontSize=18"], [], None, None, module="UnrealEd")
+        node.x, node.y, node.width, node.height = x, y, width, height
         return node
+
+    # ---- layout ----
+    @staticmethod
+    def _is_comment(n: Node) -> bool:
+        return n.cls.endswith("EdGraphNode_Comment")
+
+    @staticmethod
+    def _member_name(n: Node) -> str:
+        import re
+        for p in n.props:
+            m = re.search(r'MemberName="([^"]+)"', p)
+            if m:
+                return m.group(1)
+        return ""
+
+    def _estimate(self, n: Node) -> Tuple[int, int]:
+        """Approximate rendered size of a node (px at zoom 1), from its class and visible pins."""
+        short = n.cls.rsplit(".", 1)[1]
+        ins = [p for p in n.pins if p.direction == "in" and not p.hidden]
+        outs = [p for p in n.pins if p.direction == "out" and not p.hidden]
+        tall_header = short in ("K2Node_Event", "K2Node_CustomEvent", "K2Node_ComponentBoundEvent", "K2Node_DynamicCast",
+                                "K2Node_MacroInstance", "K2Node_SpawnActorFromClass", "K2Node_CreateWidget",
+                                "K2Node_AddComponentByClass", "K2Node_CallParentFunction", "K2Node_InputAction") or (
+            short in ("K2Node_CallFunction", "K2Node_CallArrayFunction") and any(p.category == EXEC for p in n.pins))
+        height = (48 if tall_header else 32) + 24 * max(len(ins), len(outs), 1) + 12
+        name = self._member_name(n)
+        title = {"K2Node_IfThenElse": "Branch", "K2Node_ExecutionSequence": "Sequence", "K2Node_Self": "Self",
+                 "K2Node_FunctionResult": "Return Node", "K2Node_MakeArray": "Make Array",
+                 "K2Node_SpawnActorFromClass": "SpawnActor from class", "K2Node_CreateWidget": "Create Widget",
+                 "K2Node_AddComponentByClass": "Add Component", "K2Node_DynamicCast": "Cast To Something",
+                 "K2Node_MacroInstance": "ForEachLoop", "K2Node_Event": "Event " + name, "K2Node_CustomEvent": name,
+                 "K2Node_InputAction": "InputAction " + name, "K2Node_ComponentBoundEvent": "On Component Begin Overlap (X)",
+                 "K2Node_CallParentFunction": "Parent: " + name, "K2Node_CallDelegate": "Call " + name,
+                 "K2Node_GetInputAxisValue": "Get " + name}.get(short, name)
+        if short in ("K2Node_MakeStruct", "K2Node_BreakStruct"):
+            title = "Make Struct"
+        title_w = 7.5 * len(title) + (60 if tall_header else 40)
+        in_w = (7 * max([len(p.name) for p in ins] or [0]) + 24) if ins else 0
+        out_w = (7 * max([len(p.name) for p in outs] or [0]) + 24) if outs else 0
+        width = max(title_w, in_w + out_w + 30, 110)
+        if short in ("K2Node_VariableGet", "K2Node_Self"):
+            width = max(100, 7 * len(name) + 70)
+        return int(min(max(width, 110), 460)), int(height)
+
+    def layout(self) -> Dict[str, Optional[List[int]]]:
+        """Assigns x/y to every node (and adds the section comment boxes); idempotent until the graph changes."""
+        if self._layout_info is not None:
+            return self._layout_info
+        self.nodes = [n for n in self.nodes if not self._is_comment(n)]
+        by_name = {n.name: n for n in self.nodes}
+        for n in self.nodes:
+            n.width, n.height = self._estimate(n)
+        has_entry = self.graph != "EventGraph"
+        exec_nodes = [n for n in self.nodes if any(p.category == EXEC for p in n.pins)]
+        exec_set = set(id(n) for n in exec_nodes)
+        succ: Dict[int, List[Node]] = {}
+        pred: Dict[int, List[Node]] = {id(n): [] for n in exec_nodes}
+        for n in exec_nodes:
+            succ[id(n)] = []
+            for p in n.pins:
+                if p.category == EXEC and p.direction == "out":
+                    for tname, _ in p.links:
+                        t = by_name.get(tname)
+                        if t is not None and id(t) in exec_set:
+                            succ[id(n)].append(t)
+                            pred[id(t)].append(n)
+        to_result = [a for a, _, b, _ in self.extra_links if b == "result"]
+        roots = [n for n in exec_nodes if not pred[id(n)]]
+        base_col = 1 if has_entry else 0
+        col: Dict[int, int] = {}
+
+        def column(n: Node, stack=()) -> int:
+            if id(n) in col:
+                return col[id(n)]
+            if id(n) in stack:
+                return base_col
+            c = base_col
+            for p in pred[id(n)]:
+                c = max(c, column(p, stack + (id(n),)) + 1)
+            col[id(n)] = c
+            return c
+
+        for n in exec_nodes:
+            column(n)
+        rows: Dict[int, int] = {}
+        sec_of: Dict[int, str] = {}
+        counter = [0]
+
+        def visit(n: Node, row: int, sec: str) -> None:
+            if id(n) in rows:
+                return
+            rows[id(n)], sec_of[id(n)] = row, sec
+            for i, s in enumerate(succ[id(n)]):
+                if id(s) in rows:
+                    continue
+                if i == 0:
+                    visit(s, row, sec)
+                else:
+                    counter[0] += 1
+                    visit(s, counter[0], sec)
+
+        for r in roots + [n for n in exec_nodes if id(n) not in rows]:
+            if id(r) not in rows:
+                visit(r, counter[0], r.name)
+                counter[0] += 1
+        # pure trees hang from their first consumer in (column, row) order; nodes feeding only the result node hang
+        # from a virtual sink in the last column
+        order = sorted(exec_nodes, key=lambda n: (col[id(n)], rows[id(n)]))
+        pure_set = set(id(n) for n in self.nodes if id(n) not in exec_set)
+        placed: set = set()
+        trees: Dict[int, Dict[int, List[Node]]] = {}
+        consumers_of: Dict[int, List[Node]] = {}
+        for n in self.nodes:
+            for p in n.pins:
+                if p.direction == "in" and p.category != EXEC:
+                    for tname, _ in p.links:
+                        t = by_name.get(tname)
+                        if t is not None and id(t) in pure_set:
+                            consumers_of.setdefault(id(t), []).append(n)
+
+        def gather(consumer: Node, members: List[Node]) -> None:
+            for p in consumer.pins:
+                if p.direction == "in" and p.category != EXEC:
+                    for tname, _ in p.links:
+                        t = by_name.get(tname)
+                        if t is not None and id(t) in pure_set and id(t) not in placed:
+                            placed.add(id(t))
+                            members.append(t)
+                            gather(t, members)
+
+        def depth_of(t: Node, members_ids: set, memo: Dict[int, int], root_ids: set) -> int:
+            if id(t) in memo:
+                return memo[id(t)]
+            memo[id(t)] = 1
+            d = 1
+            for c in consumers_of.get(id(t), []):
+                if id(c) in root_ids:
+                    d = max(d, 1)
+                elif id(c) in members_ids:
+                    d = max(d, depth_of(c, members_ids, memo, root_ids) + 1)
+            memo[id(t)] = d
+            return d
+
+        def build_tree(key: int, roots_: List[Node]) -> None:
+            members: List[Node] = []
+            for r in roots_:
+                gather(r, members)
+            ids = set(id(m) for m in members)
+            memo: Dict[int, int] = {}
+            tree: Dict[int, List[Node]] = {}
+            for m in members:
+                tree.setdefault(depth_of(m, ids, memo, set(id(r) for r in roots_)), []).append(m)
+            trees[key] = tree
+
+        for e in order:
+            build_tree(id(e), [e])
+        result_key = -1
+        result_pure = [by_name[a] for a in to_result if a in by_name and id(by_name[a]) in pure_set]
+        if has_entry and self.result_pins:
+            placed_before = set(placed)
+            fake = Node("result", "result", [], [Pin("execute", EXEC)] + [Pin("o%d" % i, INT) for i in range(self.result_pins - 1)])
+            members: List[Node] = []
+            for t in result_pure:
+                if id(t) not in placed:
+                    placed.add(id(t))
+                    members.append(t)
+                    gather(t, members)
+            ids = set(id(m) for m in members)
+            memo = {}
+            tree = {}
+            for m in members:
+                tree.setdefault(depth_of(m, ids, memo, set()), []).append(m)
+            trees[result_key] = tree
+            del placed_before
+        dangling = [n for n in self.nodes if id(n) in pure_set and id(n) not in placed]
+
+        def tree_size(tree: Dict[int, List[Node]]) -> Tuple[int, int, Dict[int, int]]:
+            widths = {d: max(m.width for m in ms) for d, ms in tree.items()}
+            total_w = sum(w + self.PURE_DX for w in widths.values())
+            total_h = max([sum(m.height + self.PURE_GAP for m in ms) for ms in tree.values()] or [0])
+            return total_w, total_h, widths
+
+        # columns and rows
+        max_col = max([col[id(n)] for n in exec_nodes] or [base_col - 1])
+        result_col = max_col + 1 if (has_entry and self.result_pins) else None
+        ncols = (result_col if result_col is not None else max_col) + 1
+        col_nodes: Dict[int, List[Node]] = {c: [] for c in range(ncols)}
+        for n in exec_nodes:
+            col_nodes[col[id(n)]].append(n)
+        entry_w, entry_h = (200, 48 + 24 * self.entry_pins) if has_entry else (0, 0)
+        result_w, result_h = (200, 48 + 24 * self.result_pins) if result_col is not None else (0, 0)
+        col_w = {c: max([n.width for n in col_nodes[c]] or [0]) for c in range(ncols)}
+        col_pure = {c: max([tree_size(trees[id(n)])[0] for n in col_nodes[c]] or [0]) for c in range(ncols)}
+        if has_entry:
+            col_w[0] = max(col_w[0], entry_w)
+        if result_col is not None:
+            col_w[result_col] = max(col_w[result_col], result_w)
+            col_pure[result_col] = max(col_pure[result_col], tree_size(trees[result_key])[0])
+        col_x = {0: 0}
+        for c in range(1, ncols):
+            col_x[c] = col_x[c - 1] + col_w[c - 1] + self.COL_GAP + col_pure[c]
+        nrows = counter[0] if exec_nodes else 1
+        row_h = {r: 0 for r in range(nrows)}
+        row_sec = {}
+        for n in exec_nodes:
+            r = rows[id(n)]
+            _, th, _ = tree_size(trees[id(n)])
+            row_h[r] = max(row_h[r], n.height, self.PURE_DY + th)
+            row_sec.setdefault(r, sec_of[id(n)])
+        if has_entry:
+            row_h[0] = max(row_h.get(0, 0), entry_h)
+        result_row = 0
+        for n in exec_nodes:
+            if any(a == n.name and b == "result" for a, _, b, _ in self.extra_links):
+                result_row = rows[id(n)]
+                break
+        if result_col is not None:
+            _, th, _ = tree_size(trees[result_key])
+            row_h[result_row] = max(row_h.get(result_row, 0), result_h, self.PURE_DY + th)
+        row_y = {}
+        y = 0
+        for r in range(nrows):
+            if r > 0:
+                y += row_h[r - 1] + self.ROW_GAP
+                if row_sec.get(r) != row_sec.get(r - 1):
+                    y += self.SECTION_GAP
+            row_y[r] = y
+
+        def place_tree(tree: Dict[int, List[Node]], x_right: int, y_top: int) -> None:
+            _, _, widths = tree_size(tree)
+            x = x_right
+            for d in sorted(tree):
+                x -= widths[d] + self.PURE_DX
+                yy = y_top + self.PURE_DY
+                for m in tree[d]:
+                    m.x, m.y = x, yy
+                    yy += m.height + self.PURE_GAP
+
+        for n in exec_nodes:
+            n.x, n.y = col_x[col[id(n)]], row_y[rows[id(n)]]
+            place_tree(trees[id(n)], n.x, n.y)
+        info: Dict[str, Optional[List[int]]] = {"entry": [0, 0] if has_entry else None, "result": None}
+        if result_col is not None:
+            rx, ry = col_x[result_col], row_y[result_row]
+            info["result"] = [rx, ry]
+            place_tree(trees[result_key], rx, ry)
+        if dangling:
+            x = (col_x[ncols - 1] + col_w[ncols - 1] + self.COL_GAP) if exec_nodes or has_entry else 0
+            yy = 0
+            for m in dangling:
+                m.x, m.y = x, yy
+                yy += m.height + self.PURE_GAP
+        # section comment boxes
+        boxes: List[Tuple[str, List[Node]]] = []
+        if self.doc is not None:
+            boxes.append((self.doc, list(self.nodes)))
+        else:
+            members_by_sec: Dict[str, List[Node]] = {}
+            for n in exec_nodes:
+                members_by_sec.setdefault(sec_of[id(n)], []).append(n)
+                for ms in trees[id(n)].values():
+                    members_by_sec[sec_of[id(n)]].extend(ms)
+            for root_name, title in self.sections.items():
+                if root_name in members_by_sec:
+                    boxes.append((title, members_by_sec[root_name]))
+        for title, members in boxes:
+            rects = [(m.x, m.y, m.x + m.width, m.y + m.height) for m in members]
+            if self.doc is not None and has_entry:
+                rects.append((0, 0, entry_w, entry_h))
+                if info["result"]:
+                    rects.append((info["result"][0], info["result"][1], info["result"][0] + result_w, info["result"][1] + result_h))
+            if not rects:
+                continue
+            x0, y0 = min(r[0] for r in rects) - self.PAD, min(r[1] for r in rects) - self.PAD - self.TITLE_H
+            x1, y1 = max(r[2] for r in rects) + self.PAD, max(r[3] for r in rects) + self.PAD
+            self._comment_box(title, x0, y0, x1 - x0, y1 - y0)
+        self._layout_info = info
+        return info
+
+    @property
+    def layout_info(self) -> Dict[str, Optional[List[int]]]:
+        return self.layout()
+
+    def overlaps(self, margin: int = 8) -> List[str]:
+        """Pairs of nodes whose rectangles intersect (comment boxes excluded; the entry/result rectangles included)."""
+        info = self.layout()
+        rects = [(n.name, n.x, n.y, n.x + n.width, n.y + n.height) for n in self.nodes if not self._is_comment(n)]
+        if info["entry"]:
+            rects.append(("entry", 0, 0, 200, 48 + 24 * self.entry_pins))
+        if info["result"]:
+            rects.append(("result", info["result"][0], info["result"][1], info["result"][0] + 200, info["result"][1] + 48 + 24 * self.result_pins))
+        out = []
+        for i, a in enumerate(rects):
+            for b in rects[i + 1:]:
+                if a[1] < b[3] - margin and b[1] < a[3] - margin and a[2] < b[4] - margin and b[2] < a[4] - margin:
+                    out.append("%s x %s" % (a[0], b[0]))
+        return out
 
     # ---- output ----
     def text(self) -> str:
+        self.layout()
         return "\n".join(n.text() for n in self.nodes) + "\n"
 
     def write(self, out_dir: str) -> str:
@@ -550,10 +877,11 @@ class Graph:
 class Blueprint:
     """A whole Blueprint: asset, parent, components, variables, dispatchers, functions and graphs."""
 
-    def __init__(self, asset_path: str, parent: str):
+    def __init__(self, asset_path: str, parent: str, description: str = ""):
         self.asset = asset_path
         self.name = asset_path.rsplit("/", 1)[1]
         self.parent = parent  # "/Script/Engine.Actor" or a Blueprint asset path
+        self.description = description  # the Blueprint's description (content browser tooltip, class settings)
         self.components: List[dict] = []
         self.variables: List[dict] = []
         self.dispatchers: List[dict] = []
@@ -572,11 +900,15 @@ class Blueprint:
         self.dispatchers.append({"name": name, "params": params or []})
 
     def function(self, name: str, inputs: Optional[List[str]] = None, outputs: Optional[List[str]] = None,
-                 pure: bool = False, category: str = "Dead Fire", locals: Optional[List[str]] = None) -> Graph:
-        """locals: ["Name:TypeSpec[=Default]", ...] local variables of the function."""
+                 pure: bool = False, category: str = "Dead Fire", locals: Optional[List[str]] = None, doc: str = "") -> Graph:
+        """locals: ["Name:TypeSpec[=Default]", ...] local variables of the function. doc: one-line description, shown
+        as the function's tooltip and as the title of the comment box around its body."""
         self.functions.append({"name": name, "inputs": inputs or [], "outputs": outputs or [], "pure": pure,
-                               "category": category, "locals": locals or []})
+                               "category": category, "locals": locals or [], "doc": doc})
         g = Graph(self.name, name)
+        g.entry_pins = 1 + len(inputs or [])
+        g.result_pins = (1 + len(outputs)) if outputs else 0
+        g.doc = doc or None
         self.graphs.append(g)
         return g
 
@@ -596,10 +928,11 @@ class Blueprint:
 
     def manifest(self) -> dict:
         return {
-            "kind": "blueprint", "asset": self.asset, "parent": self.parent,
+            "kind": "blueprint", "asset": self.asset, "parent": self.parent, "description": self.description,
             "components": self.components, "variables": self.variables, "dispatchers": self.dispatchers,
             "functions": self.functions,
-            "graphs": [{"name": g.graph, "file": "%s.txt" % g.graph, "links": [list(l) for l in g.extra_links]}
+            "graphs": [{"name": g.graph, "file": "%s.txt" % g.graph, "links": [list(l) for l in g.extra_links],
+                        "layout": g.layout()}
                        for g in self.graphs if g.nodes],
             "defaults": self.defaults,
         }
@@ -610,6 +943,8 @@ class Blueprint:
         for g in self.graphs:
             if g.nodes:
                 g.write(out_dir)
+                for pair in g.overlaps():
+                    print("WARNING %s %s: overlap %s" % (self.name, g.graph, pair))
         path = os.path.join(d, "manifest.json")
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(self.manifest(), f, indent=1)
@@ -627,8 +962,8 @@ class WidgetBlueprint(Blueprint):
     """
 
     def __init__(self, asset_path: str, parent: str = "/Script/UMG.UserWidget", root_class: str = "/Script/UMG.CanvasPanel",
-                 root_name: str = "Root"):
-        super().__init__(asset_path, parent)
+                 root_name: str = "Root", description: str = ""):
+        super().__init__(asset_path, parent, description)
         self.root_class, self.root_name = root_class, root_name
         self.tree: List[dict] = []
 

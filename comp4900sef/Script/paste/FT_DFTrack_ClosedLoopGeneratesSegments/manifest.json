@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFTrack_ClosedLoopGeneratesSegments",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The test track's loop is about 491 m and is laid with road pieces only (no barriers).",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

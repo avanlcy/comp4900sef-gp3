@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFExplosiveDamage",
  "parent": "/Script/Engine.DamageType",
+ "description": "The damage type explosions apply: the rock accepts only this, the character ignores it.",
  "components": [],
  "variables": [],
  "dispatchers": [],

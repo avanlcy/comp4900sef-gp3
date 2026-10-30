@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFCharacter",
  "parent": "/Game/ThirdPersonBP/Blueprints/ThirdPersonCharacter",
+ "description": "The on-foot player: enter cars, fire, health, death and revive; movement and camera come from the Third Person template.",
  "components": [
   {
    "name": "InteractionSphere",
@@ -99,7 +100,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Riding in a car."
   },
   {
    "name": "IsDead",
@@ -109,7 +111,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Health reached 0."
   },
   {
    "name": "FindNearestEnterableVehicle",
@@ -122,7 +125,8 @@
    "locals": [
     "Best:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
     "BestDist:float=1000000000"
-   ]
+   ],
+   "doc": "The nearest overlapping car that can be entered."
   },
   {
    "name": "TryEnterVehicle",
@@ -136,7 +140,8 @@
    "category": "Dead Fire",
    "locals": [
     "Target:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
-   ]
+   ],
+   "doc": "Enters the given car, or the nearest enterable one."
   },
   {
    "name": "SetStowed",
@@ -147,7 +152,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Hides and attaches the character inside a car, or lets it out again."
   },
   {
    "name": "Fire",
@@ -157,7 +163,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Fires the hitscan weapon from the camera, credited to the controller."
   },
   {
    "name": "Revive",
@@ -165,7 +172,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Full health, alive and walking again."
   }
  ],
  "graphs": [
@@ -185,7 +193,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     725,
+     0
+    ]
+   }
   },
   {
    "name": "IsDead",
@@ -203,7 +221,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     439,
+     0
+    ]
+   }
   },
   {
    "name": "FindNearestEnterableVehicle",
@@ -227,7 +255,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3478,
+     0
+    ]
+   }
   },
   {
    "name": "TryEnterVehicle",
@@ -245,7 +283,17 @@
      "DFN_K2Node_VariableSet_0",
      "Target"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3369,
+     0
+    ]
+   }
   },
   {
    "name": "SetStowed",
@@ -269,7 +317,14 @@
      "DFN_K2Node_CallFunction_3",
      "ParentActor"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "Fire",
@@ -281,7 +336,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1817,
+     0
+    ]
+   }
   },
   {
    "name": "Revive",
@@ -293,12 +358,23 @@
      "DFN_K2Node_VariableSet_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

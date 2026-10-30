@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFLoot_PickupOnFootOnly",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A crate ignores a car, is collected by a character on foot (into the player's inventory), and refuses a fourth item type.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

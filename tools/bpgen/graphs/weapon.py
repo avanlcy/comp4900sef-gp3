@@ -8,7 +8,7 @@ from df import (ACTOR, BOOL, BPC_WEAPON, CONTROLLER, DAMAGE_TYPE, FLOAT, GAMEPLA
 
 
 def build() -> Blueprint:
-    bp = Blueprint(BPC_WEAPON, parent="/Script/Engine.ActorComponent")
+    bp = Blueprint(BPC_WEAPON, parent="/Script/Engine.ActorComponent", description="Hitscan weapon component: damage, range, cooldown.")
     W = "Dead Fire|Weapon"
     bp.variable("Damage", "float", "20", W, editable=True)
     bp.variable("Range", "float", "8000", W, editable=True)
@@ -19,7 +19,7 @@ def build() -> Blueprint:
     bp.dispatcher("OnFired", ["Hit:struct:" + HIT_RESULT, "bHit:bool"])
 
     # CanFire: now - LastFireTime >= Cooldown
-    g = bp.function("CanFire", outputs=["ReturnValue:bool"], pure=True)
+    g = bp.function("CanFire", doc="The cooldown has passed.", outputs=["ReturnValue:bool"], pure=True)
     now = game_time(g)
     last = g.var_get("LastFireTime", FLOAT)
     sub = math2(g, "Subtract_FloatFloat", FLOAT)
@@ -35,7 +35,7 @@ def build() -> Blueprint:
     # Fire(Origin, Direction) -> bHit, Hit
     # Fire(Origin, Direction, Instigator) -> bHit, Hit: the caller names the controller credited for the damage (Phase 3:
     # the character passes its controller, the vehicle its driver's)
-    g = bp.function("Fire", inputs=["Origin:struct:" + VECTOR, "Direction:struct:" + VECTOR, "Instigator:object:" + CONTROLLER],
+    g = bp.function("Fire", doc="A hitscan shot: trace, point damage credited to Instigator, OnFired.", inputs=["Origin:struct:" + VECTOR, "Direction:struct:" + VECTOR, "Instigator:object:" + CONTROLLER],
                     outputs=["bHit:bool", "Hit:struct:" + HIT_RESULT])
     can = g.call_self("CanFire", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     b = g.branch()

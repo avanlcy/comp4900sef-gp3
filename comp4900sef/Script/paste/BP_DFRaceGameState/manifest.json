@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFRaceGameState",
  "parent": "/Script/Engine.GameStateBase",
+ "description": "Race state shared with the HUD: clock, active flag, result.",
  "components": [],
  "variables": [
   {
@@ -24,6 +25,13 @@
    "default": "",
    "category": "Dead Fire|Race",
    "editable": false
+  },
+  {
+   "name": "RacerCount",
+   "type": "int",
+   "default": "1",
+   "category": "Dead Fire|Race",
+   "editable": false
   }
  ],
  "dispatchers": [],
@@ -36,7 +44,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The clock as m:ss, rounded up."
   }
  ],
  "graphs": [
@@ -56,7 +65,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1986,
+     0
+    ]
+   }
   }
  ],
  "defaults": {}

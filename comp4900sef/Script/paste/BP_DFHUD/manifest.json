@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFHUD",
  "parent": "/Script/Engine.HUD",
+ "description": "Creates the race HUD at start and the summary at race end.",
  "components": [],
  "variables": [
   {
@@ -41,7 +42,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Summary off, race HUD on (created once)."
   },
   {
    "name": "ShowSummary",
@@ -49,7 +51,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Race HUD off, summary on with the result, UI input."
   }
  ],
  "graphs": [
@@ -63,7 +66,14 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "ShowSummary",
@@ -75,12 +85,23 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {

@@ -14,7 +14,7 @@ POLE = "/Game/VehicleAdv/ArenaMesh/pole"
 
 
 def build() -> Blueprint:
-    bp = Blueprint(BP_CHECKPOINT, parent="/Script/Engine.Actor")
+    bp = Blueprint(BP_CHECKPOINT, parent="/Script/Engine.Actor", description="A gate across the road: trigger, two poles, respawn point; index 0 is the start line.")
     bp.component("Trigger", BOX_COMP, **{"box_extent": {"vector": [100, 1400, 250]},
                                          "call:set_collision_profile_name": "Trigger",
                                          "generate_overlap_events": True})
@@ -29,7 +29,7 @@ def build() -> Blueprint:
     bp.variable("RespawnHeightOffset", "float", "50", C, editable=True)
 
     # GetRespawnTransform: actor rotation, location raised by RespawnHeightOffset
-    g = bp.function("GetRespawnTransform", outputs=["Transform:struct:" + TRANSFORM], pure=True)
+    g = bp.function("GetRespawnTransform", doc="The gate's transform raised by RespawnHeightOffset.", outputs=["Transform:struct:" + TRANSFORM], pure=True)
     loc = g.call_self_native(ACTOR, "K2_GetActorLocation", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
     rot = g.call_self_native(ACTOR, "K2_GetActorRotation", outputs=[struct_pin("ReturnValue", "/Script/CoreUObject.Rotator", "out")], pure=True)
     h = g.var_get("RespawnHeightOffset", FLOAT)
@@ -49,7 +49,7 @@ def build() -> Blueprint:
     g.link_entry("then", "result", "execute")
 
     # NotifyVehicle(Vehicle) -> bool: the racer is the driver, or the last driver of a parked car
-    g = bp.function("NotifyVehicle", inputs=["Vehicle:object:" + VC], outputs=["ReturnValue:bool"])
+    g = bp.function("NotifyVehicle", doc="Reports a car crossing to the GameMode (the driver, or a parked car's last driver).", inputs=["Vehicle:object:" + VC], outputs=["ReturnValue:bool"])
     ctrl = g.call_on(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     g.link_entry("Vehicle", ctrl, "self")
     last = g.var_get_on(VC, "LastDriver", OBJECT, cls_ref(CONTROLLER))
@@ -108,6 +108,7 @@ def build() -> Blueprint:
         prev = setl
 
     g = bp.event_graph()
+    g.section("Begin Play: register with the GameMode")
     bpl = g.begin_play(col=0, row=0)
     gm = get_game_mode(g, col=0, row=1)
     cast = cast_to(g, BP_GM, col=1, row=0)
@@ -119,6 +120,7 @@ def build() -> Blueprint:
     g.link(me, "self", reg, "Checkpoint")
     g.link(cast, "then", reg, "execute")
 
+    g.section("Trigger overlap: a car crossed the gate")
     ov = g.component_event("Trigger", "OnComponentBeginOverlap", PRIMITIVE,
                            [obj_pin("OverlappedComponent", PRIMITIVE), obj_pin("OtherActor", ACTOR), obj_pin("OtherComp", PRIMITIVE),
                             Pin("OtherBodyIndex", INT), Pin("bFromSweep", BOOL), struct_pin("SweepResult", HIT_RESULT)],

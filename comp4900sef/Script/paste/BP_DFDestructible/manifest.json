@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFDestructible",
  "parent": "/Script/Engine.Actor",
+ "description": "A block only explosives demolish; it closes the shortcut road.",
  "components": [
   {
    "name": "Rock",
@@ -59,7 +60,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Once: effects-only explosion, hidden and non-colliding; the road behind is open."
   }
  ],
  "graphs": [
@@ -73,12 +75,23 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

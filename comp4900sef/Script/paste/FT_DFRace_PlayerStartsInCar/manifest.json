@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFRace_PlayerStartsInCar",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The player starts in a BP_DFVehicle with the on-foot character stowed in it; four gates, clock running.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

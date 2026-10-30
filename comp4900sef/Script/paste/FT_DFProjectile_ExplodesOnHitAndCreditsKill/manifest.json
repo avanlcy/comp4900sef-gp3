@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFProjectile_ExplodesOnHitAndCreditsKill",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A rocket fired at a car 10 m ahead explodes on it; a lethal rocket credits the shooter with a kill and +50.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

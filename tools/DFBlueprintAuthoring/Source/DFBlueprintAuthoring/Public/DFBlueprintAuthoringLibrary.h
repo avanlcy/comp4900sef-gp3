@@ -121,6 +121,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
 	static FString Compile(UBlueprint* Blueprint);
 
+	/** Moves a node (object name, or "entry" / "result" for a function's terminators) to a graph position; the generator lays graphs out itself. */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString SetNodePosition(UBlueprint* Blueprint, FName GraphName, const FString& Node, int32 X, int32 Y);
+
+	/** Sets a function's description (the tooltip shown in My Blueprint and on call nodes). */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString SetFunctionDescription(UBlueprint* Blueprint, FName FunctionName, const FString& Description);
+
+	/** Opens the Blueprint editor on the named graph (for looking at a generated graph or taking a screenshot of it). */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString FocusGraph(UBlueprint* Blueprint, FName GraphName);
+
 	// helpers (not exposed)
 	static bool ParseTypeSpec(const FString& Spec, FEdGraphPinType& OutType, FString& OutError);
 	static UEdGraph* FindGraph(UBlueprint* Blueprint, FName GraphName);

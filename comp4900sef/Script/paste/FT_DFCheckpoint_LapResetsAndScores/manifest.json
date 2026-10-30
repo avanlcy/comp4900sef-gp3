@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFCheckpoint_LapResetsAndScores",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Crossing the start line when it is next completes a lap: +1 lap, +100, next gate 1, +8 s.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

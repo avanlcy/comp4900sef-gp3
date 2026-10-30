@@ -268,6 +268,8 @@ def pass1(m):
             lname, _, rest = loc.partition(":")
             ltype, _, ldefault = rest.partition("=")
             _check(A.add_local_variable(bp, f["name"], lname, ltype, ldefault), "%s local %s.%s" % (m["asset"], f["name"], lname))
+        if f.get("doc") and hasattr(A, "set_function_description"):  # the function's tooltip (plugin >= Phase 4)
+            _check(A.set_function_description(bp, f["name"], f["doc"]), "%s describe %s" % (m["asset"], f["name"]))
     # no full compile here: the plugin regenerates the skeleton class after each change, which is all pass 2 of
     # other Blueprints needs to resolve references; graphs may still hold a previous, broken version until pass 2.
 
@@ -379,14 +381,52 @@ def pass2(m, folder):
         restored = _restore_defaults(bp, name, text, prefix)
         if restored:
             log("%s %s: restored %d pin default(s)" % (m["asset"], name, restored))
+        # the generator lays the graph out and tells us where the pre-existing entry/result nodes belong
+        layout = g.get("layout") or {}
+        if hasattr(A, "set_node_position"):
+            for key in ("entry", "result"):
+                if layout.get(key):
+                    res = A.set_node_position(bp, name, key, int(layout[key][0]), int(layout[key][1]))
+                    if not str(res).startswith("ERROR: node not found"):
+                        _check(res, "%s position %s in %s" % (m["asset"], key, name))
+    if m.get("description"):
+        bp.set_editor_property("blueprint_description", m["description"])
     _compile(bp, m["asset"])
-    if m.get("defaults"):
+    inherited = _inherited_defaults(m)
+    if m.get("defaults") or inherited:
         cdo = unreal.get_default_object(_load_class(m["asset"]))
-        for k, v in m["defaults"].items():
+        # a child of a generated Blueprint: variables its parent declares take the parent's class-default value unless the
+        # child sets its own (a child created before the parent's variables existed keeps zeros for them otherwise)
+        for k, v in inherited.items():
+            if k not in (m.get("defaults") or {}):
+                cdo.set_editor_property(k, v)
+        for k, v in (m.get("defaults") or {}).items():
             cdo.set_editor_property(k, _value(v))
         _compile(bp, m["asset"] + " (defaults)")
     unreal.EditorAssetLibrary.save_asset(m["asset"], False)
     log("applied %s" % m["asset"])
+
+
+_MANIFESTS_BY_ASSET = {}
+
+
+def _inherited_defaults(m):
+    """{variable: value} for every variable declared by a generated ancestor of this Blueprint, read from the ancestor's
+    class defaults (empty for Blueprints whose parent is native or not generated)."""
+    out = {}
+    parent = m.get("parent", "")
+    while parent in _MANIFESTS_BY_ASSET:
+        pm = _MANIFESTS_BY_ASSET[parent]
+        pcdo = unreal.get_default_object(_load_class(parent))
+        for v in pm.get("variables", []):
+            # only the Instance Editable ones (tunables): a plain state variable cannot be set on a class default object
+            if v.get("editable") and v["name"] not in out:
+                try:
+                    out[v["name"]] = pcdo.get_editor_property(v["name"])
+                except Exception as e:  # a type Python cannot carry: leave it
+                    log("inherit %s.%s skipped: %s" % (parent, v["name"], e))
+        parent = pm.get("parent", "")
+    return out
 
 
 def apply_all(root, only=None):
@@ -400,18 +440,35 @@ def apply_all(root, only=None):
     order = {"enum": 0, "struct": 1, "widget": 2, "blueprint": 3}
     manifests.sort(key=lambda fm: order.get(fm[1]["kind"], 9))
     _STRUCT_NAMES.clear()
+    # every manifest under the folder (not only the ones applied now), so a child can inherit a parent's defaults
+    _MANIFESTS_BY_ASSET.clear()
+    for d in sorted(os.listdir(root)):
+        p = os.path.join(root, d, "manifest.json")
+        if os.path.isfile(p):
+            mm = json.load(open(p, encoding="utf-8"))
+            if mm["kind"] in ("blueprint", "widget"):
+                _MANIFESTS_BY_ASSET[mm["asset"]] = mm
     for folder, m in manifests:
         pass0(m)
     del _LOG[:]
     for folder, m in manifests:
         pass1(m)
-    failures = []
-    for folder, m in manifests:
-        try:
-            pass2(m, folder)
-        except Exception as e:  # keep going so one Blueprint's errors do not hide the others'
-            failures.append("%s: %s" % (m["asset"], e))
-            log("FAILED %s: %s" % (m["asset"], e))
+    # a Blueprint's new variables are only visible to other Blueprints once it has been fully compiled, and pass 2 runs in
+    # name order, so a manifest that fails to compile is retried after the others (at most three rounds)
+    failures, pending = [], list(manifests)
+    for attempt in range(3):
+        failures = []
+        for folder, m in pending:
+            try:
+                pass2(m, folder)
+            except Exception as e:  # keep going so one Blueprint's errors do not hide the others'
+                failures.append((folder, m, "%s: %s" % (m["asset"], e)))
+                log("FAILED (round %d) %s: %s" % (attempt + 1, m["asset"], e))
+        if not failures or len(failures) == len(pending):
+            break
+        log("retrying %d manifest(s) now that the others have compiled" % len(failures))
+        pending = [(folder, m) for folder, m, _ in failures]
+    failures = [text for _, _, text in failures]
     log("DONE %d manifests, %d failed" % (len(manifests), len(failures)))
     with open(LOG_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(_LOG) + "\n")

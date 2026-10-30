@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFTrackSpline",
  "parent": "/Script/Engine.Actor",
+ "description": "A spline whose construction script lays the road; progress and off-road queries; the AI racing line.",
  "components": [
   {
    "name": "Spline",
@@ -136,7 +137,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Road pieces laid by the last rebuild."
   },
   {
    "name": "GetGeneratedMeshCount",
@@ -146,7 +148,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Spline mesh components laid by the last rebuild."
   },
   {
    "name": "GetTrackLength",
@@ -156,7 +159,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Length of the spline in cm."
   },
   {
    "name": "GetDistanceAlongTrack",
@@ -168,7 +172,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Progress along the spline of the point nearest a location."
   },
   {
    "name": "GetLateralDistanceFromTrack",
@@ -180,7 +185,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "How far a location is from the spline, sideways."
   },
   {
    "name": "IsOnRoad",
@@ -192,7 +198,34 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Within RoadWidth/2 of the spline."
+  },
+  {
+   "name": "WrapDistance",
+   "inputs": [
+    "Distance:float"
+   ],
+   "outputs": [
+    "Wrapped:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A distance brought into [0, length): modulo on a closed track, clamped on an open one."
+  },
+  {
+   "name": "GetDirectionAtDistance",
+   "inputs": [
+    "Distance:float"
+   ],
+   "outputs": [
+    "Direction:struct:/Script/CoreUObject.Vector"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Unit direction of the spline at a distance, in world space (the AI's corner look-ahead)."
   },
   {
    "name": "GetTransformAtDistance",
@@ -204,7 +237,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "World transform on the spline at a distance."
   },
   {
    "name": "RebuildTrack",
@@ -212,7 +246,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Lays one road slab per PieceLength along the spline, plus optional barriers."
   }
  ],
  "graphs": [
@@ -232,7 +267,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     474,
+     0
+    ]
+   }
   },
   {
    "name": "GetGeneratedMeshCount",
@@ -250,7 +295,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     516,
+     0
+    ]
+   }
   },
   {
    "name": "GetTrackLength",
@@ -268,7 +323,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     655,
+     0
+    ]
+   }
   },
   {
    "name": "GetDistanceAlongTrack",
@@ -292,7 +357,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1132,
+     0
+    ]
+   }
   },
   {
    "name": "GetLateralDistanceFromTrack",
@@ -322,7 +397,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     976,
+     0
+    ]
+   }
   },
   {
    "name": "IsOnRoad",
@@ -346,7 +431,91 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     965,
+     0
+    ]
+   }
+  },
+  {
+   "name": "WrapDistance",
+   "file": "WrapDistance.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Distance",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Distance",
+     "DFN_K2Node_CallFunction_5",
+     "A"
+    ],
+    [
+     "entry",
+     "Distance",
+     "DFN_K2Node_CallFunction_6",
+     "Value"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2383,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetDirectionAtDistance",
+   "file": "GetDirectionAtDistance.txt",
+   "links": [
+    [
+     "entry",
+     "Distance",
+     "DFN_K2Node_CallFunction_0",
+     "Distance"
+    ],
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "Direction"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     759,
+     0
+    ]
+   }
   },
   {
    "name": "GetTransformAtDistance",
@@ -370,7 +539,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     759,
+     0
+    ]
+   }
   },
   {
    "name": "UserConstructionScript",
@@ -382,7 +561,14 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RebuildTrack",
@@ -394,7 +580,14 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   }
  ],
  "defaults": {

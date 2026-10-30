@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFCheckpoint",
  "parent": "/Script/Engine.Actor",
+ "description": "A gate across the road: trigger, two poles, respawn point; index 0 is the start line.",
  "components": [
   {
    "name": "Trigger",
@@ -92,7 +93,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The gate's transform raised by RespawnHeightOffset."
   },
   {
    "name": "NotifyVehicle",
@@ -104,7 +106,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Reports a car crossing to the GameMode (the driver, or a parked car's last driver)."
   }
  ],
  "graphs": [
@@ -124,7 +127,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1218,
+     0
+    ]
+   }
   },
   {
    "name": "NotifyVehicle",
@@ -148,7 +161,17 @@
      "DFN_K2Node_DynamicCast_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2480,
+     0
+    ]
+   }
   },
   {
    "name": "UserConstructionScript",
@@ -160,12 +183,23 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

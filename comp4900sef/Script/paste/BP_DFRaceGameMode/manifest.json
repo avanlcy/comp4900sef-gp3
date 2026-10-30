@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFRaceGameMode",
  "parent": "/Script/Engine.GameModeBase",
+ "description": "Every race rule: clock, gates, laps, kills, deaths, respawn, off-track, ranking, race end, items, explosions.",
  "components": [],
  "variables": [
   {
@@ -103,20 +104,6 @@
    "editable": false
   },
   {
-   "name": "PendingRespawnRacer",
-   "type": "object:/Script/Engine.Controller",
-   "default": "",
-   "category": "Dead Fire|Race|State",
-   "editable": false
-  },
-  {
-   "name": "RespawnDueTime",
-   "type": "float",
-   "default": "-1",
-   "category": "Dead Fire|Race|State",
-   "editable": false
-  },
-  {
    "name": "ExplosionEffect",
    "type": "object:/Script/Engine.ParticleSystem",
    "default": "",
@@ -150,6 +137,69 @@
    "default": "800",
    "category": "Dead Fire|Explosions",
    "editable": true
+  },
+  {
+   "name": "NPCCount",
+   "type": "int",
+   "default": "3",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NPCRowSpacing",
+   "type": "float",
+   "default": "800",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NPCColumnOffset",
+   "type": "float",
+   "default": "350",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NPCSkillSpread",
+   "type": "float",
+   "default": "0.1",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "RankInterval",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "AIItemInterval",
+   "type": "float",
+   "default": "20",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NextAIItemTime",
+   "type": "float",
+   "default": "-1",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "RacerControllers",
+   "type": "array<object:/Script/Engine.Controller>",
+   "default": "",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "NextRankTime",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Race|State",
+   "editable": false
   }
  ],
  "dispatchers": [
@@ -192,7 +242,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The racer component on a controller, or none."
   },
   {
    "name": "RegisterCheckpoint",
@@ -202,7 +253,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Adds a gate once and keeps the list sorted by CheckpointIndex."
   },
   {
    "name": "CollectLevelActors",
@@ -210,7 +262,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Finds every gate and track in the level; the first track flagged bIsMainTrack becomes MainTrack."
   },
   {
    "name": "AddScore",
@@ -221,7 +274,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Adds points to a controller's racer."
   },
   {
    "name": "GrantCheckpointTimeBonus",
@@ -231,7 +285,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Adds CheckpointTimeBonus to the clock; players only."
   },
   {
    "name": "NotifyLapCompleted",
@@ -241,7 +296,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "A lap: +1 lap, PointsPerLap, next gate back to 1."
   },
   {
    "name": "NotifyCheckpointPassed",
@@ -251,7 +307,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Advances the racer's next gate (wrapping) and grants the time bonus."
   },
   {
    "name": "NotifyCheckpointReached",
@@ -264,7 +321,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "A car crossed a gate: credited only when it is the racer's next gate and the race is active."
   },
   {
    "name": "HandleRacerDeath",
@@ -274,7 +332,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Counts a life; a player at MaxDeaths ends the race, otherwise a respawn is scheduled after RespawnDelay."
   },
   {
    "name": "NotifyVehicleDestroyed",
@@ -285,7 +344,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "A car was wrecked: credit the killer (+PointsPerKill) and count the victim's death."
   },
   {
    "name": "NotifyCharacterDied",
@@ -295,7 +355,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "The on-foot character died: count its controller's death."
   },
   {
    "name": "SpawnExplosion",
@@ -312,7 +373,8 @@
    "category": "Dead Fire",
    "locals": [
     "Shooter:object:/Script/Engine.Actor"
-   ]
+   ],
+   "doc": "The explosion rule: effects, full radial damage inside the radius, a shove and a tire blast for every car caught."
   },
   {
    "name": "SweepItems",
@@ -320,7 +382,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Removes every live bomb and rocket (RestartRace)."
   },
   {
    "name": "GetItemInfo",
@@ -334,7 +397,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Item name, charges per crate and cap per racer, in one place."
   },
   {
    "name": "GrantItem",
@@ -348,7 +412,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Puts an item into a controller's inventory (capped) and stamps the pickup for the HUD."
   },
   {
    "name": "CycleItem",
@@ -358,7 +423,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Selects the next inventory slot of a controller's racer."
   },
   {
    "name": "GetRespawnTransform",
@@ -370,7 +436,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Where a racer comes back: its last gate, else gate 0, else the player start."
   },
   {
    "name": "RespawnRacer",
@@ -383,7 +450,8 @@
    "locals": [
     "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
     "SpawnAt:struct:/Script/CoreUObject.Transform"
-   ]
+   ],
+   "doc": "Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed."
   },
   {
    "name": "IsOnAnyTrack",
@@ -395,7 +463,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "True within RoadWidth/2 + OffTrackMargin of any track (or when the level has no track)."
   },
   {
    "name": "TickRacer",
@@ -406,7 +475,21 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Per-frame racer upkeep: progress along the main track and the off-track timer while driving."
+  },
+  {
+   "name": "RankDistance",
+   "inputs": [
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ],
+   "outputs": [
+    "Distance:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Ranking tiebreak: progress from the start line (gate 0); a racer still waiting for gate 1 but already past gate 1's progress (the grid before the line) counts as behind the line. Raw spline distance without a track or gates."
   },
   {
    "name": "IsRacerAhead",
@@ -419,7 +502,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Ranking order: score, then laps, then RankDistance (progress past the start line)."
   },
   {
    "name": "GetRankedRacers",
@@ -431,7 +515,91 @@
    "category": "Dead Fire",
    "locals": [
     "Ranked:array<object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C>"
-   ]
+   ],
+   "doc": "Every racer in the level, best first."
+  },
+  {
+   "name": "IsPlayer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "True for a player controller (the death limit and the time bonus are players-only rules)."
+  },
+  {
+   "name": "RegisterRacer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Adds a controller with a racer to the ranked list, once, and refreshes the ranks."
+  },
+  {
+   "name": "UnregisterRacer",
+   "inputs": [
+    "C:object:/Script/Engine.Controller"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Removes a controller from the ranked list."
+  },
+  {
+   "name": "UpdateRanks",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Writes each racer's 1-based Rank and the GameState's RacerCount from GetRankedRacers."
+  },
+  {
+   "name": "SpawnNPCs",
+   "inputs": [
+    "Count:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "AI:object:/Game/DeadFire/Blueprints/BP_DFVehicleAIController.BP_DFVehicleAIController_C",
+    "SpawnAt:struct:/Script/CoreUObject.Transform",
+    "Side:float",
+    "StartDistance:float"
+   ],
+   "doc": "Spawns Count NPC cars with their controllers on a grid behind the start line, alternating lanes, and registers their racers."
+  },
+  {
+   "name": "DespawnNPCs",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Pawn:object:/Script/Engine.Pawn"
+   ],
+   "doc": "Takes every NPC out of the ranking and destroys its car; the controller dies with its pawn (Blueprints cannot destroy a controller directly)."
+  },
+  {
+   "name": "GrantNPCItems",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
+   ],
+   "doc": "Every NPC with a free inventory slot gets a random item (Boost..RPG) with that type's crate charges."
   },
   {
    "name": "EndRace",
@@ -443,7 +611,8 @@
    "category": "Dead Fire",
    "locals": [
     "Player:object:/Script/Engine.PlayerController"
-   ]
+   ],
+   "doc": "Ends the race: result, ranking, player input off, summary."
   },
   {
    "name": "RestartRace",
@@ -453,7 +622,8 @@
    "category": "Dead Fire",
    "locals": [
     "Player:object:/Script/Engine.PlayerController"
-   ]
+   ],
+   "doc": "A clean race without reloading the level: clock, result, racer stats, items swept, player back on the line."
   }
  ],
  "graphs": [
@@ -479,7 +649,17 @@
      "DFN_K2Node_CallFunction_1",
      "self"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1559,
+     0
+    ]
+   }
   },
   {
    "name": "RegisterCheckpoint",
@@ -503,7 +683,14 @@
      "DFN_K2Node_CallArrayFunction_1",
      "NewItem"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "CollectLevelActors",
@@ -515,7 +702,14 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "AddScore",
@@ -539,7 +733,14 @@
      "DFN_K2Node_CallFunction_2",
      "B"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "GrantCheckpointTimeBonus",
@@ -557,7 +758,14 @@
      "DFN_K2Node_DynamicCast_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "NotifyLapCompleted",
@@ -581,7 +789,14 @@
      "DFN_K2Node_CallFunction_3",
      "C"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "NotifyCheckpointPassed",
@@ -605,7 +820,14 @@
      "DFN_K2Node_CallFunction_7",
      "C"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "NotifyCheckpointReached",
@@ -659,7 +881,17 @@
      "DFN_K2Node_CallFunction_11",
      "C"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3963,
+     0
+    ]
+   }
   },
   {
    "name": "HandleRacerDeath",
@@ -673,12 +905,6 @@
     ],
     [
      "entry",
-     "C",
-     "DFN_K2Node_CallFunction_3",
-     "B"
-    ],
-    [
-     "entry",
      "then",
      "DFN_K2Node_IfThenElse_0",
      "execute"
@@ -686,16 +912,23 @@
     [
      "entry",
      "C",
-     "DFN_K2Node_CallFunction_12",
+     "DFN_K2Node_CallFunction_8",
      "Object"
     ],
     [
      "entry",
      "C",
-     "DFN_K2Node_VariableSet_1",
-     "PendingRespawnRacer"
+     "DFN_K2Node_DynamicCast_0",
+     "Object"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "NotifyVehicleDestroyed",
@@ -749,7 +982,14 @@
      "DFN_K2Node_CallFunction_19",
      "C"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "NotifyCharacterDied",
@@ -773,7 +1013,14 @@
      "DFN_K2Node_CallFunction_8",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "SpawnExplosion",
@@ -929,7 +1176,14 @@
      "DFN_K2Node_CallDelegate_0",
      "Radius"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "SweepItems",
@@ -941,7 +1195,14 @@
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "GetItemInfo",
@@ -983,7 +1244,17 @@
      "DFN_K2Node_CallFunction_4",
      "A"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2839,
+     0
+    ]
+   }
   },
   {
    "name": "GrantItem",
@@ -1049,7 +1320,17 @@
      "DFN_K2Node_CallDelegate_0",
      "Type"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4565,
+     0
+    ]
+   }
   },
   {
    "name": "CycleItem",
@@ -1067,7 +1348,14 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "GetRespawnTransform",
@@ -1085,7 +1373,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4378,
+     0
+    ]
+   }
   },
   {
    "name": "RespawnRacer",
@@ -1124,7 +1422,19 @@
     [
      "entry",
      "C",
-     "DFN_K2Node_CallFunction_22",
+     "DFN_K2Node_DynamicCast_1",
+     "Object"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_20",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_34",
      "C"
     ],
     [
@@ -1133,7 +1443,14 @@
      "DFN_K2Node_CallDelegate_0",
      "Racer"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "IsOnAnyTrack",
@@ -1151,7 +1468,17 @@
      "DFN_K2Node_CallFunction_1",
      "WorldLocation"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2963,
+     0
+    ]
+   }
   },
   {
    "name": "TickRacer",
@@ -1177,23 +1504,58 @@
     ],
     [
      "entry",
-     "C",
-     "DFN_K2Node_CallFunction_8",
-     "B"
-    ],
-    [
-     "entry",
      "DeltaSeconds",
-     "DFN_K2Node_CallFunction_14",
+     "DFN_K2Node_CallFunction_12",
      "B"
     ],
     [
      "entry",
      "C",
-     "DFN_K2Node_CallFunction_16",
+     "DFN_K2Node_CallFunction_14",
      "C"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RankDistance",
+   "file": "RankDistance.txt",
+   "links": [
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Racer",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4334,
+     0
+    ]
+   }
   },
   {
    "name": "IsRacerAhead",
@@ -1226,17 +1588,17 @@
     [
      "entry",
      "A",
-     "DFN_K2Node_VariableGet_4",
-     "self"
+     "DFN_K2Node_CallFunction_0",
+     "Racer"
     ],
     [
      "entry",
      "B",
-     "DFN_K2Node_VariableGet_5",
-     "self"
+     "DFN_K2Node_CallFunction_1",
+     "Racer"
     ],
     [
-     "DFN_K2Node_CallFunction_8",
+     "DFN_K2Node_CallFunction_10",
      "ReturnValue",
      "result",
      "ReturnValue"
@@ -1247,7 +1609,17 @@
      "result",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1517,
+     0
+    ]
+   }
   },
   {
    "name": "GetRankedRacers",
@@ -1256,10 +1628,192 @@
     [
      "entry",
      "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3306,
+     0
+    ]
+   }
+  },
+  {
+   "name": "IsPlayer",
+   "file": "IsPlayer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_DynamicCast_0",
+     "Object"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     831,
+     0
+    ]
+   }
+  },
+  {
+   "name": "RegisterRacer",
+   "file": "RegisterRacer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_0",
+     "C"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallArrayFunction_0",
+     "NewItem"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UnregisterRacer",
+   "file": "UnregisterRacer.txt",
+   "links": [
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallArrayFunction_0",
+     "Item"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallArrayFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UpdateRanks",
+   "file": "UpdateRanks.txt",
+   "links": [
+    [
+     "entry",
+     "then",
      "DFN_K2Node_CallFunction_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SpawnNPCs",
+   "file": "SpawnNPCs.txt",
+   "links": [
+    [
+     "entry",
+     "Count",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Count",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "DespawnNPCs",
+   "file": "DespawnNPCs.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "GrantNPCItems",
+   "file": "GrantNPCItems.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EndRace",
@@ -1280,7 +1834,7 @@
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallFunction_12",
+     "DFN_K2Node_CallFunction_14",
      "A"
     ],
     [
@@ -1295,7 +1849,14 @@
      "DFN_K2Node_CallDelegate_0",
      "Reason"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "RestartRace",
@@ -1307,12 +1868,23 @@
      "DFN_K2Node_CallFunction_1",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {

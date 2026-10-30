@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFOffTrack_RespawnsWithoutDeath",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Five seconds more than 5 m off every road puts the car back at the last gate without costing a life.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

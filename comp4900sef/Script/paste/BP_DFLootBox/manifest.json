@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFLootBox",
  "parent": "/Script/Engine.Actor",
+ "description": "A crate collected on touch by a character on foot; fixed or random item; comes back after a delay.",
  "components": [
   {
    "name": "Crate",
@@ -102,7 +103,8 @@
    ],
    "pure": true,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "This crate's Charges when set, else the type's charges per crate."
   },
   {
    "name": "Pickup",
@@ -114,7 +116,8 @@
    ],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "An alive, un-stowed, controller-owned character takes the item through GrantItem."
   },
   {
    "name": "Reset",
@@ -122,7 +125,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Rolls a random type when asked, then shows and collides again."
   }
  ],
  "graphs": [
@@ -136,7 +140,17 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1999,
+     0
+    ]
+   }
   },
   {
    "name": "Pickup",
@@ -178,7 +192,17 @@
      "DFN_K2Node_CallDelegate_0",
      "Character"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     5639,
+     0
+    ]
+   }
   },
   {
    "name": "Reset",
@@ -190,12 +214,23 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

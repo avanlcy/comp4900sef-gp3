@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_DrivesTowardItsLane",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "An NPC on the track at its spawn asks for full throttle and little steering; moved 3 m left of its lane it steers right; turned 60 degrees off the road it steers back.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

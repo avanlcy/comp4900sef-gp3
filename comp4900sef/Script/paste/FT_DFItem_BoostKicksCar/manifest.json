@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFItem_BoostKicksCar",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Boost sets its timer and kicks the car to at least 35 km/h at once; ClearEffects ends it.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_StuckBudgetKeepsAcrossWedges",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "UpdateStuck's give-up budget is cumulative: it does not drain while the car has not moved, and the give-up resets it and respawns the car at its gate.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

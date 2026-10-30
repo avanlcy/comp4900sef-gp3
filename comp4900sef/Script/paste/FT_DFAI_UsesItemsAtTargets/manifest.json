@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_UsesItemsAtTargets",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "ThinkItems shields a hurt car, shoots the player's car ahead, bombs a car behind, boosts on a straight, fires a rocket at 15 m but not at 8 m, leaves a parked player car alone, and does nothing once the race is over.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

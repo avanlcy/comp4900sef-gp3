@@ -274,7 +274,9 @@ def build(path):
     yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
     spawn(unreal.PlayerStart, vec(x0, y0, 30), rot(yaw=yaw), label='PlayerStart')
 
-    world_settings().set_editor_property('default_game_mode', bp_class(BP_DIR + '/BP_DFRaceGameMode'))
+    # Phase 4: the test level's GameMode spawns no NPCs (BP_DFTestGameMode, NPCCount 0); the AI tests spawn their own
+    game_mode = TESTS_DIR + '/BP_DFTestGameMode' if path == TEST_MAP else BP_DIR + '/BP_DFRaceGameMode'
+    world_settings().set_editor_property('default_game_mode', bp_class(game_mode))
 
     tests = []
     if path == TEST_MAP:

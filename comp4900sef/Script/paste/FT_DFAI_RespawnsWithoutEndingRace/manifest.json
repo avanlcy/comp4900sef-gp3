@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_RespawnsWithoutEndingRace",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "An NPC's third death never ends the race; 2.5 s later it drives an intact car near its gate; the player's deaths are untouched.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

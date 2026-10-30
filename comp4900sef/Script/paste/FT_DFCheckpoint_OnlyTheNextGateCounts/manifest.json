@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFCheckpoint_OnlyTheNextGateCounts",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Only the next gate credits: skipping or repeating a gate gives nothing; a valid gate gives +8 s.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFItem_InventoryStacksAndCaps",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Items stack to their cap, a fourth type is refused, cycling and consuming walk the slots.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

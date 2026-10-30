@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFBomb_ArmedBombDamagesAndBlowsTire",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A dropped bomb starts unarmed and leaves its dropper alone; an armed bomb under a car damages it, blows a tire and disappears.",
  "components": [],
  "variables": [],
  "dispatchers": [],
@@ -10,7 +11,11 @@
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}

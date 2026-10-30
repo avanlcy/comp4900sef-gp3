@@ -292,6 +292,12 @@ PARTICLE_SYSTEM = "/Script/Engine.ParticleSystem"
 SOUND_BASE = "/Script/Engine.SoundBase"
 
 
+# ---- Phase 4: AI racers ----
+BP_AI = BPS + "/BP_DFVehicleAIController"
+BP_GM_TEST = TESTS + "/BP_DFTestGameMode"
+AI_CONTROLLER = "/Script/AIModule.AIController"
+
+
 def enum_is(g: Graph, src, index: int, col=None, row=None) -> Node:
     """Pure EqualEqual_ByteByte(enum pin, index) -> bool; src is (node, pin) or ("entry", pin)."""
     n = g.call_static(MATH, "EqualEqual_ByteByte", inputs=[Pin("A", BYTE), Pin("B", BYTE, default=str(index))],

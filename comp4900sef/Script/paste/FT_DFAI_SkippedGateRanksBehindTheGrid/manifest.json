@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFAI_SkippedGateRanksBehindTheGrid",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Ranking counts progress through the gates, not raw spline distance: a racer teleported past gate 1 without crossing it (still waiting for gate 1) ranks behind an NPC still on the grid.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {}
+}

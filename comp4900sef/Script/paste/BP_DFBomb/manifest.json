@@ -2,6 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFBomb",
  "parent": "/Script/Engine.Actor",
+ "description": "The dropped bomb: arms after a delay, then detonates when a car touches it or when its fuse runs out.",
  "components": [
   {
    "name": "Shell",
@@ -89,7 +90,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Arms the bomb: the next car to touch it detonates it."
   },
   {
    "name": "Detonate",
@@ -97,7 +99,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Explodes once through the GameMode's explosion rule, then removes the bomb."
   },
   {
    "name": "PlaceOnGround",
@@ -105,7 +108,8 @@
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
-   "locals": []
+   "locals": [],
+   "doc": "Settles the bomb 30 cm above the ground found by a short trace down from the drop point."
   }
  ],
  "graphs": [
@@ -119,7 +123,14 @@
      "DFN_K2Node_VariableSet_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "Detonate",
@@ -131,7 +142,14 @@
      "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "PlaceOnGround",
@@ -143,12 +161,23 @@
      "DFN_K2Node_CallFunction_3",
      "execute"
     ]
-   ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   },
   {
    "name": "EventGraph",
    "file": "EventGraph.txt",
-   "links": []
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
   }
  ],
  "defaults": {}
