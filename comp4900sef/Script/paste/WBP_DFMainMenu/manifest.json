@@ -1,0 +1,345 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFMainMenu",
+ "parent": "/Script/UMG.UserWidget",
+ "description": "The main menu: PLAY, SETTINGS, QUIT and how much is unlocked.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Sets a text block from a string."
+  },
+  {
+   "name": "Refresh",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The footer: how many cars and tracks are open."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Refresh",
+   "file": "Refresh.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": [],
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Panel",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.7
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     560,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Column",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "position": [
+     40,
+     60
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "DEAD FIRE",
+    "font_size": 48,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "name": "SubtitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "\u6b7b\u706b",
+    "font_size": 28,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ]
+   }
+  },
+  {
+   "name": "PlayButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "PlayLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "PlayButton",
+   "props": {
+    "text": "PLAY",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "SettingsButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "SettingsLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "SettingsButton",
+   "props": {
+    "text": "SETTINGS",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "QuitButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "QuitLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "QuitButton",
+   "props": {
+    "text": "QUIT",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "FooterText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "CARS 1 / 3   TRACKS 1 / 2",
+    "font_size": 20,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {}
+  }
+ ]
+}

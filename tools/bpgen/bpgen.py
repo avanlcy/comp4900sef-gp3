@@ -318,10 +318,12 @@ class Graph:
                                                   container=p.container) for p in (params or [])]
         return self._add("K2Node_CustomEvent", ['CustomFunctionName="%s"' % name], pins, col, row)
 
-    def input_action(self, action: str, col=None, row=None) -> Node:
+    def input_action(self, action: str, col=None, row=None, execute_when_paused: bool = False) -> Node:
+        """Input action event; execute_when_paused lets it fire while the game is paused (a pause toggle)."""
         pins = [Pin("Pressed", EXEC, "out"), Pin("Released", EXEC, "out"),
                 Pin("Key", STRUCT, "out", struct_ref("/Script/InputCore.Key"))]
-        return self._add("K2Node_InputAction", ['InputActionName="%s"' % action], pins, col, row)
+        props = ['InputActionName="%s"' % action] + (["bExecuteWhenPaused=True"] if execute_when_paused else [])
+        return self._add("K2Node_InputAction", props, pins, col, row)
 
     def component_event(self, component: str, delegate: str, owner_class: str, params: List[Pin],
                         signature: str, signature_package: str = "/Script/Engine", col=None, row=None) -> Node:
@@ -354,8 +356,9 @@ class Graph:
                 Pin("ReturnValue", OBJECT, "out", cls_ref(result_class))]
         return self._add("K2Node_CreateWidget", [], pins, col, row, module="UMGEditor")
 
-    def spawn_actor(self, actor_class: str, col=None, row=None) -> Node:
-        """'Spawn Actor from Class' (UK2Node_SpawnActorFromClass); link SpawnTransform, optionally Owner."""
+    def spawn_actor(self, actor_class: Optional[str], result_class: Optional[str] = None, col=None, row=None) -> Node:
+        """'Spawn Actor from Class' (UK2Node_SpawnActorFromClass); link SpawnTransform, optionally Owner.
+        actor_class None leaves the Class pin to be linked (a class variable); ReturnValue is then typed result_class."""
         pins = [Pin("execute", EXEC), Pin("then", EXEC, "out"),
                 Pin("WorldContextObject", OBJECT, hidden=True, sub_object=cls_ref("/Script/CoreUObject.Object")),
                 Pin("Class", CLASS, sub_object=cls_ref("/Script/Engine.Actor"), default_object=actor_class),
@@ -363,7 +366,7 @@ class Graph:
                 Pin("CollisionHandlingOverride", BYTE, sub_object="Enum'\"/Script/Engine.ESpawnActorCollisionHandlingMethod\"'",
                     default="AlwaysSpawn"),
                 Pin("Owner", OBJECT, sub_object=cls_ref("/Script/Engine.Actor")),
-                Pin("ReturnValue", OBJECT, "out", cls_ref(actor_class))]
+                Pin("ReturnValue", OBJECT, "out", cls_ref(result_class or actor_class))]
         return self._add("K2Node_SpawnActorFromClass", [], pins, col, row)
 
     def _call(self, member_ref: str, pure: bool, inputs: List[Pin], outputs: List[Pin], self_pin: Optional[Pin],
@@ -554,7 +557,7 @@ class Graph:
     def function_result(self, outputs: List[Pin], col=None, row=None) -> Node:
         """Return node for a function body paste (the entry node already exists in the graph)."""
         pins = [Pin("execute", EXEC)] + [Pin(p.name, p.category, "in", p.sub_object, p.sub_category, p.default,
-                                             container=p.container) for p in outputs]
+                                             container=p.container, default_object=p.default_object) for p in outputs]
         return self._add("K2Node_FunctionResult", [], pins, col, row)
 
     def _comment_box(self, text: str, x: int, y: int, width: int, height: int) -> Node:
@@ -888,6 +891,17 @@ class Blueprint:
         self.functions: List[dict] = []
         self.graphs: List[Graph] = []
         self.defaults: Dict[str, object] = {}
+        self.component_defaults: Dict[str, Dict[str, object]] = {}  # inherited component -> {property: value}
+        self.required: List[dict] = []  # support assets the runner creates when missing
+
+    def component_default(self, component: str, prop: str, value) -> None:
+        """Class-default value of a property on an inherited (native or parent) component, e.g.
+        component_default("VehicleMovement", "mass", 1950.0); property names as Python's set_editor_property takes them."""
+        self.component_defaults.setdefault(component, {})[prop] = value
+
+    def requires(self, asset: str, cls: str, factory: str) -> None:
+        """An asset this Blueprint needs to exist (created by the runner through unreal.<cls> / unreal.<factory>())."""
+        self.required.append({"asset": asset, "class": cls, "factory": factory})
 
     def component(self, name: str, cls: str, parent: str = "", **props) -> None:
         self.components.append({"name": name, "class": cls, "parent": parent, "properties": props})
@@ -935,6 +949,8 @@ class Blueprint:
                         "layout": g.layout()}
                        for g in self.graphs if g.nodes],
             "defaults": self.defaults,
+            "component_defaults": self.component_defaults,
+            "requires": self.required,
         }
 
     def write(self, out_dir: str) -> str:

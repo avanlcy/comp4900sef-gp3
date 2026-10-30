@@ -1,0 +1,27 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFMenuGameMode",
+ "parent": "/Script/Engine.GameModeBase",
+ "description": "The main menu level's GameMode: no pawn, the menu player controller, the audio mix applied.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFMenuPlayerController",
+  "DefaultPawnClass": null
+ },
+ "component_defaults": {},
+ "requires": []
+}

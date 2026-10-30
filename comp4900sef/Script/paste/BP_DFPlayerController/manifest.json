@@ -32,10 +32,33 @@
    "default": "",
    "category": "Dead Fire|State",
    "editable": false
+  },
+  {
+   "name": "PauseWidgetClass",
+   "type": "class:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|Menu",
+   "editable": true
+  },
+  {
+   "name": "PauseWidget",
+   "type": "object:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|Menu",
+   "editable": false
   }
  ],
  "dispatchers": [],
  "functions": [
+  {
+   "name": "TogglePause",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Pauses the world with the pause menu up, or resumes; refused once the race is over (the summary owns the screen)."
+  },
   {
    "name": "SwitchToPawn",
    "inputs": [
@@ -49,6 +72,25 @@
   }
  ],
  "graphs": [
+  {
+   "name": "TogglePause",
+   "file": "TogglePause.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
   {
    "name": "SwitchToPawn",
    "file": "SwitchToPawn.txt",
@@ -84,5 +126,9 @@
    }
   }
  ],
- "defaults": {}
+ "defaults": {
+  "PauseWidgetClass": "class:/Game/DeadFire/UI/WBP_DFPauseMenu"
+ },
+ "component_defaults": {},
+ "requires": []
 }

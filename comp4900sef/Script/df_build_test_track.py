@@ -13,7 +13,9 @@ driven through its native Spline component, and setting a property re-runs its c
 import math
 import unreal
 
-MAPS = ['/Game/DeadFire/Maps/L_TestTrack', '/Game/DeadFire/Tests/L_DF_FunctionalTests']
+MAPS = ['/Game/DeadFire/Maps/L_TestTrack', '/Game/DeadFire/Maps/L_Switchback', '/Game/DeadFire/Maps/L_MainMenu',
+        '/Game/DeadFire/Tests/L_DF_FunctionalTests']
+MENU_MAP = '/Game/DeadFire/Maps/L_MainMenu'
 TEST_MAP = '/Game/DeadFire/Tests/L_DF_FunctionalTests'
 TESTS_DIR = '/Game/DeadFire/Tests'
 BP_DIR = '/Game/DeadFire/Blueprints'
@@ -45,6 +47,35 @@ TARGET_CAR_OFFSET = 1500    # cm sideways, toward the infield
 # Shortcut road (spec 2026-10-30 §7): an open second track from just after gate 1 to just before gate 2, bent toward the
 # middle of the loop, with a destructible rock across it ROCK_DISTANCE in from its entrance.
 SHORTCUT_FROM, SHORTCUT_TO = 0.25, 0.5          # fractions of the main loop (gates 1 and 2 sit at these)
+
+# Phase 5 (spec 2026-10-30 phase 5 §2.2): SWITCHBACK, a longer loop (about 790 m) with a hairpin at the east end and an
+# S-section on the way back; five gates; the shortcut cuts the hairpin between gates 1 and 2. Checked offline
+# (Catmull-Rom approximation): no self-intersection, shortcut saving about 13 m, every crate 35 m or more from both roads.
+SWITCHBACK_POINTS = [
+    (0, 0), (9000, -600), (18000, 800), (25500, 3200), (25500, 9800), (18000, 12200), (12500, 10200),
+    (8000, 13200), (3000, 14500), (-3000, 11500), (-4500, 5500), (-2500, 1200),
+]
+SWITCHBACK_PROPS = [
+    ('/Game/VehicleAdv/ArenaMesh/RampLarge', (9000, 6500, 0), 0),
+    ('/Game/VehicleAdv/ArenaMesh/pole', (5000, 4000, 0), 0),
+    ('/Game/VehicleAdv/ArenaMesh/pole', (13000, 4000, 0), 0),
+    ('/Game/VehicleAdv/ArenaMesh/pole', (5000, 9000, 0), 0),
+    ('/Game/VehicleAdv/ArenaMesh/pole', (13000, 9000, 0), 0),
+    ('/Game/VehicleAdv/ArenaMesh/BumpWedge', (16500, 6500, 0), 30),
+]
+SWITCHBACK_CRATES = [('Boost', (14000, 4500)), ('Shield', (6000, 6000)), ('Bomb', (-9000, 8000)),
+                     ('Gun', (30000, 6500)), ('RPG', (16000, 17000)), (None, (3000, -5500))]
+
+PROVING_GROUND = dict(points=TRACK_POINTS, gates=CHECKPOINT_COUNT, props=PROPS, crates=LOOT_BOXES,
+                      target_car=(TARGET_CAR_DISTANCE, TARGET_CAR_OFFSET), shortcut=(SHORTCUT_FROM, SHORTCUT_TO),
+                      game_mode=BP_DIR + '/BP_DFRaceGameMode')
+LAYOUTS = {
+    '/Game/DeadFire/Maps/L_TestTrack': PROVING_GROUND,
+    '/Game/DeadFire/Maps/L_Switchback': dict(points=SWITCHBACK_POINTS, gates=5, props=SWITCHBACK_PROPS, crates=SWITCHBACK_CRATES,
+                                             target_car=(3000, 1500), shortcut=(0.2, 0.4), game_mode=BP_DIR + '/BP_DFSwitchbackGameMode'),
+    # Phase 4: the test level's GameMode spawns no NPCs (BP_DFTestGameMode, NPCCount 0); the AI tests spawn their own
+    TEST_MAP: dict(PROVING_GROUND, game_mode=TESTS_DIR + '/BP_DFTestGameMode'),
+}
 SHORTCUT_GATE_CLEARANCE = 1500                  # cm after gate 1 / before gate 2
 SHORTCUT_PULL = 0.1                             # how far the middle point moves toward the loop's centroid (more bows it as long as the main road)
 SHORTCUT_Z = -2.0                               # slab top 2 cm under the main road (no flicker at the junctions)
@@ -136,8 +167,8 @@ def item_type_entry(cls, name):
     return getattr(type(current), name.upper())
 
 
-def centroid():
-    return vec(sum(x for x, _ in TRACK_POINTS) / len(TRACK_POINTS), sum(y for _, y in TRACK_POINTS) / len(TRACK_POINTS), 0)
+def centroid(points):
+    return vec(sum(x for x, _ in points) / len(points), sum(y for _, y in points) / len(points), 0)
 
 
 def distance_to_spline(spline, loc):
@@ -145,9 +176,9 @@ def distance_to_spline(spline, loc):
     return (closest - loc).length()
 
 
-def place_crates(splines):
+def place_crates(splines, crates):
     cls = bp_class(BP_DIR + '/BP_DFLootBox')
-    for name, (x, y) in LOOT_BOXES:
+    for name, (x, y) in crates:
         loc = vec(x, y, 30)
         for spline in splines:
             d = distance_to_spline(spline, loc)
@@ -158,16 +189,16 @@ def place_crates(splines):
             crate.set_editor_property('ItemType', item_type_entry(cls, name))
         else:
             crate.set_editor_property('bRandom', True)
-    return len(LOOT_BOXES)
+    return len(crates)
 
 
-def build_shortcut(main_spline, length):
+def build_shortcut(main_spline, length, layout):
     """Spawns the Shortcut track and its rock; returns (spline, pieces)."""
-    d1 = length * SHORTCUT_FROM + SHORTCUT_GATE_CLEARANCE
-    d2 = length * SHORTCUT_TO - SHORTCUT_GATE_CLEARANCE
+    d1 = length * layout['shortcut'][0] + SHORTCUT_GATE_CLEARANCE
+    d2 = length * layout['shortcut'][1] - SHORTCUT_GATE_CLEARANCE
     p1 = main_spline.get_location_at_distance_along_spline(d1, WORLD)
     p2 = main_spline.get_location_at_distance_along_spline(d2, WORLD)
-    c = centroid()
+    c = centroid(layout['points'])
     mid = (p1 + p2) * 0.5
     mid = mid + (c - mid) * SHORTCUT_PULL
     points = [vec(q.x, q.y, SHORTCUT_Z) for q in (p1, mid, p2)]
@@ -208,12 +239,13 @@ def build_shortcut(main_spline, length):
     return spline, pieces, saving, rock_distance
 
 
-def place_target_car(spline):
-    t = spline.get_transform_at_distance_along_spline(TARGET_CAR_DISTANCE, WORLD)
-    right = spline.get_right_vector_at_distance_along_spline(TARGET_CAR_DISTANCE, WORLD)
-    c = centroid()
-    a = t.translation + right * TARGET_CAR_OFFSET
-    b = t.translation - right * TARGET_CAR_OFFSET
+def place_target_car(spline, layout):
+    distance, offset = layout['target_car']
+    t = spline.get_transform_at_distance_along_spline(distance, WORLD)
+    right = spline.get_right_vector_at_distance_along_spline(distance, WORLD)
+    c = centroid(layout['points'])
+    a = t.translation + right * offset
+    b = t.translation - right * offset
     loc = a if (a - c).length() < (b - c).length() else b
     spawn(bp_class(BP_DIR + '/BP_DFVehicle'), vec(loc.x, loc.y, 30), rot(yaw=t.rotation.rotator().yaw), label='TargetCar')
 
@@ -230,6 +262,7 @@ def functional_test_classes():
 
 
 def build(path):
+    layout = LAYOUTS[path]
     open_empty_level(path)
 
     spawn_static_mesh('/Engine/BasicShapes/Cube', vec(5000, 5000, -60), scale=(500, 500, 1),
@@ -246,37 +279,35 @@ def build(path):
     # then touch a property to re-run the construction script (which lays the road pieces).
     track = spawn(bp_class(BP_DIR + '/BP_DFTrackSpline'), vec(0, 0, 0), label='MainTrack')
     spline = track.get_component_by_class(unreal.SplineComponent)
-    spline.set_spline_points([vec(x, y, 0) for x, y in TRACK_POINTS], WORLD, True)
+    spline.set_spline_points([vec(x, y, 0) for x, y in layout['points']], WORLD, True)
     spline.set_closed_loop(True, True)
     spline.set_editor_property('spline_has_been_edited', True)
     track.set_editor_property('RoadWidth', float(track.get_editor_property('RoadWidth')))
     spline = track.get_component_by_class(unreal.SplineComponent)  # the rerun replaced the component
     pieces = track.get_editor_property('GeneratedMeshCount')
     length = spline.get_spline_length()
-    if pieces < 1 or spline.get_number_of_spline_points() != len(TRACK_POINTS):
+    if pieces < 1 or spline.get_number_of_spline_points() != len(layout['points']):
         raise RuntimeError('track construction failed: %d pieces, %d spline points'
                            % (pieces, spline.get_number_of_spline_points()))
 
     checkpoint_class = bp_class(BP_DIR + '/BP_DFCheckpoint')
-    for k in range(CHECKPOINT_COUNT):
-        t = spline.get_transform_at_distance_along_spline(length * k / float(CHECKPOINT_COUNT), WORLD)
+    for k in range(layout['gates']):
+        t = spline.get_transform_at_distance_along_spline(length * k / float(layout['gates']), WORLD)
         gate = spawn(checkpoint_class, t.translation, rot(yaw=t.rotation.rotator().yaw), label='Checkpoint_{}'.format(k))
         gate.set_editor_property('CheckpointIndex', k)
 
-    for mesh_path, (x, y, z), yaw in PROPS:
+    for mesh_path, (x, y, z), yaw in layout['props']:
         spawn_static_mesh(mesh_path, vec(x, y, z), rot(yaw=yaw), label=mesh_path.rsplit('/', 1)[-1])
 
-    shortcut, shortcut_pieces, shortcut_saving, rock_distance = build_shortcut(spline, length)
-    crates = place_crates([spline, shortcut])
-    place_target_car(spline)
+    shortcut, shortcut_pieces, shortcut_saving, rock_distance = build_shortcut(spline, length, layout)
+    crates = place_crates([spline, shortcut], layout['crates'])
+    place_target_car(spline, layout)
 
-    (x0, y0), (x1, y1) = TRACK_POINTS[0], TRACK_POINTS[1]
+    (x0, y0), (x1, y1) = layout['points'][0], layout['points'][1]
     yaw = math.degrees(math.atan2(y1 - y0, x1 - x0))
     spawn(unreal.PlayerStart, vec(x0, y0, 30), rot(yaw=yaw), label='PlayerStart')
 
-    # Phase 4: the test level's GameMode spawns no NPCs (BP_DFTestGameMode, NPCCount 0); the AI tests spawn their own
-    game_mode = TESTS_DIR + '/BP_DFTestGameMode' if path == TEST_MAP else BP_DIR + '/BP_DFRaceGameMode'
-    world_settings().set_editor_property('default_game_mode', bp_class(game_mode))
+    world_settings().set_editor_property('default_game_mode', bp_class(layout['game_mode']))
 
     tests = []
     if path == TEST_MAP:
@@ -288,7 +319,44 @@ def build(path):
     if not ell.save_current_level():
         raise RuntimeError('could not save {}'.format(path))
     return 'track %.0f cm, %d pieces, %d gates, shortcut %.0f cm in %d pieces saving %.0f cm with the rock at %d cm, %d crates, %d tests' % (
-        length, pieces, CHECKPOINT_COUNT, shortcut.get_spline_length(), shortcut_pieces, shortcut_saving, rock_distance, crates, len(tests))
+        length, pieces, layout['gates'], shortcut.get_spline_length(), shortcut_pieces, shortcut_saving, rock_distance, crates, len(tests))
+
+
+# Phase 5 (spec 2026-10-30 phase 5 §5.1): the main menu level shows the three cars on plinths, one camera each
+SHOWCASE_CARS = ['/Game/DeadFire/Blueprints/BP_DFVehicle', '/Game/DeadFire/Blueprints/BP_DFVehicleBrute', '/Game/DeadFire/Blueprints/BP_DFVehicleViper']
+SHOWCASE_SPACING = 700
+SHOWCASE_CAMERA = (450, -650, 180)   # from the car, cm: forward-left of the nose
+SHOWCASE_CAMERA_ROT = (-12, 125)     # pitch, yaw
+
+
+def build_menu_level(path):
+    open_empty_level(path)
+    spawn_static_mesh('/Engine/BasicShapes/Cube', vec(0, 0, -60), scale=(200, 200, 1), label='Ground',
+                      material_path='/Game/VehicleAdv/Materials/MaterialInstances/LandscapeNoHole')
+    spawn(unreal.DirectionalLight, vec(0, 0, 2000), rot(pitch=-45, yaw=30), label='Sun')
+    spawn(unreal.SkyLight, vec(0, 0, 2000), label='SkyLight')
+    spawn(unreal.SkyAtmosphere, vec(0, 0, 0), label='SkyAtmosphere')
+    fog = spawn(unreal.ExponentialHeightFog, vec(0, 0, 0), label='HeightFog')
+    fog_comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
+    fog_comp.set_editor_property('fog_density', 0.004)
+    fog_comp.set_editor_property('start_distance', 3000.0)
+    cars, cameras = 0, 0
+    for k, car_path in enumerate(SHOWCASE_CARS):
+        x = k * SHOWCASE_SPACING - SHOWCASE_SPACING
+        spawn_static_mesh('/Engine/BasicShapes/Cube', vec(x, 0, -25), scale=(6, 4, 0.5), label='Plinth_%d' % k,
+                          material_path='/Game/Vehicle/Meshes/WhiteMaterial')
+        spawn(bp_class(car_path), vec(x, 0, 60), rot(yaw=200), label='Showcase_%d' % k)
+        cars += 1
+        cam = spawn(unreal.CameraActor, vec(x + SHOWCASE_CAMERA[0], SHOWCASE_CAMERA[1], SHOWCASE_CAMERA[2]),
+                    rot(pitch=SHOWCASE_CAMERA_ROT[0], yaw=SHOWCASE_CAMERA_ROT[1]), label='ShowcaseCamera_%d' % k)
+        cam.set_editor_property('tags', ['Showcase%d' % k])
+        cameras += 1
+    spawn(unreal.AmbientSound, vec(0, 0, 200), label='MenuMusic')  # no sound set: the team drops a cue on it
+    spawn(unreal.PlayerStart, vec(0, -1500, 100), label='PlayerStart')
+    world_settings().set_editor_property('default_game_mode', bp_class(BP_DIR + '/BP_DFMenuGameMode'))
+    if not ell.save_current_level():
+        raise RuntimeError('could not save {}'.format(path))
+    return '%d cars, %d cameras' % (cars, cameras)
 
 
 def main(maps=None):
@@ -296,7 +364,7 @@ def main(maps=None):
         raise RuntimeError('a Play-In-Editor session is running (editor scripting is disabled during play); stop it first')
     results = []
     for path in maps or MAPS:
-        results.append('%s: %s' % (path.rsplit('/', 1)[1], build(path)))
+        results.append('%s: %s' % (path.rsplit('/', 1)[1], build_menu_level(path) if path == MENU_MAP else build(path)))
     ell.load_level(MAPS[0])
     print('df_build_test_track: OK; ' + '; '.join(results))
 

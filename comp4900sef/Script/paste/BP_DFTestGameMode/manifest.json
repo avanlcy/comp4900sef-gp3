@@ -9,6 +9,9 @@
  "functions": [],
  "graphs": [],
  "defaults": {
-  "NPCCount": 0
- }
+  "NPCCount": 0,
+  "SaveSlotOverride": "DeadFireTest"
+ },
+ "component_defaults": {},
+ "requires": []
 }

@@ -188,6 +188,27 @@
    "editable": false
   },
   {
+   "name": "SaveSlotOverride",
+   "type": "string",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "LevelIndex",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "PlayerVehicleClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
    "name": "RacerControllers",
    "type": "array<object:/Script/Engine.Controller>",
    "default": "",
@@ -600,6 +621,24 @@
     "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType"
    ],
    "doc": "Every NPC with a free inventory slot gets a random item (Boost..RPG) with that type's crate charges."
+  },
+  {
+   "name": "ApplyGameInstanceSettings",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "At Begin Play: the save slot override, SelectedLevel = LevelIndex, rivals for the difficulty (once), the audio mix."
+  },
+  {
+   "name": "RefreshPlayerVehicleClass",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "PlayerVehicleClass and DefaultPawnClass from the GameInstance's selection when it is unlocked, else BP_DFVehicle."
   },
   {
    "name": "EndRace",
@@ -1816,25 +1855,63 @@
    }
   },
   {
+   "name": "ApplyGameInstanceSettings",
+   "file": "ApplyGameInstanceSettings.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RefreshPlayerVehicleClass",
+   "file": "RefreshPlayerVehicleClass.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "EndRace",
    "file": "EndRace.txt",
    "links": [
     [
      "entry",
      "then",
-     "DFN_K2Node_IfThenElse_0",
+     "DFN_K2Node_CallFunction_2",
      "execute"
     ],
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_3",
      "InByte"
     ],
     [
      "entry",
      "Reason",
-     "DFN_K2Node_CallFunction_14",
+     "DFN_K2Node_CallFunction_15",
      "A"
     ],
     [
@@ -1865,7 +1942,7 @@
     [
      "entry",
      "then",
-     "DFN_K2Node_CallFunction_1",
+     "DFN_K2Node_CallFunction_0",
      "execute"
     ]
    ],
@@ -1895,6 +1972,9 @@
   "DefaultPawnClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle",
   "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFPlayerController",
   "GameStateClass": "class:/Game/DeadFire/Blueprints/BP_DFRaceGameState",
-  "HUDClass": "class:/Game/DeadFire/Blueprints/BP_DFHUD"
- }
+  "HUDClass": "class:/Game/DeadFire/Blueprints/BP_DFHUD",
+  "PlayerVehicleClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle"
+ },
+ "component_defaults": {},
+ "requires": []
 }

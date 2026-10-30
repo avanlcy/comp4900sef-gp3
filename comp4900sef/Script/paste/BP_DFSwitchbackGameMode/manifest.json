@@ -1,0 +1,19 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFSwitchbackGameMode",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFRaceGameMode",
+ "description": "SWITCHBACK: 5 gates, 150 s, 4 rivals, 400 to pass.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "LevelIndex": 1,
+  "RaceTimeLimit": 150.0,
+  "ScoreRequirement": 400,
+  "NPCCount": 4
+ },
+ "component_defaults": {},
+ "requires": []
+}

@@ -1,0 +1,303 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFPauseMenu",
+ "parent": "/Script/UMG.UserWidget",
+ "description": "The pause menu: RESUME, RESTART, MAIN MENU, QUIT over a dark backdrop.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Sets a text block from a string."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": [],
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Backdrop",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.65
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "PauseBox",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "PauseBox",
+   "props": {
+    "text": "PAUSED",
+    "font_size": 60,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     24
+    ]
+   }
+  },
+  {
+   "name": "ResumeButton",
+   "class": "/Script/UMG.Button",
+   "parent": "PauseBox",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "ResumeLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ResumeButton",
+   "props": {
+    "text": "RESUME",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "RestartButton",
+   "class": "/Script/UMG.Button",
+   "parent": "PauseBox",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "RestartLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "RestartButton",
+   "props": {
+    "text": "RESTART",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "MenuButton",
+   "class": "/Script/UMG.Button",
+   "parent": "PauseBox",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "MenuLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "MenuButton",
+   "props": {
+    "text": "MAIN MENU",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "QuitButton",
+   "class": "/Script/UMG.Button",
+   "parent": "PauseBox",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "QuitLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "QuitButton",
+   "props": {
+    "text": "QUIT",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFSaveGame",
+ "parent": "/Script/Engine.SaveGame",
+ "description": "Saved progress: unlocked cars and tracks, best score and place per track, the settings.",
+ "components": [],
+ "variables": [
+  {
+   "name": "UnlockedVehicles",
+   "type": "array<bool>",
+   "default": "",
+   "category": "Dead Fire|Save",
+   "editable": false
+  },
+  {
+   "name": "UnlockedLevels",
+   "type": "array<bool>",
+   "default": "",
+   "category": "Dead Fire|Save",
+   "editable": false
+  },
+  {
+   "name": "BestScores",
+   "type": "array<int>",
+   "default": "",
+   "category": "Dead Fire|Save",
+   "editable": false
+  },
+  {
+   "name": "BestRanks",
+   "type": "array<int>",
+   "default": "",
+   "category": "Dead Fire|Save",
+   "editable": false
+  },
+  {
+   "name": "MasterVolume",
+   "type": "float",
+   "default": "1",
+   "category": "Dead Fire|Save",
+   "editable": false
+  },
+  {
+   "name": "Difficulty",
+   "type": "int",
+   "default": "1",
+   "category": "Dead Fire|Save",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

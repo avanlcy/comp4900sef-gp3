@@ -519,6 +519,8 @@
   }
  ],
  "defaults": {},
+ "component_defaults": {},
+ "requires": [],
  "root_class": "/Script/UMG.CanvasPanel",
  "root_name": "Root",
  "tree": [

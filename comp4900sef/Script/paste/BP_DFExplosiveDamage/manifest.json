@@ -8,5 +8,7 @@
  "dispatchers": [],
  "functions": [],
  "graphs": [],
- "defaults": {}
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
 }

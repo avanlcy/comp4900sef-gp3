@@ -4,7 +4,15 @@
  "parent": "/Script/UMG.UserWidget",
  "description": "The end-of-race summary with Retry and Quit.",
  "components": [],
- "variables": [],
+ "variables": [
+  {
+   "name": "LevelIndex",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Summary",
+   "editable": false
+  }
+ ],
  "dispatchers": [],
  "functions": [
   {
@@ -23,13 +31,14 @@
    "name": "ShowResult",
    "inputs": [
     "Result:struct:/Game/DeadFire/Data/S_DFRaceResult.S_DFRaceResult",
-    "ScoreRequirement:int"
+    "ScoreRequirement:int",
+    "LevelIndex:int"
    ],
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Fills the summary from the race result."
+   "doc": "Fills the summary from the race result, the unlock line and NEXT from the GameInstance."
   }
  ],
  "graphs": [
@@ -85,6 +94,18 @@
      "ScoreRequirement",
      "DFN_K2Node_CallFunction_12",
      "InInt"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_VariableSet_0",
+     "LevelIndex"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallFunction_34",
+     "A"
     ]
    ],
    "layout": {
@@ -106,6 +127,8 @@
   }
  ],
  "defaults": {},
+ "component_defaults": {},
+ "requires": [],
  "root_class": "/Script/UMG.CanvasPanel",
  "root_name": "Root",
  "tree": [
@@ -246,7 +269,38 @@
      0,
      0,
      0,
-     28
+     8
+    ]
+   }
+  },
+  {
+   "name": "UnlockText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "SummaryBox",
+   "props": {
+    "text": "",
+    "font_size": 26,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "h_align": "Center",
+    "padding": [
+     0,
+     0,
+     0,
+     20
     ]
    }
   },
@@ -297,18 +351,57 @@
    "slot": {}
   },
   {
-   "name": "QuitButton",
+   "name": "NextButton",
+   "class": "/Script/UMG.Button",
+   "parent": "ButtonRow",
+   "props": {
+    "visibility": "Collapsed"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     24,
+     0
+    ]
+   }
+  },
+  {
+   "name": "NextLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "NextButton",
+   "props": {
+    "text": "NEXT",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "MenuButton",
    "class": "/Script/UMG.Button",
    "parent": "ButtonRow",
    "props": {},
    "slot": {}
   },
   {
-   "name": "QuitLabel",
+   "name": "MenuLabel",
    "class": "/Script/UMG.TextBlock",
-   "parent": "QuitButton",
+   "parent": "MenuButton",
    "props": {
-    "text": "QUIT",
+    "text": "MENU",
     "font_size": 28,
     "color": [
      0.05,

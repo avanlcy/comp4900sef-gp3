@@ -75,3 +75,7 @@
 
 # Optional sample assets; re-add via Content Browser > Add > Add Feature or Content Pack
 **/Content/StarterContent/
+
+# Python bytecode caches (the generators and editor scripts)
+__pycache__/
+*.pyc

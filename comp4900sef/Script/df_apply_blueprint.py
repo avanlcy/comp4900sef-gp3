@@ -96,6 +96,11 @@ def _compile(bp, what):
     if not first.startswith("errors=0"):
         errors = [l for l in rest.splitlines() if l.startswith("[ERROR]")]
         raise RuntimeError("%s compile failed (%s):\n%s" % (what, first, "\n".join(errors[:12])))
+    # the compiler only warns about a call to a function (or a read of a variable) another Blueprint has not compiled yet,
+    # and drops the node: treat it as a failure so the retry rounds re-import the graph once that Blueprint has compiled
+    unresolved = [l for l in rest.splitlines() if l.startswith("[WARN]") and "Could not find" in l]
+    if unresolved:
+        raise RuntimeError("%s compile left unresolved references:\n%s" % (what, "\n".join(unresolved[:12])))
 
 
 def _value(v):
@@ -156,6 +161,8 @@ def pass0(m):
             log("created %s (widget, parent %s)" % (m["asset"], m["parent"]))
     else:
         _ensure_blueprint(m["asset"], m["parent"])
+    for r in m.get("requires", []):  # support assets (e.g. a SoundMix) a Blueprint's defaults point at
+        _ensure_asset(r["asset"], getattr(unreal, r["class"]), getattr(unreal, r["factory"])())
 
 
 def _vec2(v):
@@ -401,7 +408,8 @@ def pass2(m, folder):
         bp.set_editor_property("blueprint_description", m["description"])
     _compile(bp, m["asset"])
     inherited = _inherited_defaults(m)
-    if m.get("defaults") or inherited:
+    component_defaults = m.get("component_defaults") or {}
+    if m.get("defaults") or inherited or component_defaults:
         cdo = unreal.get_default_object(_load_class(m["asset"]))
         # a child of a generated Blueprint: variables its parent declares take the parent's class-default value unless the
         # child sets its own (a child created before the parent's variables existed keeps zeros for them otherwise)
@@ -410,6 +418,15 @@ def pass2(m, folder):
                 cdo.set_editor_property(k, v)
         for k, v in (m.get("defaults") or {}).items():
             cdo.set_editor_property(k, _value(v))
+        # defaults of an inherited component (e.g. the Sedan's VehicleMovement): set on the class-default object's own
+        # component instance, which is how the editor stores a child Blueprint's override of a native component property
+        for comp, props in component_defaults.items():
+            obj = cdo.get_editor_property(comp)
+            if obj is None:
+                raise RuntimeError("%s: component %s not found on the class defaults" % (m["asset"], comp))
+            for k, v in props.items():
+                obj.set_editor_property(k, _value(v))
+                log("%s component default %s.%s = %r" % (m["asset"], comp, k, v))
         _compile(bp, m["asset"] + " (defaults)")
     _save(m["asset"])
     log("applied %s" % m["asset"])
@@ -437,6 +454,31 @@ def _inherited_defaults(m):
     return out
 
 
+def _is_test(m):
+    """A functional-test Blueprint (placed in the test level; references everything, referenced by nothing)."""
+    return m["asset"].rsplit("/", 1)[1].startswith("FT_DF")
+
+
+def _pass2_with_retries(manifests):
+    """Pass 2 over a group: a Blueprint's new variables are only visible to other Blueprints once it has been fully
+    compiled, and pass 2 runs in name order, so a manifest that fails to compile is retried after the others (at most
+    three rounds). Returns the (folder, manifest, text) failures left."""
+    failures, pending = [], list(manifests)
+    for attempt in range(3):
+        failures = []
+        for folder, m in pending:
+            try:
+                pass2(m, folder)
+            except Exception as e:  # keep going so one Blueprint's errors do not hide the others'
+                failures.append((folder, m, "%s: %s" % (m["asset"], e)))
+                log("FAILED (round %d) %s: %s" % (attempt + 1, m["asset"], e))
+        if not failures or len(failures) == len(pending):
+            break
+        log("retrying %d manifest(s) now that the others have compiled" % len(failures))
+        pending = [(folder, m) for folder, m, _ in failures]
+    return failures
+
+
 def apply_all(root, only=None):
     if len(unreal.EditorLevelLibrary.get_pie_worlds(False)) > 0:
         raise RuntimeError("a Play-In-Editor session is running (editor scripting is disabled during play); stop it first")
@@ -456,26 +498,31 @@ def apply_all(root, only=None):
             mm = json.load(open(p, encoding="utf-8"))
             if mm["kind"] in ("blueprint", "widget"):
                 _MANIFESTS_BY_ASSET[mm["asset"]] = mm
-    for folder, m in manifests:
-        pass0(m)
     del _LOG[:]
-    for folder, m in manifests:
+    # a child of a Blueprint applied in this same batch waits for a second round: creating the child and then recompiling
+    # its parent with new members in one go trips the engine's compilation manager (ensure "ChildClass->ClassDefaultObject
+    # == nullptr", which hung the editor on 2026-10-30); once the parent has compiled, the child is created and applied
+    in_batch = set(m["asset"] for _, m in manifests)
+    children = [fm for fm in manifests if fm[1].get("parent") in in_batch]
+    tests = [fm for fm in manifests if fm[1].get("parent") not in in_batch and _is_test(fm[1])]
+    core = [fm for fm in manifests if fm[1].get("parent") not in in_batch and not _is_test(fm[1])]
+    if children:
+        log("children of generated parents are created after the others have compiled: %s" % ", ".join(m["asset"] for _, m in children))
+    for folder, m in core + tests:
+        pass0(m)
+    for folder, m in core + tests:
         pass1(m)
-    # a Blueprint's new variables are only visible to other Blueprints once it has been fully compiled, and pass 2 runs in
-    # name order, so a manifest that fails to compile is retried after the others (at most three rounds)
-    failures, pending = [], list(manifests)
-    for attempt in range(3):
-        failures = []
-        for folder, m in pending:
-            try:
-                pass2(m, folder)
-            except Exception as e:  # keep going so one Blueprint's errors do not hide the others'
-                failures.append((folder, m, "%s: %s" % (m["asset"], e)))
-                log("FAILED (round %d) %s: %s" % (attempt + 1, m["asset"], e))
-        if not failures or len(failures) == len(pending):
-            break
-        log("retrying %d manifest(s) now that the others have compiled" % len(failures))
-        pending = [(folder, m) for folder, m, _ in failures]
+    # 1. the gameplay Blueprints, parents included, compile with no freshly created child class to reinstance
+    failed = _pass2_with_retries(core)
+    # 2. now the children may exist (tests and catalogues reference them by class)
+    for folder, m in children:
+        pass0(m)
+    for folder, m in children:
+        pass1(m)
+    # 3. the tests, the children, and whatever failed above (a reference to a child, or to a Blueprint compiled later)
+    failed_assets = set(f[1]["asset"] for f in failed)
+    last = [fm for fm in manifests if _is_test(fm[1]) or fm in children or fm[1]["asset"] in failed_assets]
+    failures = _pass2_with_retries(last)
     failures = [text for _, _, text in failures]
     log("DONE %d manifests, %d failed" % (len(manifests), len(failures)))
     with open(LOG_PATH, "w", encoding="utf-8") as f:

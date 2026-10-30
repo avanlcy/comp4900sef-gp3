@@ -13,6 +13,7 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_GM, BP_VEHICLE, CONTROLLER, FLOAT,
                 WHEELED_MOVE, Blueprint, Graph, Node, Pin, and_bool, as_pin, cast_to, cls_ref, compare, gen,
                 get_game_mode, is_valid, math2, member, not_bool, obj_pin, obj_spec, struct_path, struct_pin,
                 struct_spec)
+from df import MATERIAL_INTERFACE, PAINT_SLOT, SEDAN_MASS, STRING, VEHICLES  # noqa: E402
 
 VC, CC, GMC = gen(BP_VEHICLE), gen(BP_CHARACTER), gen(BP_GM)
 TIRE = struct_path(S_TIRE)
@@ -37,6 +38,15 @@ def mv_call(g: Graph, fn: str, inputs=None, outputs=None, pure=False, col=None, 
 
 def set_throttle(g, value_default=None):
     return mv_call(g, "SetThrottleInput", inputs=[Pin("Throttle", FLOAT, default=value_default)])
+
+
+def drive_throttle(g: Graph, input_src) -> Node:
+    """self.ComputeDriveThrottle(input, GetSpeedKPH()) (pure): the car's throttle scale and speed limiter (Phase 5)."""
+    n = g.call_self("ComputeDriveThrottle", inputs=[Pin("Input", FLOAT), Pin("SpeedKPH", FLOAT)], outputs=[Pin("Throttle", FLOAT, "out")], pure=True)
+    g.link(input_src[0], input_src[1], n, "Input")
+    kph = g.call_self("GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True)
+    g.link(kph, "KPH", n, "SpeedKPH")
+    return n
 
 
 def set_steering(g, value_default=None):
@@ -114,6 +124,13 @@ def build() -> Blueprint:
     bp.variable("AISteering", "float", "0", A)
     bp.variable("bAIHandbrake", "bool", "false", A)
     bp.variable("AimTarget", "object:" + ACTOR, "", A)  # set by an AI for one shot: the gun and the rocket aim at it (spec §3.2)
+    # Phase 5 (spec 2026-10-30 phase 5 §3.2): what makes one car differ from another; the children override these defaults
+    ST = "Dead Fire|Stats"
+    bp.variable("VehicleName", "string", "SEDAN", ST, editable=True)
+    bp.variable("ThrottleScale", "float", "1", ST, editable=True)
+    bp.variable("TopSpeedKPH", "float", "0", ST, editable=True)  # 0 = no limiter
+    bp.variable("PaintMaterial", "object:" + MATERIAL_INTERFACE, "", ST, editable=True)  # none = the template paint
+    bp.variable("PaintSlot", "int", str(PAINT_SLOT), ST, editable=True)
 
     bp.dispatcher("OnVehicleDamaged", ["Damage:float", "TireIndex:int"])
     bp.dispatcher("OnTireBlown", ["TireIndex:int"])
@@ -781,7 +798,7 @@ def build() -> Blueprint:
     g.link(at, "AIThrottle", mul_ai, "A")
     g.link(scale_ai, "Scale", mul_ai, "B")
     th_ai = set_throttle(g)
-    g.link(mul_ai, "ReturnValue", th_ai, "Throttle")
+    g.link(drive_throttle(g, (mul_ai, "ReturnValue")), "Throttle", th_ai, "Throttle")
     g.link(bai, "then", th_ai, "execute")
     ast = g.var_get("AISteering", FLOAT)
     st_ai = set_steering(g)
@@ -796,8 +813,35 @@ def build() -> Blueprint:
     g.link(axis, "ReturnValue", mul, "A")
     g.link(scale, "Scale", mul, "B")
     th = set_throttle(g)
-    g.link(mul, "ReturnValue", th, "Throttle")
+    g.link(drive_throttle(g, (mul, "ReturnValue")), "Throttle", th, "Throttle")
     g.link(bai, "else", th, "execute")
+
+    # ComputeDriveThrottle(Input, SpeedKPH) -> Throttle (Phase 5 spec §3.2): the car's throttle scale, and a speed limiter
+    # that cuts positive throttle at TopSpeedKPH (0 = none); braking and reverse are only scaled, never cut
+    g = bp.function("ComputeDriveThrottle", doc="Input x ThrottleScale; 0 when accelerating at or above TopSpeedKPH (0 = no limiter).",
+                    inputs=["Input:float", "SpeedKPH:float"], outputs=["Throttle:float"], pure=True)
+    scaled = math2(g, "Multiply_FloatFloat", FLOAT)
+    g.link_entry("Input", scaled, "A")
+    g.link(g.var_get("ThrottleScale", FLOAT), "ThrottleScale", scaled, "B")
+    accelerating = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link_entry("Input", accelerating, "A")
+    has_limit = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
+    g.link(g.var_get("TopSpeedKPH", FLOAT), "TopSpeedKPH", has_limit, "A")
+    at_limit = compare(g, "GreaterEqual_FloatFloat", FLOAT)
+    g.link_entry("SpeedKPH", at_limit, "A")
+    g.link(g.var_get("TopSpeedKPH", FLOAT), "TopSpeedKPH", at_limit, "B")
+    both = and_bool(g)
+    g.link(has_limit, "ReturnValue", both, "A")
+    g.link(at_limit, "ReturnValue", both, "B")
+    limited = and_bool(g)
+    g.link(accelerating, "ReturnValue", limited, "A")
+    g.link(both, "ReturnValue", limited, "B")
+    pick = g.call_static(MATH, "SelectFloat", inputs=[Pin("A", FLOAT, default="0.0"), Pin("B", FLOAT), Pin("bPickA", BOOL)],
+                         outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(scaled, "ReturnValue", pick, "B")
+    g.link(limited, "ReturnValue", pick, "bPickA")
+    g.link_result(pick, "ReturnValue", "Throttle")
+    g.link_entry("then", "result", "execute")
 
     # SetAIInput(Throttle, Steering, bHandbrake): what TickDriveOverrides applies while bAIControlled
     g = bp.function("SetAIInput", inputs=["Throttle:float", "Steering:float", "bHandbrake:bool"],
@@ -1151,11 +1195,26 @@ def build() -> Blueprint:
 
     # ---- Event graph ----
     g = bp.event_graph()
-    g.section("Begin Play: fresh tires")
+    g.section("Begin Play: fresh tires, full health, the paint")
     bpl = g.begin_play(col=0, row=1)
     par = g.call_parent(gen(SEDAN), "ReceiveBeginPlay", col=1, row=1)
     init = g.call_self("InitTires", col=2, row=1)
     g.exec(bpl, par, init)
+    full = g.var_set("Health", FLOAT)  # Phase 5: a child with more MaxHealth starts full
+    g.link(g.var_get("MaxHealth", FLOAT), "MaxHealth", full, "Health")
+    g.exec(init, full)
+    paint = g.var_get("PaintMaterial", OBJECT, cls_ref(MATERIAL_INTERFACE))
+    has_paint = is_valid(g)
+    g.link(paint, "PaintMaterial", has_paint, "Object")
+    bpaint = g.branch()
+    g.note(bpaint, "a paint of its own?")
+    g.link(has_paint, "ReturnValue", bpaint, "Condition")
+    g.exec(full, bpaint)
+    sm = g.call_on(PRIMITIVE, "SetMaterial", inputs=[Pin("ElementIndex", INT), obj_pin("Material", MATERIAL_INTERFACE)])
+    g.link(mesh(g), "Mesh", sm, "self")
+    g.link(g.var_get("PaintSlot", INT), "PaintSlot", sm, "ElementIndex")
+    g.link(paint, "PaintMaterial", sm, "Material")
+    g.link(bpaint, "then", sm, "execute")
 
     g.section("Tick: drive overrides, then item effects")
     tick = g.tick(col=0, row=2)
@@ -1214,5 +1273,33 @@ def build() -> Blueprint:
     return bp
 
 
+def build_children() -> list:
+    """BRUTE and VIPER (spec 2026-10-30 phase 5 §3): children of BP_DFVehicle that only change class defaults, from the
+    VEHICLES catalogue in df.py; the mass override lands on the inherited VehicleMovement component."""
+    out = []
+    for row in VEHICLES:
+        if row.asset == BP_VEHICLE:
+            continue
+        child = Blueprint(row.asset, parent=BP_VEHICLE, description="%s: %s" % (row.name, row.description))
+        child.default("MaxHealth", float(row.max_health))
+        child.default("Health", float(row.max_health))
+        child.default("VehicleName", row.name)
+        child.default("ThrottleScale", float(row.throttle_scale))
+        child.default("TopSpeedKPH", float(row.top_speed))
+        child.default("BoostDuration", float(row.boost_duration))
+        child.default("BoostKickSpeed", float(row.boost_kick))
+        if row.paint:
+            child.default("PaintMaterial", row.paint)
+        if row.mass_factor:
+            child.component_default("VehicleMovement", "mass", SEDAN_MASS * row.mass_factor)
+        out.append(child)
+    return out
+
+
+def build_all() -> list:
+    return [build()] + build_children()
+
+
 if __name__ == "__main__":
-    print(build().write(OUT))
+    for b in build_all():
+        print(b.write(OUT))

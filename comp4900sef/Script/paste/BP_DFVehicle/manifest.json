@@ -233,6 +233,41 @@
    "default": "",
    "category": "Dead Fire|AI",
    "editable": false
+  },
+  {
+   "name": "VehicleName",
+   "type": "string",
+   "default": "SEDAN",
+   "category": "Dead Fire|Stats",
+   "editable": true
+  },
+  {
+   "name": "ThrottleScale",
+   "type": "float",
+   "default": "1",
+   "category": "Dead Fire|Stats",
+   "editable": true
+  },
+  {
+   "name": "TopSpeedKPH",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Stats",
+   "editable": true
+  },
+  {
+   "name": "PaintMaterial",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|Stats",
+   "editable": true
+  },
+  {
+   "name": "PaintSlot",
+   "type": "int",
+   "default": "2",
+   "category": "Dead Fire|Stats",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -510,6 +545,20 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "Per-frame input: parked or wrecked cars brake; blown tires cap the throttle."
+  },
+  {
+   "name": "ComputeDriveThrottle",
+   "inputs": [
+    "Input:float",
+    "SpeedKPH:float"
+   ],
+   "outputs": [
+    "Throttle:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Input x ThrottleScale; 0 when accelerating at or above TopSpeedKPH (0 = no limiter)."
   },
   {
    "name": "SetAIInput",
@@ -1333,6 +1382,52 @@
    }
   },
   {
+   "name": "ComputeDriveThrottle",
+   "file": "ComputeDriveThrottle.txt",
+   "links": [
+    [
+     "entry",
+     "Input",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "Input",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_6",
+     "ReturnValue",
+     "result",
+     "Throttle"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1393,
+     0
+    ]
+   }
+  },
+  {
    "name": "SetAIInput",
    "file": "SetAIInput.txt",
    "links": [
@@ -1731,5 +1826,7 @@
  ],
  "defaults": {
   "WreckSmokeEffect": "/Game/StarterContent/Particles/P_Smoke"
- }
+ },
+ "component_defaults": {},
+ "requires": []
 }

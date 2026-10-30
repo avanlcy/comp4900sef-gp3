@@ -419,5 +419,7 @@
    }
   }
  ],
- "defaults": {}
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
 }

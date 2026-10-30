@@ -1,0 +1,195 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFMenuPlayerController",
+ "parent": "/Script/Engine.PlayerController",
+ "description": "The menu's player controller: cursor and UI input, the page on screen, the showcase cameras.",
+ "components": [],
+ "variables": [
+  {
+   "name": "CurrentPage",
+   "type": "object:/Script/UMG.UserWidget",
+   "default": "",
+   "category": "Dead Fire|Menu",
+   "editable": false
+  },
+  {
+   "name": "ShowcaseCameras",
+   "type": "array<object:/Script/Engine.CameraActor>",
+   "default": "",
+   "category": "Dead Fire|Menu",
+   "editable": false
+  },
+  {
+   "name": "BlendSeconds",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|Menu",
+   "editable": true
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "FindShowcaseCameras",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "ShowcaseCameras[k] = the CameraActor tagged Showcase<k>, k = 0..2."
+  },
+  {
+   "name": "ShowVehicle",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Blends the view to the showcase camera of car Index."
+  },
+  {
+   "name": "SnapToVehicle",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Cuts the view to the showcase camera of car Index (Begin Play)."
+  },
+  {
+   "name": "ShowPage",
+   "inputs": [
+    "PageClass:class:/Script/UMG.UserWidget"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Replaces the page on screen with a new widget of PageClass."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "FindShowcaseCameras",
+   "file": "FindShowcaseCameras.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallArrayFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowVehicle",
+   "file": "ShowVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SnapToVehicle",
+   "file": "SnapToVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowPage",
+   "file": "ShowPage.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "PageClass",
+     "DFN_K2Node_CreateWidget_0",
+     "Class"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

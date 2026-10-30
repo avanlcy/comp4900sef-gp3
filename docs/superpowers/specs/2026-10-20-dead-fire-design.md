@@ -97,13 +97,18 @@ Asset prefix `DF`: `BP_DF*` actors, `BPC_DF*` actor components, `WBP_DF*` widget
 | `BP_DFDestructible`, `BP_DFExplosiveDamage` (Phase 3) | `Actor`, `DamageType` | Explosives-only rock on a shortcut road; the damage type explosions apply | Lau Chun Kit |
 | `E_DFItemType`, `S_DFItemStack` (Phase 3) | enum / struct | Item types; an inventory stack | Choy Tsz Lok |
 | `BP_DFVehicleAIController` (Phase 4) | `AIController` | NPC driver with a `BPC_DFRacer`: follows the main track on its own lane, avoids cars, uses items against the player, reverses out when stuck, is respawned by the GameMode (`docs/superpowers/specs/2026-10-30-phase4-ai-design.md`) | TBD |
-| `BP_DFTestGameMode` (Phase 4) | `BP_DFRaceGameMode` | The functional-test level's GameMode: no NPCs (`NPCCount` 0); the AI tests spawn their own | Lee Chun Yin |
+| `BP_DFTestGameMode` (Phase 4) | `BP_DFRaceGameMode` | The functional-test level's GameMode: no NPCs (`NPCCount` 0), the `DeadFireTest` save slot; the AI tests spawn their own | Lee Chun Yin |
+| `BP_DFGameInstance`, `BP_DFSaveGame` (Phase 5) | `GameInstance`, `SaveGame` | The meta layer: car and track catalogues, saved progress and unlock rules, settings, level changes with a fade (`docs/superpowers/specs/2026-10-30-phase5-menus-design.md`) | Lee Chun Yin |
+| `BP_DFVehicleBrute`, `BP_DFVehicleViper` (Phase 5) | `BP_DFVehicle` | The other two cars: class defaults (health, throttle scale, speed limit, boost, paint, mass) from the `VEHICLES` table | Fung Ming Chu, Chong Tsz Ho |
+| `BP_DFSwitchbackGameMode` (Phase 5) | `BP_DFRaceGameMode` | SWITCHBACK's rules from the `LEVELS` table | Choy Tsz Lok |
+| `BP_DFMenuGameMode`, `BP_DFMenuPlayerController` (Phase 5) | `GameModeBase`, `PlayerController` | The menu level: no pawn, cursor and UI input, the page on screen, the showcase cameras | TBD |
+| `WBP_DFMainMenu`, `WBP_DFVehicleSelect`, `WBP_DFLevelSelect`, `WBP_DFSettings`, `WBP_DFPauseMenu` (Phase 5) | `UserWidget` | The menu pages and the pause menu | TBD |
 
 Hooks that other Blueprints or later phases listen to are **Event Dispatchers** (`OnVehicleDamaged`, `OnTireBlown`, `OnVehicleDestroyed`, `OnOccupantEntered/Exited`, `OnCharacterDamaged/Died/Revived`, `OnEnteredVehicle/ExitedVehicle`, `OnFired`, `OnRaceEnded`, `OnRacerRespawned`). Tunables are variables with **Instance Editable** on, under a `Dead Fire|...` category. The GameMode references the `BP_DF*` pawn and controller classes, so visual swaps are a class-default change.
 
 Score and progress data is not kept on `PlayerState` because NPC racers have none; see `BPC_DFRacer`.
 
-Maps under `/Game/DeadFire/Maps/` (`L_TestTrack`) and `/Game/DeadFire/Tests/` (`L_DF_FunctionalTests`, the same track plus the functional test actors).
+Maps under `/Game/DeadFire/Maps/` (`L_MainMenu`, `L_TestTrack`, `L_Switchback`) and `/Game/DeadFire/Tests/` (`L_DF_FunctionalTests`, the first track plus the functional test actors).
 
 ### 6.1 Enter / exit vehicle flow
 
@@ -136,7 +141,7 @@ The proposal's week plan maps to these phases. Each phase ends with a working bu
 | **2B — Blueprint migration** (done 2026-10-22) | 9–10 | Remove the C++ module; rebuild the Phase 1 + 2 feature set in Blueprint on the template Blueprints; Blueprint Functional Tests; playtest checklist. Plan: `docs/superpowers/plans/2026-10-21-blueprint-migration.md` |
 | **3 — Items & damage** (done 2026-10-30) | 10–11 | Loot crates off-track (on foot only), three-slot inventory, item use from the car (boost, shield, bomb, gun, RPG), explosions with tire blasts, wreck effects, the explosives-only rock on a shortcut road; 15 more functional tests. Design: `docs/superpowers/specs/2026-10-30-phase3-items-design.md`; plan: `docs/superpowers/plans/2026-10-30-phase3-items.md` |
 | **4 — AI** (done 2026-10-30) | 11 | NPC drivers following the spline on lanes, avoidance, item supply and use, attacking the player, per-racer respawn, live ranking (`POS n / m`); the Blueprint generator lays graphs out in titled sections. Design: `docs/superpowers/specs/2026-10-30-phase4-ai-design.md`; plan: `docs/superpowers/plans/2026-10-30-phase4-ai.md` |
-| **5 — Menus & meta** | 12 | Main menu, vehicle select with stats, level select, unlocks (SaveGame), pause, summary, audio/VFX polish |
+| **5 — Menus & meta** (done 2026-10-30) | 12 | Main menu level with the cars on plinths, car page with stat bars, track page, three cars and a second track (SWITCHBACK), saved progress with the unlock rules, pause menu, the summary's unlock line and NEXT, settings (volume mix, difficulty, fullscreen, reset), fades between levels; 14 more functional tests. Design: `docs/superpowers/specs/2026-10-30-phase5-menus-design.md`; plan: `docs/superpowers/plans/2026-10-30-phase5-menus.md` |
 | **6 — Test & ship** | 12–13 | Bug fixing, balance (score, items), packaged Windows build, presentation |
 
 The migration was done by the tooling in about a day, so the proposal's schedule for Phases 3–6 stands. If week 11 arrives with Phase 3 unfinished, the team cuts from the end of Phase 3 (destructible shortcuts first, then RPG) and from Phase 4 (AI item use), not from Phase 5 (the menus are in the flowchart and graded).

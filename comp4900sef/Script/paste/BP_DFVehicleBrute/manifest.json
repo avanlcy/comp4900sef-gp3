@@ -1,0 +1,27 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFVehicleBrute",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFVehicle",
+ "description": "BRUTE: Armoured and heavy: slow to get going, hard to kill, limited to 120.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "MaxHealth": 160.0,
+  "Health": 160.0,
+  "VehicleName": "BRUTE",
+  "ThrottleScale": 0.8,
+  "TopSpeedKPH": 120.0,
+  "BoostDuration": 2.0,
+  "BoostKickSpeed": 1200.0,
+  "PaintMaterial": "/Game/Vehicle/Meshes/GrayMaterial"
+ },
+ "component_defaults": {
+  "VehicleMovement": {
+   "mass": 1950.0
+  }
+ },
+ "requires": []
+}

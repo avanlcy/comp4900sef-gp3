@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from bpgen import WidgetBlueprint, cls_ref, struct_ref  # noqa: E402
+from df import BP_GI, game_instance  # noqa: E402  (Phase 5)
 from df import (BOOL, BP_CHARACTER, BP_GM, BP_GS, BP_HUD, BP_PC, BP_VEHICLE, BPC_RACER, CONTROLLER, E_ITEM_TYPE, FLOAT,  # noqa: E402
                 GAMEPLAY, INT, LINEAR_COLOR, MATH, OBJECT, OUT, PLAYER_CONTROLLER, S_ITEM_STACK, S_RESULT, S_TIRE, STRING,
                 STRUCT, VECTOR, WBP_HUD, WBP_SUMMARY, Blueprint, Graph, Node, Pin, and_bool, as_pin, compare, enum_pin,
@@ -23,6 +24,7 @@ GEOMETRY = "/Script/SlateCore.Geometry"
 VIS = "/Script/UMG.ESlateVisibility"
 VC, CC, PCC, GMC, GSC, RC = gen(BP_VEHICLE), gen(BP_CHARACTER), gen(BP_PC), gen(BP_GM), gen(BP_GS), gen(BPC_RACER)
 WHUD, WSUM, HUDC = gen(WBP_HUD), gen(WBP_SUMMARY), gen(BP_HUD)
+GIC = gen(BP_GI)  # Phase 5
 TIRE, RESULT, ITEM = struct_path(S_TIRE), struct_path(S_RESULT), struct_path(S_ITEM_STACK)
 ITEM_ENUM = enum_pin("x", E_ITEM_TYPE).sub_object
 PICKUP_FLASH_SECONDS = 1.5
@@ -532,15 +534,21 @@ def build_summary() -> WidgetBlueprint:
     bp.widget("TitleText", TEXT_BLOCK, "SummaryBox", text_props("RACE COMPLETE", 60, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 16]})
     bp.widget("PlaceText", TEXT_BLOCK, "SummaryBox", text_props("Place 1 of 1", 32, justify="Center"), {"h_align": "Center", "padding": [0, 0, 0, 8]})
     bp.widget("StatsText", TEXT_BLOCK, "SummaryBox", text_props("Score 0 / 300    Laps 0    Kills 0    Deaths 0", 26, justify="Center"),
-              {"h_align": "Center", "padding": [0, 0, 0, 28]})
+              {"h_align": "Center", "padding": [0, 0, 0, 8]})
+    # Phase 5 (spec §5.2): what the race unlocked, NEXT when the next track is open, QUIT became MENU
+    bp.widget("UnlockText", TEXT_BLOCK, "SummaryBox", text_props("", 26, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 20]})
     bp.widget("ButtonRow", HBOX, "SummaryBox", slot={"h_align": "Center"})
     bp.widget("RetryButton", BUTTON, "ButtonRow", slot={"padding": [0, 0, 24, 0]})
     bp.widget("RetryLabel", TEXT_BLOCK, "RetryButton", text_props("RETRY", 28, [0.05, 0.05, 0.05, 1], "Center"))
-    bp.widget("QuitButton", BUTTON, "ButtonRow")
-    bp.widget("QuitLabel", TEXT_BLOCK, "QuitButton", text_props("QUIT", 28, [0.05, 0.05, 0.05, 1], "Center"))
+    bp.widget("NextButton", BUTTON, "ButtonRow", {"visibility": "Collapsed"}, slot={"padding": [0, 0, 24, 0]})
+    bp.widget("NextLabel", TEXT_BLOCK, "NextButton", text_props("NEXT", 28, [0.05, 0.05, 0.05, 1], "Center"))
+    bp.widget("MenuButton", BUTTON, "ButtonRow")
+    bp.widget("MenuLabel", TEXT_BLOCK, "MenuButton", text_props("MENU", 28, [0.05, 0.05, 0.05, 1], "Center"))
+    bp.variable("LevelIndex", "int", "0", "Dead Fire|Summary")  # the track just raced (NEXT starts LevelIndex + 1)
     add_text_helpers(bp)
 
-    g = bp.function("ShowResult", doc="Fills the summary from the race result.", inputs=["Result:" + struct_spec(S_RESULT), "ScoreRequirement:int"])
+    g = bp.function("ShowResult", doc="Fills the summary from the race result, the unlock line and NEXT from the GameInstance.",
+                    inputs=["Result:" + struct_spec(S_RESULT), "ScoreRequirement:int", "LevelIndex:int"])
     br = g.break_struct(RESULT, [enum_pin(member(S_RESULT, "Reason"), "/Game/DeadFire/Data/E_DFRaceEndReason", direction="out"),
                                  Pin(member(S_RESULT, "bPassed"), BOOL), Pin(member(S_RESULT, "Rank"), INT),
                                  Pin(member(S_RESULT, "RacerCount"), INT), Pin(member(S_RESULT, "Score"), INT),
@@ -557,33 +565,124 @@ def build_summary() -> WidgetBlueprint:
     req = ("entry", "ScoreRequirement")
     req_s = g.call_static("KismetStringLibrary", "Conv_IntToString", inputs=[Pin("InInt", INT)], outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
     g.link_entry("ScoreRequirement", req_s, "InInt")
-    label(g, "StatsText", cat(g, "Score ", s_int(g, m("Score")), " / ", (req_s, "ReturnValue"), "    Laps ", s_int(g, m("Laps")),
-                               "    Kills ", s_int(g, m("Kills")), "    Deaths ", s_int(g, m("Deaths"))), (n, "then"))
+    n = label(g, "StatsText", cat(g, "Score ", s_int(g, m("Score")), " / ", (req_s, "ReturnValue"), "    Laps ", s_int(g, m("Laps")),
+                                   "    Kills ", s_int(g, m("Kills")), "    Deaths ", s_int(g, m("Deaths"))), (n, "then"))
+    keep = g.var_set("LevelIndex", INT)
+    g.link_entry("LevelIndex", keep, "LevelIndex")
+    g.exec(n, keep)
+    gi = game_instance(g)
+    g.exec(keep, gi)
+    GI = (gi, as_pin(BP_GI))
+    luv = get_on(g, GIC, "LastUnlockedVehicle", INT, GI)
+    has_car = compare(g, "GreaterEqual_IntInt", INT, b="0")
+    g.link(luv[0], luv[1], has_car, "A")
+    vinfo = g.call_on(GIC, "GetVehicleInfo", inputs=[Pin("Index", INT)],
+                      outputs=[Pin("Name", STRING, "out"), Pin("VehicleClass", "class", "out", cls_ref(VC)), Pin("UnlockLevel", INT, "out"),
+                               Pin("Speed", INT, "out"), Pin("Acceleration", INT, "out"), Pin("Armor", INT, "out"), Pin("Boost", INT, "out"),
+                               Pin("Description", STRING, "out")], pure=True)
+    g.link(GI[0], GI[1], vinfo, "self")
+    g.link(luv[0], luv[1], vinfo, "Index")
+    car_line = pick(g, cat(g, "NEW CAR UNLOCKED: ", (vinfo, "Name")), "", (has_car, "ReturnValue"))
+    bll = get_on(g, GIC, "bLastUnlockedLevel", BOOL, GI)
+    nxt = math2(g, "Add_IntInt", INT, b="1")
+    g.link_entry("LevelIndex", nxt, "A")
+    linfo = g.call_on(GIC, "GetLevelInfo", inputs=[Pin("Index", INT)],
+                      outputs=[Pin("Name", STRING, "out"), Pin("MapName", "name", "out"), Pin("Description", STRING, "out"),
+                               Pin("ScoreRequirement", INT, "out"), Pin("TimeLimit", FLOAT, "out"), Pin("NPCCount", INT, "out")], pure=True)
+    g.link(GI[0], GI[1], linfo, "self")
+    g.link(nxt, "ReturnValue", linfo, "Index")
+    track_line = pick(g, cat(g, "NEXT TRACK UNLOCKED: ", (linfo, "Name")), "", bll)
+    both = and_bool(g)
+    g.link(has_car, "ReturnValue", both, "A")
+    g.link(bll[0], bll[1], both, "B")
+    sep = pick(g, "   ", "", (both, "ReturnValue"))
+    n = label(g, "UnlockText", cat(g, car_line, sep, track_line), (gi, "then"))
+    clr_v = g.var_set_on(GIC, "LastUnlockedVehicle", INT, default="-1")
+    g.link(GI[0], GI[1], clr_v, "self")
+    g.exec(n, clr_v)
+    clr_l = g.var_set_on(GIC, "bLastUnlockedLevel", BOOL, default="false")
+    g.link(GI[0], GI[1], clr_l, "self")
+    g.exec(clr_v, clr_l)
+    # NEXT: passed, and the next track exists and is open
+    count = g.call_on(GIC, "GetLevelCount", outputs=[Pin("Count", INT, "out")], pure=True)
+    g.link(GI[0], GI[1], count, "self")
+    exists = compare(g, "Less_IntInt", INT)
+    g.link(nxt, "ReturnValue", exists, "A")
+    g.link(count, "Count", exists, "B")
+    open_ = g.call_on(GIC, "IsLevelUnlocked", inputs=[Pin("Index", INT)], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(GI[0], GI[1], open_, "self")
+    g.link(nxt, "ReturnValue", open_, "Index")
+    a1 = and_bool(g)
+    g.link(exists, "ReturnValue", a1, "A")
+    g.link(open_, "ReturnValue", a1, "B")
+    show_next = and_bool(g)
+    g.link(br, member(S_RESULT, "bPassed"), show_next, "A")
+    g.link(a1, "ReturnValue", show_next, "B")
+    bn = g.branch()
+    g.note(bn, "offer NEXT?")
+    g.link(show_next, "ReturnValue", bn, "Condition")
+    g.exec(clr_l, bn)
+    nb = g.var_get("NextButton", OBJECT, cls_ref(BUTTON))
+    vis = g.call_on(WIDGET, "SetVisibility", inputs=[native_enum_pin("InVisibility", VIS, "Visible")])
+    g.link(nb, "NextButton", vis, "self")
+    g.link(bn, "then", vis, "execute")
+    hid = g.call_on(WIDGET, "SetVisibility", inputs=[native_enum_pin("InVisibility", VIS, "Collapsed")])
+    g.link(nb, "NextButton", hid, "self")
+    g.link(bn, "else", hid, "execute")
+    # without our GameInstance: no line, no NEXT
+    blank = label(g, "UnlockText", cat(g, ""), (gi, "CastFailed"))
+    hid2 = g.call_on(WIDGET, "SetVisibility", inputs=[native_enum_pin("InVisibility", VIS, "Collapsed")])
+    g.link(nb, "NextButton", hid2, "self")
+    g.exec(blank, hid2)
 
     g = bp.event_graph()
-    g.section("Retry: reload the level")
+    g.section("Retry: reload the level (through the GameInstance's fade when it is ours)")
     retry = g.component_event("RetryButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=1)
     own = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True, col=1, row=2)
     gonly = g.call_static("WidgetBlueprintLibrary", "SetInputMode_GameOnly", inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER)], module="UMG", col=2, row=1)
     g.link(own, "ReturnValue", gonly, "PlayerController")
     g.exec(retry, gonly)
+    gi = game_instance(g)
+    g.exec(gonly, gi)
+    reload = g.call_on(GIC, "ReloadCurrentLevel")
+    g.link(gi, as_pin(BP_GI), reload, "self")
+    g.link(gi, "then", reload, "execute")
     lvl = g.call_static(GAMEPLAY, "GetCurrentLevelName", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bRemovePrefixString", BOOL, default="true")],
                         outputs=[Pin("ReturnValue", STRING, "out")], col=3, row=1)
-    g.exec(gonly, lvl)
+    g.link(gi, "CastFailed", lvl, "execute")
     nm = g.call_static("KismetStringLibrary", "Conv_StringToName", inputs=[Pin("InString", STRING)], outputs=[Pin("ReturnValue", "name", "out")], pure=True, col=3, row=2)
     g.link(lvl, "ReturnValue", nm, "InString")
     op = g.call_static(GAMEPLAY, "OpenLevel", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("LevelName", "name"),
                                                         Pin("bAbsolute", BOOL, default="true"), Pin("Options", STRING, default="")], col=4, row=1)
     g.link(nm, "ReturnValue", op, "LevelName")
     g.exec(lvl, op)
-    g.section("Quit: leave the game")
-    quit_ = g.component_event("QuitButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=3)
+    g.section("Next: the next track with the same car")
+    nxt_ev = g.component_event("NextButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=3)
+    gi2 = game_instance(g)
+    g.exec(nxt_ev, gi2)
+    nxt_i = math2(g, "Add_IntInt", INT, b="1")
+    g.link(g.var_get("LevelIndex", INT), "LevelIndex", nxt_i, "A")
+    sel = g.var_set_on(GIC, "SelectedLevel", INT)
+    g.link(gi2, as_pin(BP_GI), sel, "self")
+    g.link(nxt_i, "ReturnValue", sel, "SelectedLevel")
+    g.link(gi2, "then", sel, "execute")
+    start = g.call_on(GIC, "StartRace")
+    g.link(gi2, as_pin(BP_GI), start, "self")
+    g.exec(sel, start)
+
+    g.section("Menu: back to the main menu (quit when the GameInstance is not ours)")
+    menu = g.component_event("MenuButton", "OnClicked", BUTTON, [], "OnButtonClickedEvent__DelegateSignature", UMG, col=0, row=5)
+    gi3 = game_instance(g)
+    g.exec(menu, gi3)
+    back = g.call_on(GIC, "OpenMainMenu")
+    g.link(gi3, as_pin(BP_GI), back, "self")
+    g.link(gi3, "then", back, "execute")
     own2 = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True, col=1, row=4)
     q = g.call_static("KismetSystemLibrary", "QuitGame", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("SpecificPlayer", PLAYER_CONTROLLER),
                                                                   native_enum_pin("QuitPreference", "/Script/Engine.EQuitPreference", "Quit"),
                                                                   Pin("bIgnorePlatformRestrictions", BOOL, default="false")], col=2, row=3)
     g.link(own2, "ReturnValue", q, "SpecificPlayer")
-    g.exec(quit_, q)
+    g.link(gi3, "CastFailed", q, "execute")
     return bp
 
 
@@ -694,10 +793,13 @@ def build_hud_actor() -> Blueprint:
     g.link(gs, as_pin(BP_GS), res, "self")
     req = g.var_get_on(GMC, "ScoreRequirement", INT)
     g.link(gm, as_pin(BP_GM), req, "self")
-    show = g.call_on(WSUM, "ShowResult", inputs=[Pin("Result", STRUCT, sub_object=struct_ref(RESULT)), Pin("ScoreRequirement", INT)])
+    show = g.call_on(WSUM, "ShowResult", inputs=[Pin("Result", STRUCT, sub_object=struct_ref(RESULT)), Pin("ScoreRequirement", INT), Pin("LevelIndex", INT)])
     g.link(sw2, "SummaryWidget", show, "self")
     g.link(res, "Result", show, "Result")
     g.link(req, "ScoreRequirement", show, "ScoreRequirement")
+    lvl = g.var_get_on(GMC, "LevelIndex", INT)  # Phase 5: the summary's NEXT and unlock line need the track just raced
+    g.link(gm, as_pin(BP_GM), lvl, "self")
+    g.link(lvl, "LevelIndex", show, "LevelIndex")
     g.link(gm, "then", show, "execute")
     inv = g.call_on(USER_WIDGET, "IsInViewport", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     g.link(sw2, "SummaryWidget", inv, "self")

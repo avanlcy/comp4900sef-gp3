@@ -1,0 +1,27 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFVehicleViper",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFVehicle",
+ "description": "VIPER: Light and fragile: fastest off the line, with a longer, harder boost.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "MaxHealth": 70.0,
+  "Health": 70.0,
+  "VehicleName": "VIPER",
+  "ThrottleScale": 1.0,
+  "TopSpeedKPH": 0.0,
+  "BoostDuration": 3.0,
+  "BoostKickSpeed": 1600.0,
+  "PaintMaterial": "/Game/Vehicle/Meshes/OrangeMaterial"
+ },
+ "component_defaults": {
+  "VehicleMovement": {
+   "mass": 1200.0
+  }
+ },
+ "requires": []
+}

@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from df import OUT  # noqa: E402
 
-MODULES = ["stubs", "data", "weapon", "character", "vehicle", "racer", "track", "checkpoint", "game_mode", "hud", "items", "ai", "tests", "tests_items", "tests_ai"]
+MODULES = ["stubs", "data", "weapon", "character", "vehicle", "racer", "track", "checkpoint", "game_mode", "hud", "items", "ai", "meta", "menus", "tests", "tests_items", "tests_ai", "tests_menu"]
 
 
 def load(name):
@@ -28,18 +28,18 @@ def load(name):
 
 def main():
     out = os.path.abspath(OUT)
-    if os.path.isdir(out):
-        shutil.rmtree(out)  # stale graph files of renamed functions must not linger
-    count = 0
+    built = []  # every module is built before the old output goes, so an import error leaves the previous output intact
     for name in MODULES:
         mod = load(name)
         if mod is None:
             continue
-        assets = mod.build()
-        for asset in assets if isinstance(assets, list) else [assets]:
-            asset.write(out)
-            count += 1
-    print("generated %d manifests into %s" % (count, out))
+        assets = mod.build_all() if hasattr(mod, 'build_all') else mod.build()
+        built.extend(assets if isinstance(assets, list) else [assets])
+    if os.path.isdir(out):
+        shutil.rmtree(out)  # stale graph files of renamed functions must not linger
+    for asset in built:
+        asset.write(out)
+    print("generated %d manifests into %s" % (len(built), out))
 
 
 if __name__ == "__main__":

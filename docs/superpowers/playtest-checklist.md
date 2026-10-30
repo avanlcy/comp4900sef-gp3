@@ -49,8 +49,22 @@ write anything odd in the notes column.
 | 40 | Let an NPC follow you for a while after the first 20 s | It shoots you from behind (`CAR` health drops) or fires a rocket; one that is ahead of you drops a bomb in your path now and then; your `SHIELD` still blocks all of it | | |
 | 41 | Get out of your car beside the road and wait for an NPC to pass | The parked car is not shot at; on foot you are never hit | | |
 | 42 | Flip an NPC with a bomb under it (or roll one off the ramp) | Within about 2 s it is set back on its wheels at its gate; stop beside a stopped NPC car, get out and press **E** at it: you drive off in it and the NPC gets a fresh car at its gate a second later | | |
+| 43 | Phase 5. Open `Maps/L_MainMenu` and press Play | `DEAD FIRE` over three cars on plinths (blue, grey, orange), PLAY / SETTINGS / QUIT, footer `CARS 1 / 3   TRACKS 1 / 2`; the view fades in from black | | |
+| 44 | PLAY, then `<` and `>` | The camera glides between the three cars and the stats change; BRUTE and VIPER read `LOCKED  -  FINISH 1ST ON ...` with NEXT greyed; SEDAN's NEXT works | | |
+| 45 | NEXT (on SEDAN) | The track page: PROVING GROUND with `PASS 300   CLOCK 120 s   RIVALS 3` and `NOT RACED YET`; `>` shows SWITCHBACK locked (`LOCKED  -  PASS PROVING GROUND`) with RACE greyed | | |
+| 46 | RACE on PROVING GROUND | Fade to black, then the race starts in the Sedan with three rivals and `POS 1 / 4` | | |
+| 47 | Press **P** while racing | The world freezes under `PAUSED` with RESUME / RESTART / MAIN MENU / QUIT and the cursor; **P** again or RESUME continues; RESTART gives a fresh race; MAIN MENU returns to the car page | | |
+| 48 | Finish a race with 300+ points in first place (console `ke * EndRace 1` ends it early once the score is there) | Summary `RACE COMPLETE`, line `NEW CAR UNLOCKED: BRUTE   NEXT TRACK UNLOCKED: SWITCHBACK`, buttons RETRY / NEXT / MENU | | |
+| 49 | NEXT | SWITCHBACK: five gates, four rivals, the clock at `2:30`, a hairpin at the far end with the shortcut and its rock cutting it | | |
+| 50 | MENU, then `>` to BRUTE and NEXT, RACE | BRUTE is open; the race starts in a grey car reading `CAR 160 / 160` that pulls away slower and will not pass 120 km/h | | |
+| 51 | Quit the editor, open the project again, Play `L_MainMenu` | `CARS 2 / 3   TRACKS 2 / 2`: the unlocks survived (`Saved/SaveGames/DeadFire.sav`) | | |
+| 52 | SETTINGS: drag MASTER VOLUME to 0 and race | Explosions and shots are silent; back at 100 % they are not | | |
+| 53 | SETTINGS: `>` to HARD, race PROVING GROUND | Five rivals on the grid; EASY gives two | | |
+| 54 | SETTINGS: the display button | Toggles WINDOWED and FULLSCREEN (in a packaged build; the editor viewport stays as it is) | | |
+| 55 | SETTINGS: RESET PROGRESS | The label reads `PROGRESS RESET`; BACK shows `CARS 1 / 3   TRACKS 1 / 2` again | | |
+| 56 | Summary MENU and the pause menu's MAIN MENU | Both fade out and arrive on the car page of the main menu | | |
 
-There is no cheat command for wrecking the car or running out the clock, so lines 17 to 19 are played for real (from Phase 3 on, two rockets at your own parked car also wreck it); the
+Escape ends Play-In-Editor before the game sees it, so the pause line uses **P**. There is no cheat command for wrecking the car or running out the clock, so lines 17 to 19 are played for real (from Phase 3 on, two rockets at your own parked car also wreck it); the
 matching functional tests (`FT_DFRespawn_*`, `FT_DFRaceEnd_TimeUpSetsResult`, `FT_DFHUD_SummaryShownAtRaceEnd`) check
 the same rules automatically. The console command `ke * RestartRace` (press the `` ` `` key while playing) is expected
 to call the GameMode's `RestartRace` for a fresh race without reloading; it has not been tried yet, so note whether it

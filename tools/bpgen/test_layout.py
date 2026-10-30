@@ -6,7 +6,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bpgen import BOOL, FLOAT, INT, STRING, Blueprint, Graph, Pin  # noqa: E402
+from bpgen import BOOL, FLOAT, INT, STRING, Blueprint, Graph, Pin, cls_ref  # noqa: E402
 
 MATH, SYS = "KismetMathLibrary", "KismetSystemLibrary"
 
@@ -83,6 +83,23 @@ def test_function_without_outputs_has_no_result():
     f.text()
     assert f.layout_info["result"] is None
     assert p.x > 0, "nodes start right of the entry node"
+
+
+def test_phase5_pipeline_additions():
+    g = Graph("BP_T", "EventGraph")
+    paused = g.input_action("Pause", execute_when_paused=True)
+    plain = g.input_action("Pause")
+    assert "bExecuteWhenPaused=True" in paused.text()
+    assert "bExecuteWhenPaused" not in plain.text()
+    sp = g.spawn_actor(None, result_class="/Script/Engine.CameraActor")
+    assert "DefaultObject=" not in sp.pin("Class").text()
+    assert sp.pin("ReturnValue").sub_object == cls_ref("/Script/Engine.CameraActor")
+    bp = Blueprint("/Game/T/BP_T", "/Script/Engine.Actor")
+    bp.component_default("VehicleMovement", "mass", 1950.0)
+    bp.requires("/Game/X/SM", "SoundMix", "SoundMixFactory")
+    m = bp.manifest()
+    assert m["component_defaults"] == {"VehicleMovement": {"mass": 1950.0}}
+    assert m["requires"] == [{"asset": "/Game/X/SM", "class": "SoundMix", "factory": "SoundMixFactory"}]
 
 
 if __name__ == "__main__":

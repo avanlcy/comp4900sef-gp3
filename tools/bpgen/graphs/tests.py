@@ -717,11 +717,27 @@ def screenshot_test():
     t.call(VC, "ExitVehicle", car, outputs=[Pin("ReturnValue", BOOL, "out")])
     t.delay(1.0)
     shot()
+    # Phase 5: a passed race in first place on fresh progress, so the summary shows the unlock line and NEXT (reset again after)
+    gi0 = t.g.call_static(GAMEPLAY, "GetGameInstance", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
+                          outputs=[obj_pin("ReturnValue", "/Script/Engine.GameInstance", "out")], pure=True)
+    gic0 = t.step(t.g.cast(gen("/Game/DeadFire/Blueprints/BP_DFGameInstance")))
+    t.g.link(gi0, "ReturnValue", gic0, "Object")
+    rp0 = t.g.call_on(gen("/Game/DeadFire/Blueprints/BP_DFGameInstance"), "ResetProgress")
+    t.link((gic0, as_pin("/Game/DeadFire/Blueprints/BP_DFGameInstance")), rp0, "self")
+    t.step(rp0)
+    t.set(RC, "Score", INT, racer, default="350")
     t.call(GMC, "EndRace", gm, inputs=[enum_pin("Reason", "/Game/DeadFire/Data/E_DFRaceEndReason", default=1)])
     t.delay(0.5)
     shot()
     t.call(GMC, "DespawnNPCs", gm)
     t.call(GMC, "RestartRace", gm)
+    gi_ = t.g.call_static(GAMEPLAY, "GetGameInstance", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
+                          outputs=[obj_pin("ReturnValue", "/Script/Engine.GameInstance", "out")], pure=True)
+    gic = t.step(t.g.cast(gen("/Game/DeadFire/Blueprints/BP_DFGameInstance")))
+    t.g.link(gi_, "ReturnValue", gic, "Object")
+    rp = t.g.call_on(gen("/Game/DeadFire/Blueprints/BP_DFGameInstance"), "ResetProgress")
+    t.link((gic, as_pin("/Game/DeadFire/Blueprints/BP_DFGameInstance")), rp, "self")
+    t.step(rp)
     return [t.finish()]
 
 

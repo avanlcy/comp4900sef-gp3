@@ -1,0 +1,613 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFSettings",
+ "parent": "/Script/UMG.UserWidget",
+ "description": "Settings: master volume, difficulty, display mode, reset progress.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Sets a text block from a string."
+  },
+  {
+   "name": "Refresh",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Slider, labels and the display mode from the saved settings."
+  },
+  {
+   "name": "EasierDifficulty",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One step down (wrapping)."
+  },
+  {
+   "name": "HarderDifficulty",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One step up (wrapping)."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Refresh",
+   "file": "Refresh.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EasierDifficulty",
+   "file": "EasierDifficulty.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "HarderDifficulty",
+   "file": "HarderDifficulty.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": [],
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Panel",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.7
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     560,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Column",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "position": [
+     40,
+     60
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "SETTINGS",
+    "font_size": 48,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ]
+   }
+  },
+  {
+   "name": "VolumeLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "MASTER VOLUME",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "name": "VolumeRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     24
+    ]
+   }
+  },
+  {
+   "name": "VolumeBox",
+   "class": "/Script/UMG.SizeBox",
+   "parent": "VolumeRow",
+   "props": {
+    "width_override": 320,
+    "height_override": 28
+   },
+   "slot": {
+    "v_align": "Center"
+   }
+  },
+  {
+   "name": "VolumeSlider",
+   "class": "/Script/UMG.Slider",
+   "parent": "VolumeBox",
+   "props": {
+    "min_value": 0.0,
+    "max_value": 1.0,
+    "step_size": 0.05,
+    "value": 1.0
+   },
+   "slot": {}
+  },
+  {
+   "name": "VolumeText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "VolumeRow",
+   "props": {
+    "text": "100 %",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     16,
+     0,
+     0,
+     0
+    ],
+    "v_align": "Center"
+   }
+  },
+  {
+   "name": "DifficultyLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "DIFFICULTY",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "name": "DiffRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "name": "DiffLeftButton",
+   "class": "/Script/UMG.Button",
+   "parent": "DiffRow",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "DiffLeftLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "DiffLeftButton",
+   "props": {
+    "text": "<",
+    "font_size": 24,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "DifficultyText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "DiffRow",
+   "props": {
+    "text": "NORMAL",
+    "font_size": 28,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {
+    "padding": [
+     16,
+     0,
+     16,
+     0
+    ],
+    "v_align": "Center"
+   }
+  },
+  {
+   "name": "DiffRightButton",
+   "class": "/Script/UMG.Button",
+   "parent": "DiffRow",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "DiffRightLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "DiffRightButton",
+   "props": {
+    "text": ">",
+    "font_size": 24,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "DifficultyHint",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "EASY 2, NORMAL 3, HARD 5 RIVALS ON PROVING GROUND",
+    "font_size": 16,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left",
+    "wrap_text_at": 480.0
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     24
+    ]
+   }
+  },
+  {
+   "name": "ModeButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "ModeLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ModeButton",
+   "props": {
+    "text": "WINDOWED",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "ResetButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "ResetLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ResetButton",
+   "props": {
+    "text": "RESET PROGRESS",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "BackButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "BackLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "BackButton",
+   "props": {
+    "text": "BACK",
+    "font_size": 24,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  }
+ ]
+}

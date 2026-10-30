@@ -326,3 +326,84 @@ def bool_str(g: Graph, src) -> tuple:
                       outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
     g.link(src[0], src[1], n, "InBool")
     return (n, "ReturnValue")
+
+
+# ---- Phase 5: menus and meta ----
+BP_GI = BPS + "/BP_DFGameInstance"
+BP_SAVE = BPS + "/BP_DFSaveGame"
+BP_VEHICLE_BRUTE = BPS + "/BP_DFVehicleBrute"
+BP_VEHICLE_VIPER = BPS + "/BP_DFVehicleViper"
+BP_GM_SWITCHBACK = BPS + "/BP_DFSwitchbackGameMode"
+BP_MENU_GM = BPS + "/BP_DFMenuGameMode"
+BP_MENU_PC = BPS + "/BP_DFMenuPlayerController"
+WBP_MAIN_MENU = UI + "/WBP_DFMainMenu"
+WBP_VEHICLE_SELECT = UI + "/WBP_DFVehicleSelect"
+WBP_LEVEL_SELECT = UI + "/WBP_DFLevelSelect"
+WBP_SETTINGS = UI + "/WBP_DFSettings"
+WBP_PAUSE = UI + "/WBP_DFPauseMenu"
+AUDIO = "/Game/DeadFire/Audio"
+SM_MASTER = AUDIO + "/SM_DFMaster"
+MAPS = "/Game/DeadFire/Maps"
+L_TEST_TRACK = MAPS + "/L_TestTrack"
+L_SWITCHBACK = MAPS + "/L_Switchback"
+L_MAIN_MENU = MAPS + "/L_MainMenu"
+GAME_INSTANCE = "/Script/Engine.GameInstance"
+SAVE_GAME = "/Script/Engine.SaveGame"
+SOUND_MIX = "/Script/Engine.SoundMix"
+SOUND_CLASS = "/Script/Engine.SoundClass"
+MATERIAL_INTERFACE = "/Script/Engine.MaterialInterface"
+CAMERA_ACTOR = "/Script/Engine.CameraActor"
+USER_WIDGET = "/Script/UMG.UserWidget"
+
+SEDAN_MASS = 1500.0  # the Sedan template's VehicleMovement.Mass (read in the editor 2026-10-30)
+PAINT_SLOT = 2       # the Sedan mesh's body material slot (M_Vehicle_Sedan)
+
+
+class VehicleRow:
+    """One catalogue row (spec 2026-10-30 phase 5 §3.1): display, unlock rule, tuning and the stat bars (1-5)."""
+
+    def __init__(self, index, name, asset, unlock_level, max_health, throttle_scale, top_speed, boost_duration, boost_kick,
+                 mass_factor, paint, bars, description):
+        self.index, self.name, self.asset, self.unlock_level = index, name, asset, unlock_level
+        self.max_health, self.throttle_scale, self.top_speed = max_health, throttle_scale, top_speed
+        self.boost_duration, self.boost_kick, self.mass_factor, self.paint = boost_duration, boost_kick, mass_factor, paint
+        self.speed, self.acceleration, self.armor, self.boost = bars
+        self.description = description
+
+
+VEHICLES = [
+    VehicleRow(0, "SEDAN", BP_VEHICLE, -1, 100, 1.0, 0, 2, 1200, None, None, (3, 3, 3, 3),
+               "Balanced. Takes a beating, keeps its speed."),
+    VehicleRow(1, "BRUTE", BP_VEHICLE_BRUTE, 0, 160, 0.8, 120, 2, 1200, 1.3, "/Game/Vehicle/Meshes/GrayMaterial", (2, 2, 5, 3),
+               "Armoured and heavy: slow to get going, hard to kill, limited to 120."),
+    VehicleRow(2, "VIPER", BP_VEHICLE_VIPER, 1, 70, 1.0, 0, 3, 1600, 0.8, "/Game/Vehicle/Meshes/OrangeMaterial", (5, 4, 2, 5),
+               "Light and fragile: fastest off the line, with a longer, harder boost."),
+]
+
+
+class LevelRow:
+    """One track (spec §2.2): display, map, GameMode, pass score, clock, rivals, gates."""
+
+    def __init__(self, index, name, map_path, game_mode, score, time, npcs, gates, description):
+        self.index, self.name, self.map, self.game_mode = index, name, map_path, game_mode
+        self.score, self.time, self.npcs, self.gates, self.description = score, time, npcs, gates, description
+
+
+LEVELS = [
+    LevelRow(0, "PROVING GROUND", L_TEST_TRACK, BP_GM, 300, 120, 3, 4,
+             "The kidney loop you know: four gates, a shortcut behind a rock, crates in the infield."),
+    LevelRow(1, "SWITCHBACK", L_SWITCHBACK, BP_GM_SWITCHBACK, 400, 150, 4, 5,
+             "Longer and tighter: five gates, an S-bend you must brake for, more rivals, more time."),
+]
+DIFFICULTY_NAMES = ["EASY", "NORMAL", "HARD"]
+DIFFICULTY_DELTA = [-1, 0, 2]
+
+
+def game_instance(g: Graph, col=None, row=None) -> Node:
+    """GetGameInstance cast to BP_DFGameInstance: an impure cast node (link its execute; use then / CastFailed and the
+    as_pin(BP_GI) output). The cast fails only when the project runs another GameInstance class."""
+    gi = g.call_static(GAMEPLAY, "GetGameInstance", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
+                       outputs=[obj_pin("ReturnValue", GAME_INSTANCE, "out")], pure=True, col=col, row=row)
+    c = g.cast(gen(BP_GI), col=col, row=row)
+    g.link(gi, "ReturnValue", c, "Object")
+    return c

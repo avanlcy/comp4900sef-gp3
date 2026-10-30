@@ -1,0 +1,1463 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFGameInstance",
+ "parent": "/Script/Engine.GameInstance",
+ "description": "The meta layer: car and track catalogues, saved progress and unlocks, settings, level transitions.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Save",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFSaveGame.BP_DFSaveGame_C",
+   "default": "",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "SaveSlotName",
+   "type": "string",
+   "default": "DeadFire",
+   "category": "Dead Fire|Meta",
+   "editable": true
+  },
+  {
+   "name": "SelectedVehicle",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "SelectedLevel",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "LastUnlockedVehicle",
+   "type": "int",
+   "default": "-1",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "bLastUnlockedLevel",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "bReturnToVehicleSelect",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "FadeSeconds",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|Meta",
+   "editable": true
+  },
+  {
+   "name": "PendingMap",
+   "type": "name",
+   "default": "",
+   "category": "Dead Fire|Meta",
+   "editable": false
+  },
+  {
+   "name": "MasterMix",
+   "type": "object:/Script/Engine.SoundMix",
+   "default": "",
+   "category": "Dead Fire|Meta",
+   "editable": true
+  },
+  {
+   "name": "MasterClass",
+   "type": "object:/Script/Engine.SoundClass",
+   "default": "",
+   "category": "Dead Fire|Meta",
+   "editable": true
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "GetVehicleCount",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "How many cars the catalogue has."
+  },
+  {
+   "name": "GetVehicleInfo",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "Name:string",
+    "VehicleClass:class:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+    "UnlockLevel:int",
+    "Speed:int",
+    "Acceleration:int",
+    "Armor:int",
+    "Boost:int",
+    "Description:string"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One car of the catalogue: name, class, the level whose first place unlocks it (-1 always open), stat bars 1-5, description."
+  },
+  {
+   "name": "GetLevelCount",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "How many tracks the catalogue has."
+  },
+  {
+   "name": "GetLevelInfo",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "Name:string",
+    "MapName:name",
+    "Description:string",
+    "ScoreRequirement:int",
+    "TimeLimit:float",
+    "NPCCount:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One track of the catalogue: name, map, description, pass score, clock, rivals."
+  },
+  {
+   "name": "IsVehicleUnlocked",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Is this car open? Car 0 always is; an unknown index is not."
+  },
+  {
+   "name": "IsLevelUnlocked",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Is this track open? Track 0 always is; an unknown index is not."
+  },
+  {
+   "name": "GetBestScore",
+   "inputs": [
+    "Level:int"
+   ],
+   "outputs": [
+    "Score:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Best score on a track (0 when never raced)."
+  },
+  {
+   "name": "GetBestRank",
+   "inputs": [
+    "Level:int"
+   ],
+   "outputs": [
+    "Rank:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Best place on a track among passed races (0 when never placed)."
+  },
+  {
+   "name": "GetMasterVolume",
+   "inputs": [],
+   "outputs": [
+    "Volume:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The saved master volume, 1 without a save."
+  },
+  {
+   "name": "GetDifficulty",
+   "inputs": [],
+   "outputs": [
+    "Difficulty:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The saved difficulty (0 EASY, 1 NORMAL, 2 HARD), NORMAL without a save."
+  },
+  {
+   "name": "GetDifficultyName",
+   "inputs": [],
+   "outputs": [
+    "Name:string"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "EASY, NORMAL or HARD."
+  },
+  {
+   "name": "GetNPCCountFor",
+   "inputs": [
+    "LevelCount:int"
+   ],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Rivals for a level that asks for LevelCount: EASY -1, NORMAL 0, HARD +2, at least 1; 0 stays 0."
+  },
+  {
+   "name": "IsFullscreen",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The window is fullscreen or borderless fullscreen."
+  },
+  {
+   "name": "EnsureArrays",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Pads the save's arrays to the catalogue sizes (an older save survives a new car or track) and opens car 0 and track 0."
+  },
+  {
+   "name": "LoadProgress",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Loads the save slot, or starts a fresh save; pads the arrays."
+  },
+  {
+   "name": "SaveProgress",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Writes the save to its slot."
+  },
+  {
+   "name": "ResetProgress",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Old:object:/Game/DeadFire/Blueprints/BP_DFSaveGame.BP_DFSaveGame_C"
+   ],
+   "doc": "A fresh save that keeps the settings; the selections go back to the first car and track."
+  },
+  {
+   "name": "UnlockVehicle",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Opens a car; true when it was locked."
+  },
+  {
+   "name": "UnlockLevel",
+   "inputs": [
+    "Index:int"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Opens a track; true when it was locked."
+  },
+  {
+   "name": "RecordResult",
+   "inputs": [
+    "LevelIndex:int",
+    "Score:int",
+    "Rank:int",
+    "bPassed:bool"
+   ],
+   "outputs": [
+    "UnlockedVehicle:int",
+    "bUnlockedLevel:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Vehicle:int=-1",
+    "bLevel:bool=false"
+   ],
+   "doc": "A finished race: best score, best place when passed, the car for first place, the next track when passed; saved."
+  },
+  {
+   "name": "CountUnlockedVehicles",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "N:int=0"
+   ],
+   "doc": "How many cars are open."
+  },
+  {
+   "name": "CountUnlockedLevels",
+   "inputs": [],
+   "outputs": [
+    "Count:int"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "N:int=0"
+   ],
+   "doc": "How many tracks are open."
+  },
+  {
+   "name": "ApplyAudioSettings",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Pushes the master sound mix with the saved volume on the Master sound class."
+  },
+  {
+   "name": "SetMasterVolume",
+   "inputs": [
+    "Volume:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Saves and applies the master volume (0-1)."
+  },
+  {
+   "name": "SetDifficulty",
+   "inputs": [
+    "Difficulty:int"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Saves the difficulty (0 EASY, 1 NORMAL, 2 HARD)."
+  },
+  {
+   "name": "ToggleFullscreen",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Windowed <-> borderless fullscreen, applied at once (the engine saves this itself)."
+  },
+  {
+   "name": "UseSaveSlot",
+   "inputs": [
+    "SlotName:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Switches to another save slot and loads it (the functional tests' DeadFireTest)."
+  },
+  {
+   "name": "StartRace",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Loads the selected track (with the fade)."
+  },
+  {
+   "name": "StartNextLevel",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Selects the next track when it is open and starts it."
+  },
+  {
+   "name": "OpenMainMenu",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Back to the main menu; from a race it opens on the car page (the flowchart's continue loop)."
+  },
+  {
+   "name": "ReloadCurrentLevel",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Reloads the level being played (the summary's RETRY), with the fade."
+  },
+  {
+   "name": "GetMapLoadDelay",
+   "inputs": [],
+   "outputs": [
+    "Seconds:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The load timer: FadeSeconds, but never under 0.01 s (a zero timer never fires)."
+  },
+  {
+   "name": "OpenMapWithFade",
+   "inputs": [
+    "MapName:name"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Fades the local camera to black over FadeSeconds, then loads the map (OpenPendingMap on a timer)."
+  },
+  {
+   "name": "OpenPendingMap",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Loads PendingMap (the timer's target after the fade)."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "GetVehicleCount",
+   "file": "GetVehicleCount.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_FunctionResult_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     482,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetVehicleInfo",
+   "file": "GetVehicleInfo.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1410,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetLevelCount",
+   "file": "GetLevelCount.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_FunctionResult_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     482,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetLevelInfo",
+   "file": "GetLevelInfo.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     982,
+     0
+    ]
+   }
+  },
+  {
+   "name": "IsVehicleUnlocked",
+   "file": "IsVehicleUnlocked.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3071,
+     0
+    ]
+   }
+  },
+  {
+   "name": "IsLevelUnlocked",
+   "file": "IsLevelUnlocked.txt",
+   "links": [
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3043,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetBestScore",
+   "file": "GetBestScore.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Level",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Level",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2522,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetBestRank",
+   "file": "GetBestRank.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Level",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Level",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2508,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetMasterVolume",
+   "file": "GetMasterVolume.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1462,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetDifficulty",
+   "file": "GetDifficulty.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1450,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetDifficultyName",
+   "file": "GetDifficultyName.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1571,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetNPCCountFor",
+   "file": "GetNPCCountFor.txt",
+   "links": [
+    [
+     "entry",
+     "LevelCount",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "LevelCount",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2195,
+     0
+    ]
+   }
+  },
+  {
+   "name": "IsFullscreen",
+   "file": "IsFullscreen.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1205,
+     0
+    ]
+   }
+  },
+  {
+   "name": "EnsureArrays",
+   "file": "EnsureArrays.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "LoadProgress",
+   "file": "LoadProgress.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SaveProgress",
+   "file": "SaveProgress.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2140,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ResetProgress",
+   "file": "ResetProgress.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UnlockVehicle",
+   "file": "UnlockVehicle.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_2",
+     "Index"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_1",
+     "InInt"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4215,
+     0
+    ]
+   }
+  },
+  {
+   "name": "UnlockLevel",
+   "file": "UnlockLevel.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallArrayFunction_2",
+     "Index"
+    ],
+    [
+     "entry",
+     "Index",
+     "DFN_K2Node_CallFunction_1",
+     "InInt"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4173,
+     0
+    ]
+   }
+  },
+  {
+   "name": "RecordResult",
+   "file": "RecordResult.txt",
+   "links": [
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallArrayFunction_0",
+     "IndexToTest"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallArrayFunction_1",
+     "Index"
+    ],
+    [
+     "entry",
+     "Score",
+     "DFN_K2Node_CallFunction_2",
+     "B"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallArrayFunction_2",
+     "Index"
+    ],
+    [
+     "entry",
+     "bPassed",
+     "DFN_K2Node_IfThenElse_1",
+     "Condition"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallArrayFunction_3",
+     "Index"
+    ],
+    [
+     "entry",
+     "Rank",
+     "DFN_K2Node_CallFunction_3",
+     "B"
+    ],
+    [
+     "entry",
+     "Rank",
+     "DFN_K2Node_CallFunction_5",
+     "A"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallArrayFunction_4",
+     "Index"
+    ],
+    [
+     "entry",
+     "Rank",
+     "DFN_K2Node_CallFunction_6",
+     "A"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallFunction_10",
+     "B"
+    ],
+    [
+     "entry",
+     "LevelIndex",
+     "DFN_K2Node_CallFunction_12",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     7714,
+     0
+    ]
+   }
+  },
+  {
+   "name": "CountUnlockedVehicles",
+   "file": "CountUnlockedVehicles.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2073,
+     0
+    ]
+   }
+  },
+  {
+   "name": "CountUnlockedLevels",
+   "file": "CountUnlockedLevels.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2058,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ApplyAudioSettings",
+   "file": "ApplyAudioSettings.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SetMasterVolume",
+   "file": "SetMasterVolume.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Volume",
+     "DFN_K2Node_CallFunction_1",
+     "Value"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SetDifficulty",
+   "file": "SetDifficulty.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Difficulty",
+     "DFN_K2Node_CallFunction_1",
+     "Value"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ToggleFullscreen",
+   "file": "ToggleFullscreen.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UseSaveSlot",
+   "file": "UseSaveSlot.txt",
+   "links": [
+    [
+     "entry",
+     "SlotName",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "SlotName",
+     "DFN_K2Node_VariableSet_0",
+     "SaveSlotName"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "StartRace",
+   "file": "StartRace.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "StartNextLevel",
+   "file": "StartNextLevel.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "OpenMainMenu",
+   "file": "OpenMainMenu.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ReloadCurrentLevel",
+   "file": "ReloadCurrentLevel.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "GetMapLoadDelay",
+   "file": "GetMapLoadDelay.txt",
+   "links": [
+    [
+     "DFN_K2Node_CallFunction_0",
+     "ReturnValue",
+     "result",
+     "Seconds"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     669,
+     0
+    ]
+   }
+  },
+  {
+   "name": "OpenMapWithFade",
+   "file": "OpenMapWithFade.txt",
+   "links": [
+    [
+     "entry",
+     "MapName",
+     "DFN_K2Node_VariableSet_0",
+     "PendingMap"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "OpenPendingMap",
+   "file": "OpenPendingMap.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "MasterMix": "/Game/DeadFire/Audio/SM_DFMaster",
+  "MasterClass": "/Engine/EngineSounds/Master"
+ },
+ "component_defaults": {},
+ "requires": [
+  {
+   "asset": "/Game/DeadFire/Audio/SM_DFMaster",
+   "class": "SoundMix",
+   "factory": "SoundMixFactory"
+  }
+ ]
+}

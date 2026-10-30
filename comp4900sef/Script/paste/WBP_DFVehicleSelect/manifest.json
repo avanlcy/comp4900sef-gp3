@@ -1,0 +1,703 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFVehicleSelect",
+ "parent": "/Script/UMG.UserWidget",
+ "description": "The car page: stats, description and lock state of each car; < > NEXT BACK.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Index",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Menu",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Sets a text block from a string."
+  },
+  {
+   "name": "Bar",
+   "inputs": [
+    "Value:int"
+   ],
+   "outputs": [
+    "Text:string"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Five cells: [###--] for 3."
+  },
+  {
+   "name": "Refresh",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Fills the page for Index and moves the showcase camera to that car."
+  },
+  {
+   "name": "SelectNext",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The next car, wrapping."
+  },
+  {
+   "name": "SelectPrevious",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The previous car, wrapping."
+  },
+  {
+   "name": "Confirm",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Stores the car when it is open and moves on to the track page."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Bar",
+   "file": "Bar.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_4",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2762,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Refresh",
+   "file": "Refresh.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SelectNext",
+   "file": "SelectNext.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SelectPrevious",
+   "file": "SelectPrevious.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Confirm",
+   "file": "Confirm.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": [],
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Panel",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.7
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     560,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Column",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "position": [
+     40,
+     60
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "CHOOSE YOUR CAR",
+    "font_size": 48,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ]
+   }
+  },
+  {
+   "name": "NameText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "SEDAN",
+    "font_size": 40,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ]
+   }
+  },
+  {
+   "name": "SpeedText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "TOP SPEED     [###--]",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "AccelText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "ACCELERATION  [###--]",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ArmorText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "ARMOR         [###--]",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "BoostText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "BOOST         [###--]",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "DescriptionText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "",
+    "font_size": 20,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left",
+    "wrap_text_at": 480.0
+   },
+   "slot": {
+    "padding": [
+     0,
+     12,
+     0,
+     8
+    ]
+   }
+  },
+  {
+   "name": "LockText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "",
+    "font_size": 22,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left",
+    "wrap_text_at": 480.0
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "NavRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     24,
+     0,
+     16
+    ]
+   }
+  },
+  {
+   "name": "LeftButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     12,
+     0
+    ]
+   }
+  },
+  {
+   "name": "LeftLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "LeftButton",
+   "props": {
+    "text": "<",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "RightButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     24,
+     0
+    ]
+   }
+  },
+  {
+   "name": "RightLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "RightButton",
+   "props": {
+    "text": ">",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "ConfirmButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "ConfirmLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ConfirmButton",
+   "props": {
+    "text": "NEXT",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "BackButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "BackLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "BackButton",
+   "props": {
+    "text": "BACK",
+    "font_size": 24,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  }
+ ]
+}

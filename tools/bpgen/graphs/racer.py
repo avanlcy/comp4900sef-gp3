@@ -13,6 +13,7 @@ from df import (BOOL, BP_CHARACTER, BP_CHECKPOINT, BP_PC, BP_VEHICLE, BPC_RACER,
                 OBJECT, OUT, PAWN, PLAYER_CONTROLLER, S_ITEM_STACK, STRUCT, Blueprint, Graph, Node, Pin, as_pin,
                 cast_to, cls_ref, compare, enum_pin, enum_spec, gen, math2, member, obj_pin, obj_spec, struct_path,
                 struct_spec)
+from df import BP_GS, CLASS, FLOAT, GAMEPLAY, LINEAR_COLOR, USER_WIDGET, WBP_PAUSE, is_valid, native_enum_pin, struct_pin  # noqa: E402  (Phase 5)
 
 VC = gen(BP_VEHICLE)
 ITEM = struct_path(S_ITEM_STACK)
@@ -298,6 +299,76 @@ def build_controller() -> Blueprint:
     bp.variable("OnFootCharacter", obj_spec(BP_CHARACTER), "", S)
     bp.variable("CurrentVehicle", obj_spec(BP_VEHICLE), "", S)  # the possessed car, empty on foot (HUD)
     bp.variable("LastVehicle", obj_spec(BP_VEHICLE), "", S)  # the last car possessed, kept on foot (respawn)
+    # Phase 5 (spec 2026-10-30 phase 5 §5.3): the pause menu
+    MN = "Dead Fire|Menu"
+    bp.variable("PauseWidgetClass", "class:" + USER_WIDGET, "", MN, editable=True)
+    bp.variable("PauseWidget", "object:" + USER_WIDGET, "", MN)
+    bp.default("PauseWidgetClass", "class:" + WBP_PAUSE)
+
+    g = bp.function("TogglePause", doc="Pauses the world with the pause menu up, or resumes; refused once the race is over (the summary owns the screen).")
+    gs = g.call_static(GAMEPLAY, "GetGameState", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
+                       outputs=[obj_pin("ReturnValue", "/Script/Engine.GameStateBase", "out")], pure=True)
+    cgs = g.cast(gen(BP_GS))
+    g.link(gs, "ReturnValue", cgs, "Object")
+    g.link_entry("then", cgs, "execute")
+    active = g.var_get_on(gen(BP_GS), "bRaceActive", BOOL)
+    g.link(cgs, as_pin(BP_GS), active, "self")
+    bact = g.branch()
+    g.note(bact, "no pause once the race is over")
+    g.link(active, "bRaceActive", bact, "Condition")
+    g.link(cgs, "then", bact, "execute")
+    paused = g.call_static(GAMEPLAY, "IsGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    bp_ = g.branch()
+    g.note(bp_, "paused now? then resume")
+    g.link(paused, "ReturnValue", bp_, "Condition")
+    g.link(bact, "then", bp_, "execute")
+    # resume
+    pw = g.var_get("PauseWidget", OBJECT, cls_ref(USER_WIDGET))
+    has = is_valid(g)
+    g.link(pw, "PauseWidget", has, "Object")
+    bw = g.branch()
+    g.link(has, "ReturnValue", bw, "Condition")
+    g.link(bp_, "then", bw, "execute")
+    rm = g.call_on("/Script/UMG.Widget", "RemoveFromParent")
+    g.link(pw, "PauseWidget", rm, "self")
+    g.link(bw, "then", rm, "execute")
+    clr = g.var_set("PauseWidget", OBJECT, sub_object=cls_ref(USER_WIDGET))
+    g.exec(rm, clr)
+    g.link(bw, "else", clr, "execute")
+    unp = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="false")],
+                        outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.exec(clr, unp)
+    cur_off = g.var_set_on(PLAYER_CONTROLLER, "bShowMouseCursor", BOOL, default="false")
+    g.link(g.self_node(), "self", cur_off, "self")
+    g.exec(unp, cur_off)
+    gonly = g.call_static("WidgetBlueprintLibrary", "SetInputMode_GameOnly", inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER)], module="UMG")
+    g.link(g.self_node(), "self", gonly, "PlayerController")
+    g.exec(cur_off, gonly)
+    # pause
+    pse = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="true")],
+                        outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link(bp_, "else", pse, "execute")
+    cw = g.create_widget()
+    g.link(g.var_get("PauseWidgetClass", CLASS, cls_ref(USER_WIDGET)), "PauseWidgetClass", cw, "Class")
+    g.link(g.self_node(), "self", cw, "OwningPlayer")
+    g.exec(pse, cw)
+    sw = g.var_set("PauseWidget", OBJECT, sub_object=cls_ref(USER_WIDGET))
+    g.link(cw, "ReturnValue", sw, "PauseWidget")
+    g.exec(cw, sw)
+    add = g.call_on(USER_WIDGET, "AddToViewport", inputs=[Pin("ZOrder", INT, default="20")])
+    g.link(cw, "ReturnValue", add, "self")
+    g.exec(sw, add)
+    cur_on = g.var_set_on(PLAYER_CONTROLLER, "bShowMouseCursor", BOOL, default="true")
+    g.link(g.self_node(), "self", cur_on, "self")
+    g.exec(add, cur_on)
+    # Game-and-UI, not UI-only: the P key must still reach this controller to resume
+    gui = g.call_static("WidgetBlueprintLibrary", "SetInputMode_GameAndUIEx",
+                        inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER), obj_pin("InWidgetToFocus", "/Script/UMG.Widget"),
+                                native_enum_pin("InMouseLockMode", "/Script/UMG.EMouseLockMode", "DoNotLock"),
+                                Pin("bHideCursorDuringCapture", BOOL, default="false")], module="UMG")
+    g.link(g.self_node(), "self", gui, "PlayerController")
+    g.link(cw, "ReturnValue", gui, "InWidgetToFocus")
+    g.exec(cur_on, gui)
 
     g = bp.function("SwitchToPawn", doc="Possesses the given pawn.", inputs=["NewPawn:object:" + PAWN])
     poss = g.call_self_native("/Script/Engine.Controller", "Possess", inputs=[obj_pin("InPawn", PAWN)])
@@ -317,6 +388,22 @@ def build_controller() -> Blueprint:
     g.exec(cast, set_cur, set_last)
     clear = g.var_set("CurrentVehicle", OBJECT, sub_object=cls_ref(VC), col=2, row=1)
     g.link(cast, "CastFailed", clear, "execute")
+
+    g.section("Pause: toggle the pause menu (fires while paused too)")
+    pa = g.input_action("Pause", execute_when_paused=True)
+    tp = g.call_self("TogglePause")
+    g.link(pa, "Pressed", tp, "execute")
+
+    g.section("Begin Play: fade in from black (the GameInstance fades out before every level change)")
+    bpl = g.begin_play()
+    cam = g.var_get_on(PLAYER_CONTROLLER, "PlayerCameraManager", OBJECT, cls_ref("/Script/Engine.PlayerCameraManager"))
+    g.link(g.self_node(), "self", cam, "self")
+    fade = g.call_on("/Script/Engine.PlayerCameraManager", "StartCameraFade",
+                     inputs=[Pin("FromAlpha", FLOAT, default="1.0"), Pin("ToAlpha", FLOAT, default="0.0"), Pin("Duration", FLOAT, default="0.5"),
+                             struct_pin("Color", LINEAR_COLOR, default="(R=0.000000,G=0.000000,B=0.000000,A=1.000000)"),
+                             Pin("bShouldFadeAudio", BOOL, default="false"), Pin("bHoldWhenFinished", BOOL, default="false")])
+    g.link(cam, "PlayerCameraManager", fade, "self")
+    g.exec(bpl, fade)
     return bp
 
 

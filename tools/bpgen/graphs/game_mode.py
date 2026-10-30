@@ -16,7 +16,9 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_CHECKPOINT, BP_GM, BP_GS, BP_HUD, 
                 SKEL_MESH_COMP, SOUND_BASE, get_all_actors_of_class, native_enum_pin)
 from bpgen import struct_ref  # noqa: E402
 from df import BP_AI, BP_GM_TEST, S_ITEM_STACK, TEXT, enum_value  # noqa: E402  (Phase 4)
+from df import BP_GI, BP_GM_SWITCHBACK, CLASS, LEVELS, game_instance  # noqa: E402  (Phase 5)
 
+GIC = gen(BP_GI)  # Phase 5
 GMC, GSC, PCC, VC, CC, CPC, TC, RC, HUDC = (gen(BP_GM), gen(BP_GS), gen(BP_PC), gen(BP_VEHICLE), gen(BP_CHARACTER),
                                            gen(BP_CHECKPOINT), gen(BP_TRACK), gen(BPC_RACER), gen(BP_HUD))
 RESULT = struct_path(S_RESULT)
@@ -192,6 +194,11 @@ def build_mode() -> Blueprint:
     bp.variable("RankInterval", "float", "0.5", A, editable=True)
     bp.variable("AIItemInterval", "float", "20", A, editable=True)  # 0 = NPCs get no items (spec §3.1)
     bp.variable("NextAIItemTime", "float", "-1", S)
+    # Phase 5 (spec 2026-10-30 phase 5 §4.2): a level can point the GameInstance at another save slot (the test level's DeadFireTest)
+    bp.variable("SaveSlotOverride", "string", "", R, editable=True)
+    bp.variable("LevelIndex", "int", "0", R, editable=True)  # the catalogue row this level reports to (spec §2.2)
+    bp.variable("PlayerVehicleClass", "class:" + VC, "", R, editable=True)  # what the player starts and respawns in (spec §3.3)
+    bp.default("PlayerVehicleClass", "class:" + BP_VEHICLE)
     bp.variable("RacerControllers", "array<object:%s>" % CONTROLLER, "", S)
     bp.variable("NextRankTime", "float", "0", S)
 
@@ -797,7 +804,8 @@ def build_mode() -> Blueprint:
     tp = call(g, VC, "TeleportAndStop", car(), inputs=[struct_pin("NewTransform", TRANSFORM)])
     link(g, spawn_at(), tp, "NewTransform")
     g.link(bi, "then", tp, "execute")
-    sp = g.spawn_actor(VC)
+    sp = g.spawn_actor(None, result_class=VC)  # Phase 5: the player's chosen class
+    g.link(g.var_get("PlayerVehicleClass", CLASS, cls_ref(VC)), "PlayerVehicleClass", sp, "Class")
     link(g, spawn_at(), sp, "SpawnTransform")
     g.link(bi, "else", sp, "execute")
     bw = branch_on(g, (valid(g, car()), "ReturnValue"), (sp, "then"))
@@ -1475,6 +1483,58 @@ def build_mode() -> Blueprint:
     log = log_line(g, "npc item ", (info, "Name"), " to ", name_of(g, E))
     g.exec(give, log)
 
+    # ---- Phase 5 (spec 2026-10-30 phase 5 §2-4): the GameInstance's say in a race ----
+    g = bp.function("ApplyGameInstanceSettings", doc="At Begin Play: the save slot override, SelectedLevel = LevelIndex, rivals for the difficulty (once), the audio mix.")
+    gi = game_instance(g)
+    g.link_entry("then", gi, "execute")
+    GI = (gi, as_pin(BP_GI))
+    slot = g.var_get("SaveSlotOverride", STRING)
+    has_slot = g.call_static("KismetStringLibrary", "NotEqual_StrStr", inputs=[Pin("A", STRING), Pin("B", STRING, default="")],
+                             outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(slot, "SaveSlotOverride", has_slot, "A")
+    bslot = branch_on(g, (has_slot, "ReturnValue"), (gi, "then"))
+    g.note(bslot, "another save slot for this level? (the test level)")
+    use = call(g, GIC, "UseSaveSlot", GI, inputs=[Pin("SlotName", STRING)])
+    g.link(slot, "SaveSlotOverride", use, "SlotName")
+    g.link(bslot, "then", use, "execute")
+    sync = set_on(g, GIC, "SelectedLevel", INT, GI, value=(g.var_get("LevelIndex", INT), "LevelIndex"))
+    g.exec(use, sync)
+    g.link(bslot, "else", sync, "execute")
+    cnt = call(g, GIC, "GetNPCCountFor", GI, inputs=[Pin("LevelCount", INT)], outputs=[Pin("Count", INT, "out")], pure=True)
+    g.link(g.var_get("NPCCount", INT), "NPCCount", cnt, "LevelCount")
+    s_npc = g.var_set("NPCCount", INT)
+    g.link(cnt, "Count", s_npc, "NPCCount")
+    g.exec(sync, s_npc)
+    audio = call(g, GIC, "ApplyAudioSettings", GI)
+    g.exec(s_npc, audio)
+
+    g = bp.function("RefreshPlayerVehicleClass", doc="PlayerVehicleClass and DefaultPawnClass from the GameInstance's selection when it is unlocked, else BP_DFVehicle.")
+    gi = game_instance(g)
+    g.link_entry("then", gi, "execute")
+    GI = (gi, as_pin(BP_GI))
+    sel = get_on(g, GIC, "SelectedVehicle", INT, GI)
+    unlocked = call(g, GIC, "IsVehicleUnlocked", GI, inputs=[Pin("Index", INT)], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(sel, "SelectedVehicle", unlocked, "Index")
+    bu = branch_on(g, (unlocked, "ReturnValue"), (gi, "then"))
+    g.note(bu, "the chosen car is open?")
+    info = call(g, GIC, "GetVehicleInfo", GI, inputs=[Pin("Index", INT)],
+                outputs=[Pin("Name", STRING, "out"), Pin("VehicleClass", CLASS, "out", cls_ref(VC)), Pin("UnlockLevel", INT, "out"),
+                         Pin("Speed", INT, "out"), Pin("Acceleration", INT, "out"), Pin("Armor", INT, "out"), Pin("Boost", INT, "out"),
+                         Pin("Description", STRING, "out")], pure=True)
+    g.link(sel, "SelectedVehicle", info, "Index")
+    s_cls = g.var_set("PlayerVehicleClass", CLASS, sub_object=cls_ref(VC))
+    g.link(info, "VehicleClass", s_cls, "PlayerVehicleClass")
+    g.link(bu, "then", s_cls, "execute")
+    s_def = g.var_set("PlayerVehicleClass", CLASS, sub_object=cls_ref(VC))
+    s_def.pin("PlayerVehicleClass").default_object = VC
+    g.link(bu, "else", s_def, "execute")
+    g.link(gi, "CastFailed", s_def, "execute")
+    pawn_cls = g.var_set_on(GAME_MODE_BASE, "DefaultPawnClass", CLASS, sub_object=cls_ref(PAWN))
+    g.link(g.self_node(), "self", pawn_cls, "self")
+    g.link(g.var_get("PlayerVehicleClass", CLASS, cls_ref(VC)), "PlayerVehicleClass", pawn_cls, "DefaultPawnClass")
+    g.exec(s_cls, pawn_cls)
+    g.exec(s_def, pawn_cls)
+
     # EndRace(Reason)
     g = bp.function("EndRace", doc="Ends the race: result, ranking, player input off, summary.", inputs=["Reason:" + enum_spec(E_END_REASON)], locals=["Player:object:" + PLAYER_CONTROLLER])
     active = get_on(g, GSC, "bRaceActive", BOOL, race_state(g))
@@ -1482,7 +1542,10 @@ def build_mode() -> Blueprint:
     g.link(valid(g, race_state(g)), "ReturnValue", ok, "A")
     g.link(active, "bRaceActive", ok, "B")
     b = branch_on(g, (ok, "ReturnValue"))
-    g.link_entry("then", b, "execute")
+    unpause = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="false")],
+                            outputs=[Pin("ReturnValue", BOOL, "out")])  # Phase 5: a race never ends into a frozen world
+    g.link_entry("then", unpause, "execute")
+    g.exec(unpause, b)
     reason_int = g.call_static(MATH, "Conv_ByteToInt", inputs=[Pin("InByte", "byte")], outputs=[Pin("ReturnValue", INT, "out")], pure=True)
     g.link_entry("Reason", reason_int, "InByte")
     log = log_line(g, "race end, reason ", int_str(g, (reason_int, "ReturnValue")))
@@ -1541,10 +1604,22 @@ def build_mode() -> Blueprint:
     g.link(get_on(g, RC, "Deaths", INT, R_), "Deaths", mk, member(S_RESULT, "Deaths"))
     sres = set_on(g, GSC, "Result", STRUCT, race_state(g), value=(mk, RESULT.rsplit(".", 1)[1]), sub=struct_ref(RESULT))
     g.exec(ranked, sres)
+    # Phase 5 (spec §4.3): the GameInstance records the result (best score, place, unlocks) and saves
+    gi = game_instance(g)
+    g.exec(sres, gi)
+    rr = call(g, GIC, "RecordResult", (gi, as_pin(BP_GI)),
+              inputs=[Pin("LevelIndex", INT), Pin("Score", INT), Pin("Rank", INT), Pin("bPassed", BOOL)],
+              outputs=[Pin("UnlockedVehicle", INT, "out"), Pin("bUnlockedLevel", BOOL, "out")])
+    g.link(g.var_get("LevelIndex", INT), "LevelIndex", rr, "LevelIndex")
+    g.link(score, "Score", rr, "Score")
+    g.link(rank, "ReturnValue", rr, "Rank")
+    g.link(passed, "ReturnValue", rr, "bPassed")
+    g.link(gi, "then", rr, "execute")
     fire = g.call_delegate("OnRaceEnded", [enum_pin("Reason", E_END_REASON), Pin("bPassed", BOOL)])
     g.link_entry("Reason", fire, "Reason")
     g.link(passed, "ReturnValue", fire, "bPassed")
-    g.exec(sres, fire)
+    g.exec(rr, fire)
+    g.link(gi, "CastFailed", fire, "execute")
     # stop the player: no input, mouse cursor on, summary up
     pawn = call(g, CONTROLLER, "K2_GetPawn", player(), outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
     bpw = branch_on(g, (valid(g, (pawn, "ReturnValue")), "ReturnValue"), (fire, "then"))
@@ -1564,8 +1639,11 @@ def build_mode() -> Blueprint:
     # RestartRace: a clean race without reloading the level (functional tests share one play session; also usable
     # for a future in-game "restart"): clock, result, racer stats, pending respawn, player back in a car at the start.
     g = bp.function("RestartRace", doc="A clean race without reloading the level: clock, result, racer stats, items swept, player back on the line.", locals=["Player:object:" + PLAYER_CONTROLLER])
+    unpause = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="false")],
+                            outputs=[Pin("ReturnValue", BOOL, "out")])  # Phase 5: a restart from the pause menu resumes the world
+    g.link_entry("then", unpause, "execute")
     log = log_line(g, "race restart")
-    g.link_entry("then", log, "execute")
+    g.exec(unpause, log)
     s_act = set_on(g, GSC, "bRaceActive", BOOL, race_state(g), default="true")
     g.exec(log, s_act)
     limit = g.var_get("RaceTimeLimit", FLOAT)
@@ -1600,8 +1678,9 @@ def build_mode() -> Blueprint:
     resp = g.call_self("RespawnRacer", inputs=[obj_pin("C", CONTROLLER)])
     link(g, player(), resp, "C")
     ci = call(g, RC, "ClearInventory", R_)
-    g.exec(s_lc, ci, resp)
-    g.link(br, "else", resp, "execute")
+    refresh = g.call_self("RefreshPlayerVehicleClass")  # Phase 5: a car chosen between races applies to the next spawned car
+    g.exec(s_lc, ci, refresh, resp)
+    g.link(br, "else", refresh, "execute")
     pawn = call(g, CONTROLLER, "K2_GetPawn", player(), outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
     bpw = branch_on(g, (valid(g, (pawn, "ReturnValue")), "ReturnValue"), (resp, "then"))
     en = call(g, ACTOR, "EnableInput", (pawn, "ReturnValue"), inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER)])
@@ -1651,8 +1730,11 @@ def build_mode() -> Blueprint:
     g.exec(srs, stime)
     sact = set_on(g, GSC, "bRaceActive", BOOL, (srs, "Output_Get"), default="true")
     g.exec(stime, sact)
+    # Phase 5: save slot override, selected level, difficulty and audio from the GameInstance
+    settings = g.call_self("ApplyGameInstanceSettings")
+    g.exec(sact, settings)
     collect = g.call_self("CollectLevelActors", col=6, row=1)
-    g.exec(sact, collect)
+    g.exec(settings, collect)
     g.link(cgs, "CastFailed", collect, "execute")
     npcs = g.var_get("NPCCount", INT)
     spawn = g.call_self("SpawnNPCs", inputs=[Pin("Count", INT)])
@@ -1670,7 +1752,8 @@ def build_mode() -> Blueprint:
     hs = g.event(GAME_MODE_BASE, "HandleStartingNewPlayer", [obj_pin("NewPlayer", PLAYER_CONTROLLER)], col=0, row=4)
     hpar = g.call_parent(GAME_MODE_BASE, "HandleStartingNewPlayer", [obj_pin("NewPlayer", PLAYER_CONTROLLER)], col=1, row=4)
     g.link(hs, "NewPlayer", hpar, "NewPlayer")
-    g.exec(hs, hpar)
+    refresh = g.call_self("RefreshPlayerVehicleClass")  # Phase 5: the chosen car is what the parent spawns
+    g.exec(hs, refresh, hpar)
     pawn = call(g, CONTROLLER, "K2_GetPawn", (hs, "NewPlayer"), outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
     cv = g.cast(VC, col=2, row=4)
     g.link(pawn, "ReturnValue", cv, "Object")
@@ -1816,11 +1899,24 @@ def build_test_mode() -> Blueprint:
     bp = Blueprint(BP_GM_TEST, parent=BP_GM,
                    description="The functional-test level's GameMode: BP_DFRaceGameMode with no NPCs (the AI tests spawn their own).")
     bp.default("NPCCount", 0)
+    bp.default("SaveSlotOverride", "DeadFireTest")  # Phase 5: the test level's progress lives in its own slot
+    return bp
+
+
+def build_switchback_mode() -> Blueprint:
+    """BP_DFSwitchbackGameMode (Phase 5 spec §2.2): the second track's rules, from LEVELS[1]."""
+    row = LEVELS[1]
+    bp = Blueprint(BP_GM_SWITCHBACK, parent=BP_GM,
+                   description="%s: %d gates, %d s, %d rivals, %d to pass." % (row.name, row.gates, row.time, row.npcs, row.score))
+    bp.default("LevelIndex", row.index)
+    bp.default("RaceTimeLimit", float(row.time))
+    bp.default("ScoreRequirement", row.score)
+    bp.default("NPCCount", row.npcs)
     return bp
 
 
 def build():
-    return [build_state(), build_mode(), build_test_mode()]
+    return [build_state(), build_mode(), build_test_mode(), build_switchback_mode()]
 
 
 if __name__ == "__main__":

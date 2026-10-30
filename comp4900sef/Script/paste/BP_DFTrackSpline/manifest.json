@@ -595,5 +595,7 @@
   "BarrierMesh": "/Engine/BasicShapes/Cube",
   "RoadMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid",
   "BarrierMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
- }
+ },
+ "component_defaults": {},
+ "requires": []
 }

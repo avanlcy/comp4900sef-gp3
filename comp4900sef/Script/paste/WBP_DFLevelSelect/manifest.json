@@ -1,0 +1,578 @@
+{
+ "kind": "widget",
+ "asset": "/Game/DeadFire/UI/WBP_DFLevelSelect",
+ "parent": "/Script/UMG.UserWidget",
+ "description": "The track page: description, rules, best result and lock state of each track; < > RACE BACK.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Index",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Menu",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetLabel",
+   "inputs": [
+    "Target:object:/Script/UMG.TextBlock",
+    "Value:string"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Sets a text block from a string."
+  },
+  {
+   "name": "Refresh",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Fills the page for Index: rules, best result, lock state."
+  },
+  {
+   "name": "SelectNext",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The next track, wrapping."
+  },
+  {
+   "name": "SelectPrevious",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The previous track, wrapping."
+  },
+  {
+   "name": "Confirm",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Stores the track when it is open and starts the race."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetLabel",
+   "file": "SetLabel.txt",
+   "links": [
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_0",
+     "InString"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_1",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Refresh",
+   "file": "Refresh.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SelectNext",
+   "file": "SelectNext.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SelectPrevious",
+   "file": "SelectPrevious.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "Confirm",
+   "file": "Confirm.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": [],
+ "root_class": "/Script/UMG.CanvasPanel",
+ "root_name": "Root",
+ "tree": [
+  {
+   "name": "Panel",
+   "class": "/Script/UMG.Border",
+   "parent": "",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.7
+    ]
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     560,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Column",
+   "class": "/Script/UMG.VerticalBox",
+   "parent": "",
+   "props": {},
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "position": [
+     40,
+     60
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "TitleText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "CHOOSE A TRACK",
+    "font_size": 48,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     28
+    ]
+   }
+  },
+  {
+   "name": "NameText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "PROVING GROUND",
+    "font_size": 40,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ]
+   }
+  },
+  {
+   "name": "DescriptionText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "",
+    "font_size": 20,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left",
+    "wrap_text_at": 480.0
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     12
+    ]
+   }
+  },
+  {
+   "name": "RulesText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "PASS 300   CLOCK 120 s   RIVALS 3",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "BestText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "NOT RACED YET",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left"
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     8
+    ]
+   }
+  },
+  {
+   "name": "LockText",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "Column",
+   "props": {
+    "text": "",
+    "font_size": 22,
+    "color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Left",
+    "wrap_text_at": 480.0
+   },
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     4
+    ]
+   }
+  },
+  {
+   "name": "NavRow",
+   "class": "/Script/UMG.HorizontalBox",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     24,
+     0,
+     16
+    ]
+   }
+  },
+  {
+   "name": "LeftButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     12,
+     0
+    ]
+   }
+  },
+  {
+   "name": "LeftLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "LeftButton",
+   "props": {
+    "text": "<",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "RightButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     24,
+     0
+    ]
+   }
+  },
+  {
+   "name": "RightLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "RightButton",
+   "props": {
+    "text": ">",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "RaceButton",
+   "class": "/Script/UMG.Button",
+   "parent": "NavRow",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "RaceLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "RaceButton",
+   "props": {
+    "text": "RACE",
+    "font_size": 28,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  },
+  {
+   "name": "BackButton",
+   "class": "/Script/UMG.Button",
+   "parent": "Column",
+   "props": {},
+   "slot": {
+    "padding": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "h_align": "Fill"
+   }
+  },
+  {
+   "name": "BackLabel",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "BackButton",
+   "props": {
+    "text": "BACK",
+    "font_size": 24,
+    "color": [
+     0.05,
+     0.05,
+     0.05,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Center"
+   },
+   "slot": {}
+  }
+ ]
+}
