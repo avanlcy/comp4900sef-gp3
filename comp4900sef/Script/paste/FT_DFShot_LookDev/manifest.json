@@ -1,0 +1,26 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShot_LookDev",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Presentation capture of the art look-dev level: one image per LookDevShot camera (placed in L_DF_LookDev for a capture run only).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "TimeLimit": 150.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

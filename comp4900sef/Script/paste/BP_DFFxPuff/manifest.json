@@ -1,0 +1,123 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxPuff",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "A puff of smoke that rises (rocket trail, tyre smoke, wreck smoke): three light ash-grey balls; tint it darker for a wreck.",
+ "components": [
+  {
+   "name": "Puff",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.1,
+      1.1,
+      1.1
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxPuff"
+    ]
+   }
+  },
+  {
+   "name": "PuffSide",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      15.0,
+      35.0,
+      25.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      0.8,
+      0.8,
+      0.8
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxPuff"
+    ]
+   }
+  },
+  {
+   "name": "PuffTop",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      -20.0,
+      -25.0,
+      40.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      0.7,
+      0.7,
+      0.7
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxPuff"
+    ]
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "Lifetime": 1.2,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.0,
+  "RiseSpeed": 80.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

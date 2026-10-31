@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_RestartClearsEffects",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Review Focus 3: with two BP_DFFxExplosion spawned and one SpawnExplosion's effect and scorch decal live, and (Task 21) a test rock demolished into its 8 BP_DFDebris chunks, RestartRace leaves no BP_DFFx and no BP_DFDebris in the world, destroys the scorch decal and empties the GameMode's ScorchDecals (checked in the frame of the restart).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Scorch",
+   "type": "object:/Script/Engine.DecalComponent",
+   "default": "",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

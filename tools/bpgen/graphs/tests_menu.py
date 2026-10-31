@@ -10,7 +10,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, ".."))
 from bpgen import CLASS, cls_ref  # noqa: E402,F401
 from df import (BOOL, BP_GI, BP_GM, BP_PC, BP_SAVE, BP_VEHICLE, BP_VEHICLE_BRUTE, BP_VEHICLE_VIPER, BPC_RACER, CONTROLLER, FLOAT,  # noqa: E402
-                GAME_INSTANCE, GAMEPLAY, INT, MATERIAL_INTERFACE, MATH, OBJECT, OUT, PRIMITIVE, SKEL_MESH_COMP, STRING, WBP_LEVEL_SELECT,
+                GAME_INSTANCE, GAMEPLAY, INT, MATERIAL_INTERFACE, MATH, OBJECT, OUT, PRIMITIVE, SKEL_MESH_COMP, STATIC_MESH_COMP, STRING, WBP_LEVEL_SELECT,
                 WBP_PAUSE, WBP_SUMMARY, WBP_VEHICLE_SELECT, Pin, as_pin, enum_pin, gen, name_of, obj_pin)
 from tests import T, race_context  # noqa: E402
 from tests_ai import ai_count  # noqa: E402
@@ -31,13 +31,19 @@ def str_equals(t: T, src, expected, message):
     t.true((eq, "ReturnValue"), message)
 
 
-def material_name(t: T, car, slot):
-    """Display name of the material in one slot of the car's mesh."""
-    mesh = t.get(VC, "Mesh", OBJECT, car, sub=cls_ref(SKEL_MESH_COMP))
+def body_material(t: T, car, slot):
+    """The material in one slot of the car's Body (Phase 7 Task 13: the visible car is the Body static mesh; the physics
+    Mesh is hidden)."""
+    body = t.get(VC, "Body", OBJECT, car, sub=cls_ref(STATIC_MESH_COMP))
     gm = t.g.call_on(PRIMITIVE, "GetMaterial", inputs=[Pin("ElementIndex", INT, default=str(slot))],
                      outputs=[obj_pin("ReturnValue", MATERIAL_INTERFACE, "out")], pure=True)
-    t.link(mesh, gm, "self")
-    return name_of(t.g, (gm, "ReturnValue"))
+    t.link(body, gm, "self")
+    return (gm, "ReturnValue")
+
+
+def material_name(t: T, car, slot):
+    """Display name of the material in one slot of the car's Body."""
+    return name_of(t.g, body_material(t, car, slot))
 
 
 def drive_throttle(t: T, car, value, kph):
@@ -57,16 +63,16 @@ def vehicle_tests():
     t.eq_float(t.get(VC, "MaxHealth", FLOAT, brute), 160, "BRUTE max health")
     t.eq_float(t.get(VC, "Health", FLOAT, brute), 160, "BRUTE starts at full health")
     str_equals(t, t.get(VC, "VehicleName", STRING, brute), "BRUTE", "BRUTE name")
-    str_equals(t, material_name(t, brute, 2), "GrayMaterial", "BRUTE paint")
+    str_equals(t, material_name(t, brute, 0), "MI_DF_Paint_Brute", "BRUTE paint (Body slot 0)")
     viper = spawn_class(t, BP_VEHICLE_VIPER, dy=600.0)
     t.eq_float(t.get(VC, "MaxHealth", FLOAT, viper), 70, "VIPER max health")
     t.eq_float(t.get(VC, "BoostDuration", FLOAT, viper), 3, "VIPER boost duration")
     t.eq_float(t.get(VC, "BoostKickSpeed", FLOAT, viper), 1600, "VIPER boost kick")
-    str_equals(t, material_name(t, viper, 2), "OrangeMaterial", "VIPER paint")
+    str_equals(t, material_name(t, viper, 0), "MI_DF_Paint_Viper", "VIPER paint (Body slot 0)")
     sedan = spawn_class(t, BP_VEHICLE, dy=-600.0)
     t.eq_float(drive_throttle(t, sedan, 1, 200), 1.0, "SEDAN has no limiter", 0.001)
     t.eq_float(drive_throttle(t, sedan, 0.5, 10), 0.5, "SEDAN throttle scale 1", 0.001)
-    str_equals(t, material_name(t, sedan, 2), "M_Vehicle_Sedan", "SEDAN keeps the template paint")
+    str_equals(t, material_name(t, sedan, 0), "MI_DF_Paint_Sedan", "SEDAN paint (Body slot 0)")
     for car in (brute, viper, sedan):
         destroy(t, car)
     return [t.finish()]

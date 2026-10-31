@@ -1,0 +1,53 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_HandbrakeDrifts",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Two cars 30 m apart at 80 km/h, full right lock for 1.0 s, one with the handbrake: its heading changes at least 1.4 times as much, and it is drifting at 0.5 s. SEDAN on the drive strip in the gear the auto-box holds at its start speed, raw AI controller (unsmoothed, unscaled inputs), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "YawA0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "YawB0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "bDriftAtHalf",
+   "type": "bool",
+   "default": "false",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

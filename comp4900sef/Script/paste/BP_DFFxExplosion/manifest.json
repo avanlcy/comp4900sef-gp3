@@ -1,0 +1,247 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxExplosion",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "An explosion on the ground (SpawnExplosion): a white-hot core in an orange fireball, dark smoke rising behind it, an orange shockwave ring, burning debris flying out and an orange flash of light.",
+ "components": [
+  {
+   "name": "Smoke",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      200.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      5.5,
+      5.5,
+      5.5
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxSmoke"
+    ],
+    "translucency_sort_priority": -1
+   }
+  },
+  {
+   "name": "SmokeTop",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      -60.0,
+      50.0,
+      380.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      4.0,
+      4.0,
+      4.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxSmoke"
+    ],
+    "translucency_sort_priority": -1
+   }
+  },
+  {
+   "name": "Fireball",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      80.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      5.0,
+      5.0,
+      5.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBlast"
+    ],
+    "translucency_sort_priority": 1
+   }
+  },
+  {
+   "name": "Core",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxSphere",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      80.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      2.6,
+      2.6,
+      2.6
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "translucency_sort_priority": 2
+   }
+  },
+  {
+   "name": "Shockwave",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxRing",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      10.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      10.0,
+      10.0,
+      3.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBlast"
+    ],
+    "translucency_sort_priority": 1
+   }
+  },
+  {
+   "name": "Debris",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxChunk",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      40.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      6.0,
+      6.0,
+      6.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBlast"
+    ],
+    "translucency_sort_priority": 1
+   }
+  },
+  {
+   "name": "Flash",
+   "class": "/Script/Engine.PointLightComponent",
+   "parent": "",
+   "properties": {
+    "intensity_units": {
+     "enum": "LightUnits.UNITLESS"
+    },
+    "intensity": 0.0,
+    "attenuation_radius": 2500.0,
+    "cast_shadows": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      150.0
+     ]
+    },
+    "call:set_light_color": {
+     "color": [
+      1.0,
+      0.55,
+      0.25,
+      1.0
+     ]
+    }
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "Lifetime": 1.2,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.5,
+  "RiseSpeed": 0.0,
+  "LightStart": 50000.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

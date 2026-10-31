@@ -14,11 +14,25 @@
   "VehicleName": "VIPER",
   "ThrottleScale": 1.0,
   "TopSpeedKPH": 0.0,
+  "SteerAtSpeed": 0.38,
+  "GripAssist": 2.5,
+  "DownforceG": 0.35,
   "BoostDuration": 3.0,
   "BoostKickSpeed": 1600.0,
-  "PaintMaterial": "/Game/Vehicle/Meshes/OrangeMaterial"
+  "LastResetTime": -1000.0,
+  "LastCrashTime": -1000.0,
+  "EngineSound": "/Game/DeadFire/Art/Sounds/SW_DF_EngineViper",
+  "PaintMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Paint_Viper",
+  "BodyMesh": "/Game/DeadFire/Art/Meshes/SM_DF_Car_Viper",
+  "bHasLightBar": false
  },
  "component_defaults": {
+  "Mesh": {
+   "visible": false,
+   "visibility_based_anim_tick_option": {
+    "enum": "VisibilityBasedAnimTickOption.ALWAYS_TICK_POSE_AND_REFRESH_BONES"
+   }
+  },
   "VehicleMovement": {
    "mass": 1200.0
   }

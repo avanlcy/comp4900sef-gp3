@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFHUD_HitMarkerOnHit",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.6, \u00a77.2: the player gets out of the car (the crosshair shows on foot) and the player's character fires (its Weapon's Fire from 4 m behind a target car, along +X). In the frame of the hit the race HUD's crosshair is red ((R=1.000000,G=0.150000,B=0.100000,A=1.000000)) at 1.3x; 0.55 s later (the 0.15 s marker plus one headless frame) it is white at 1x again. A shot straight down from the character into the road under it (a hit, but not on a car or a character) leaves it white at 1x.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

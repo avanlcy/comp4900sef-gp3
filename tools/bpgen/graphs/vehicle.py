@@ -1,7 +1,14 @@
 """BP_DFVehicle (plan Tasks 3 and 5): child of the Vehicle template's Sedan.
 
-Health, tires, damage routing, destruction, drive overrides, enter/exit, teleport. Driving, cameras and the
-in-car HUD text come from the Sedan parent untouched.
+Health, tires, damage routing, destruction, drive overrides, enter/exit, teleport. Driving comes from the Sedan parent
+with Dead Fire's arcade layer on top (Phase 7 Task 9: TickArcade); the cameras and the in-car HUD text are the parent's,
+with the speed FOV, camera lag, look-back, the reset and the camera shakes on top (Phase 7 Task 10). The engine and skid
+loops and the crash sound are Phase 7 Task 11 (TickAudio, HandleCrashHit). The visible car is Phase 7 Task 13: the physics Mesh
+is hidden and the Dead Fire body, wheels, light bar, roof weapon, shield bubble and boost flames are static meshes on it
+(RefreshWheels, ApplyPaint, RefreshRoofWeapon, the charred wreck). Phase 7 Task 16: the gun and rocket sounds and effects, the
+tyre pop, tyre smoke and the burning wreck (TickTyreSmoke, SpawnWreckSmoke). Phase 7 Task 17: the boost flames and the shield
+bubble follow the item timers (RefreshEffectLook), with the boost and shield sounds and a blocked hit's flash (ShieldHit).
+Phase 7 Task 18: a hit taken shows the driving player's damage vignette (ShowDriverDamage).
 """
 import os
 import sys
@@ -14,10 +21,71 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_GM, BP_VEHICLE, CONTROLLER, FLOAT,
                 get_game_mode, is_valid, math2, member, not_bool, obj_pin, obj_spec, struct_path, struct_pin,
                 struct_spec)
 from df import MATERIAL_INTERFACE, PAINT_SLOT, SEDAN_MASS, STRING, VEHICLES  # noqa: E402
+from df import (BP_SHAKE_LIGHT, CAMERA_COMP, CAMERA_SHAKE_BASE, CLASS, PLAYER_CONTROLLER, ROTATOR, SPRING_ARM,  # noqa: E402  (Task 10)
+                start_camera_shake)
+from df import AUDIO_COMP, SOUND_BASE, SW_CRASH, SW_SKID, art_sound  # noqa: E402  (Task 11)
+from df import (CAR_WHEELS, MI_PAINT_CHARRED, NO_COLLISION, SHIELD_BUBBLE_AT, SM_EXHAUST_FLAME, SM_LIGHT_BAR,  # noqa: E402  (Task 13)
+                SM_ROOF_GUN, SM_ROOF_LAUNCHER, SM_SHIELD_BUBBLE, SM_WHEEL, SM_WHEEL_RIM, STATIC_MESH, STATIC_MESH_COMP, art_mesh,
+                asset_object)
+from df import (BP_FX_PUFF, BP_FX_SPARKS, FX_VIEW_RADIUS, LINEAR_COLOR, MI_FX_FLAME, SW_CAR_GUN, SW_ROCKET_LAUNCH,  # noqa: E402  (Task 16)
+                SW_TIRE_POP, play_sound_at, spawn_fx, weapon_look)
+from df import MID, SW_BOOST, SW_SHIELD_DOWN, SW_SHIELD_HIT, SW_SHIELD_UP, transform_at  # noqa: E402  (Task 17)
+from df import BP_HUD, USER_WIDGET, WBP_HUD, timer  # noqa: E402  (Task 18: timer moved to df.py, shared with the race HUD)
 
 VC, CC, GMC = gen(BP_VEHICLE), gen(BP_CHARACTER), gen(BP_GM)
 TIRE = struct_path(S_TIRE)
 WHEEL_BONES = ["Wheel_Front_Left", "Wheel_Front_Right", "Wheel_Rear_Left", "Wheel_Rear_Right"]
+assert [bone for _, bone in CAR_WHEELS] == WHEEL_BONES  # Tires index i drives the i-th wheel component (RefreshWheels)
+# Phase 7 Task 13 (spec §6.1): the hidden physics Mesh keeps ticking its pose and refreshing its bones (the wheels ride on them)
+TICK_REFRESH_BONES = {"enum": "VisibilityBasedAnimTickOption.ALWAYS_TICK_POSE_AND_REFRESH_BONES"}
+# the visible parts never collide (df.NO_COLLISION): no physics state, so the mass stays the template's
+# Phase 7 Task 11 (spec §5.4): a hit plays the crash sound when its normal impulse (kg cm/s) is above this. Set from the logged
+# run of 2026-10-31 (three SEDANs at 40 km/h into three parked BRUTEs on the drive strip): each impact's contact impulse was
+# 1,300,269 / 1,300,270 / 1,300,272, median 1,300,270, half 650,135, rounded to 650,000 (about a 20 km/h hit). The resting
+# pushes that follow an impact (2,600-14,000) are not the hit and stay far below it; the chassis never touched the strip.
+CRASH_IMPULSE = 650000.0
+# Phase 7 Task 16 (spec §7.1): the wreck's fire, SM_DF_ExhaustFlame (80 cm along +X) stood up (pitch 90) on the front of the Body,
+# about where the bonnet is on all three bodies (a lower bonnet hides a little more of its root), 1.3 m tall and 50 cm across
+WRECK_FIRE_AT, WRECK_FIRE_SCALE = (165.0, 0.0, 85.0), (1.6, 3.0, 3.0)
+WRECK_SMOKE_TINT = [0.3, 0.28, 0.26, 1.0]  # x MI_DF_FxPuff's light ash grey: a dark smoke (a tint can only darken it)
+
+
+def comp_location(g: Graph, name: str) -> tuple:
+    """A static mesh component's world location (WheelRL, WreckFire, ...)."""
+    n = g.call_on(SCENE_COMP, "K2_GetComponentLocation", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    c = look_comp(g, name)
+    g.link(c[0], c[1], n, "self")
+    return (n, "ReturnValue")
+
+
+def near_player_view(g: Graph, loc_src, prev) -> Node:
+    """After prev: the GameMode cast to BP_DFRaceGameMode, then a branch on IsNearPlayerView(loc, FX_VIEW_RADIUS) (cosmetic
+    smoke only near the player's camera, Review Focus 2; no race GameMode, e.g. the menu, = no smoke). Returns the branch."""
+    cast = cast_to(g, BP_GM)
+    g.link(get_game_mode(g), "ReturnValue", cast, "Object")
+    g.link(prev[0], prev[1], cast, "execute")
+    near = g.call_on(GMC, "IsNearPlayerView", inputs=[struct_pin("Location", VECTOR), Pin("Radius", FLOAT, default="%f" % FX_VIEW_RADIUS)],
+                     outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(cast, as_pin(BP_GM), near, "self")
+    g.link(loc_src[0], loc_src[1], near, "Location")
+    b = g.branch()
+    g.note(b, "near the player's camera?")
+    g.link(near, "ReturnValue", b, "Condition")
+    g.link(cast, "then", b, "execute")
+    return b
+
+
+def car_sound(g: Graph, var: str) -> Node:
+    """One of the car's SoundBase variables (BoostSound, ShieldUpSound, ...) at the car (df.play_sound_at; impure)."""
+    return play_sound_at(g, (g.var_get(var, OBJECT, cls_ref(SOUND_BASE)), var), (self_actor_location(g), "ReturnValue"))
+
+
+def mid_glow(g: Graph, value_src) -> Node:
+    """ShieldMID.SetScalarParameterValue("Glow", value) (Task 17: the shield bubble's flash on a blocked hit; impure)."""
+    n = g.call_on(MID, "SetScalarParameterValue", inputs=[Pin("ParameterName", NAME, default="Glow"), Pin("Value", FLOAT)])
+    g.link(g.var_get("ShieldMID", OBJECT, cls_ref(MID)), "ShieldMID", n, "self")
+    g.link(value_src[0], value_src[1], n, "Value")
+    return n
 
 
 def mesh(g: Graph, col=None, row=None) -> Node:
@@ -86,9 +154,182 @@ def result_bool(g: Graph, value: str) -> Node:
     return g.function_result([Pin("ReturnValue", BOOL, default=value)])
 
 
+# ---- Phase 7 Task 9 helpers: sources are (node, pin) tuples; a float may also be a literal string ----
+def _f(g: Graph, fn: str, a, b=None, out=FLOAT) -> tuple:
+    """Pure KismetMathLibrary float op (b None: one input A, e.g. Abs)."""
+    ins = [Pin("A", FLOAT, default=a if isinstance(a, str) else None)]
+    if b is not None:
+        ins.append(Pin("B", FLOAT, default=b if isinstance(b, str) else None))
+    n = g.call_static(MATH, fn, inputs=ins, outputs=[Pin("ReturnValue", out, "out")], pure=True)
+    if not isinstance(a, str):
+        g.link(a[0], a[1], n, "A")
+    if b is not None and not isinstance(b, str):
+        g.link(b[0], b[1], n, "B")
+    return (n, "ReturnValue")
+
+
+def _fvar(g: Graph, name: str, cat=FLOAT) -> tuple:
+    return (g.var_get(name, cat), name)
+
+
+def _self_vec(g: Graph, fn: str) -> tuple:
+    """Actor.GetActorForwardVector / GetActorRightVector / GetActorUpVector / GetVelocity on self (pure)."""
+    return (g.call_self_native(ACTOR, fn, outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True), "ReturnValue")
+
+
+def _vscale(g: Graph, v, f) -> tuple:
+    n = g.call_static(MATH, "Multiply_VectorFloat", inputs=[struct_pin("A", VECTOR), Pin("B", FLOAT, default=f if isinstance(f, str) else None)],
+                      outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(v[0], v[1], n, "A")
+    if not isinstance(f, str):
+        g.link(f[0], f[1], n, "B")
+    return (n, "ReturnValue")
+
+
+def _vbin(g: Graph, fn: str, a, b, out_cat=None) -> tuple:
+    """Add_VectorVector / Dot_VectorVector / Cross_VectorVector; b may be a literal vector string such as '0,0,1'."""
+    out = Pin("ReturnValue", FLOAT, "out") if fn == "Dot_VectorVector" else struct_pin("ReturnValue", VECTOR, "out")
+    n = g.call_static(MATH, fn, inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR, default=b if isinstance(b, str) else None)],
+                      outputs=[out], pure=True)
+    g.link(a[0], a[1], n, "A")
+    if not isinstance(b, str):
+        g.link(b[0], b[1], n, "B")
+    return (n, "ReturnValue")
+
+
+def _ang_vel(g: Graph) -> tuple:
+    """The Mesh body's angular velocity in degrees/s (pure: the engine function is const)."""
+    n = g.call_on(PRIMITIVE, "GetPhysicsAngularVelocityInDegrees", inputs=[Pin("BoneName", NAME, default="None")],
+                  outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(mesh(g), "Mesh", n, "self")
+    return (n, "ReturnValue")
+
+
+def _mesh_call(g: Graph, fn: str, vec_pin: str, vec_src, flag_pin: str) -> Node:
+    """Mesh.AddForce / AddTorqueInDegrees / AddImpulse(vec, None, flag true): mass-independent (bAccelChange / bVelChange)."""
+    n = g.call_on(PRIMITIVE, fn, inputs=[struct_pin(vec_pin, VECTOR), Pin("BoneName", NAME, default="None"), Pin(flag_pin, BOOL, default="true")])
+    g.link(mesh(g), "Mesh", n, "self")
+    g.link(vec_src[0], vec_src[1], n, vec_pin)
+    return n
+
+
+def spring_arm(g: Graph) -> tuple:
+    """The Sedan template's SpringArm (an inherited Blueprint component: set its members at run time, not as class defaults)."""
+    return (g.var_get("SpringArm", OBJECT, cls_ref(SPRING_ARM)), "SpringArm")
+
+
+def chase_camera(g: Graph) -> tuple:
+    return (g.var_get("ChaseCamera", OBJECT, cls_ref(CAMERA_COMP)), "ChaseCamera")
+
+
+def arm_set(g: Graph, prop: str, cat: str, value=None, src=None) -> Node:
+    """SpringArm.<prop> := value (a literal) or src (a source tuple)."""
+    n = g.var_set_on(SPRING_ARM, prop, cat, default=value)
+    arm = spring_arm(g)
+    g.link(arm[0], arm[1], n, "self")
+    if src is not None:
+        g.link(src[0], src[1], n, prop)
+    return n
+
+
+def audio(g: Graph, name: str) -> tuple:
+    """EngineAudio / SkidAudio (Task 11): this car's AudioComponents."""
+    return (g.var_get(name, OBJECT, cls_ref(AUDIO_COMP)), name)
+
+
+def audio_call(g: Graph, name: str, fn: str, inputs=None, outputs=None, pure=False) -> Node:
+    """An AudioComponent function (SetSound, Play, IsPlaying, SetPitchMultiplier, SetVolumeMultiplier) on EngineAudio / SkidAudio."""
+    n = g.call_on(AUDIO_COMP, fn, inputs=inputs, outputs=outputs, pure=pure)
+    a = audio(g, name)
+    g.link(a[0], a[1], n, "self")
+    return n
+
+
+def look_comp(g: Graph, name: str) -> tuple:
+    """Body / WheelFL / LightBar / RoofWeapon ... (Task 13): this car's static mesh components."""
+    return (g.var_get(name, OBJECT, cls_ref(STATIC_MESH_COMP)), name)
+
+
+def set_mesh(g: Graph, name: str, src=None, asset=None) -> Node:
+    """<name>.SetStaticMesh(src or the asset) (impure; link execute)."""
+    n = g.call_on(STATIC_MESH_COMP, "SetStaticMesh",
+                  inputs=[Pin("NewMesh", OBJECT, sub_object=cls_ref(STATIC_MESH), default_object=asset_object(asset) if asset else None)],
+                  outputs=[Pin("ReturnValue", BOOL, "out")])
+    c = look_comp(g, name)
+    g.link(c[0], c[1], n, "self")
+    if src is not None:
+        g.link(src[0], src[1], n, "NewMesh")
+    return n
+
+
+def set_shown(g: Graph, name: str, value=None, src=None) -> Node:
+    """<name>.SetVisibility(value or src, no propagation) (impure; link execute)."""
+    n = g.call_on(SCENE_COMP, "SetVisibility", inputs=[Pin("bNewVisibility", BOOL, default=value), Pin("bPropagateToChildren", BOOL, default="false")])
+    c = look_comp(g, name)
+    g.link(c[0], c[1], n, "self")
+    if src is not None:
+        g.link(src[0], src[1], n, "bNewVisibility")
+    return n
+
+
+def set_body_material(g: Graph, slot_src, material_src, slot=None) -> Node:
+    """Body.SetMaterial(slot, material) (impure; link execute); slot_src None uses the literal slot."""
+    n = g.call_on(PRIMITIVE, "SetMaterial", inputs=[Pin("ElementIndex", INT, default=slot), obj_pin("Material", MATERIAL_INTERFACE)])
+    c = look_comp(g, "Body")
+    g.link(c[0], c[1], n, "self")
+    if slot_src is not None:
+        g.link(slot_src[0], slot_src[1], n, "ElementIndex")
+    g.link(material_src[0], material_src[1], n, "Material")
+    return n
+
+
+def driver_shake(g: Graph, scale="1.0") -> Node:
+    """self.PlayDriverShake(LightShake, scale): the light camera shake on the driver's view (players only)."""
+    n = g.call_self("PlayDriverShake", inputs=[Pin("Shake", CLASS, sub_object=cls_ref(CAMERA_SHAKE_BASE)), Pin("Scale", FLOAT, default=scale)])
+    g.link(g.var_get("LightShake", CLASS, cls_ref(CAMERA_SHAKE_BASE)), "LightShake", n, "Shake")
+    return n
+
+
+def _limited(g: Graph, accel, value) -> tuple:
+    """self.LimitDamping(accel, value, DeltaSeconds) inside a function with a DeltaSeconds input."""
+    n = g.call_self("LimitDamping", inputs=[Pin("Accel", FLOAT), Pin("Value", FLOAT), Pin("DeltaSeconds", FLOAT)],
+                    outputs=[Pin("Limited", FLOAT, "out")], pure=True)
+    g.link(accel[0], accel[1], n, "Accel")
+    g.link(value[0], value[1], n, "Value")
+    g.link_entry("DeltaSeconds", n, "DeltaSeconds")
+    return (n, "Limited")
+
+
 def build() -> Blueprint:
     bp = Blueprint(BP_VEHICLE, parent=SEDAN, description="The race car: health and tires, damage, wrecking, enter/exit, item use; driving and cameras come from the Sedan template.")
-    bp.component("Weapon", gen(BPC_WEAPON), Damage=15.0, Range=10000.0, Cooldown=0.2, bDebugTrace=False)  # the car's gun (spec §2)
+    # the car's gun (spec §2); Phase 7 Task 16 (spec §7.2): its shot sound and effects (df.weapon_look), its VisualOrigin the RoofWeapon
+    bp.component("Weapon", gen(BPC_WEAPON), Damage=15.0, Range=10000.0, Cooldown=0.2, bDebugTrace=False, **weapon_look(SW_CAR_GUN))
+    # Phase 7 Task 11 (spec §5.4): the engine loop (BeginPlay sets the class's EngineSound) and the skid loop, both on the car's
+    # root, the Mesh (an SCS root node attaches to the inherited native root); TickAudio drives their pitch and volume
+    bp.component("EngineAudio", AUDIO_COMP, "Mesh", auto_activate=True, sound=art_sound(VEHICLES[0].engine_sound))
+    bp.component("SkidAudio", AUDIO_COMP, "Mesh", auto_activate=True, sound=SW_SKID, volume_multiplier=0.0)
+    # Phase 7 Task 13 (spec §6.1): the visible car. Physics stays on the Sedan template's skeletal Mesh, hidden here while it keeps
+    # refreshing its bones; the Dead Fire body and wheels are static meshes on it (Body: the construction script sets the class's
+    # BodyMesh). The wheel mesh's rim faces the car's left (-Y), so the right wheels are turned round; the tyre's outward offset is
+    # modelled in. The light bar and roof weapon share the Body's Roof socket (the bar is modelled ahead of it); the shield bubble
+    # is centred on its origin, so it sits at the Body's centre (Task 12). The shield and flames start hidden; Task 17's
+    # RefreshEffectLook shows them while the shield or the boost runs.
+    bp.component_default("Mesh", "visible", False)
+    bp.component_default("Mesh", "visibility_based_anim_tick_option", TICK_REFRESH_BONES)
+    bp.component("Body", STATIC_MESH_COMP, "Mesh", static_mesh=art_mesh(VEHICLES[0].body), **NO_COLLISION)
+    for name, bone in CAR_WHEELS:
+        turned = {"relative_rotation": {"rotator": {"yaw": 180.0}}} if bone.endswith("Right") else {}
+        bp.component(name, STATIC_MESH_COMP, "Mesh", socket=bone, static_mesh=SM_WHEEL, **turned, **NO_COLLISION)
+    bp.component("LightBar", STATIC_MESH_COMP, "Body", socket="Roof", static_mesh=SM_LIGHT_BAR, **NO_COLLISION)
+    bp.component("RoofWeapon", STATIC_MESH_COMP, "Body", socket="Roof", visible=False, **NO_COLLISION)
+    bp.component("ShieldBubble", STATIC_MESH_COMP, "Body", static_mesh=SM_SHIELD_BUBBLE, relative_location={"vector": list(SHIELD_BUBBLE_AT)},
+                 visible=False, **NO_COLLISION)
+    for name, socket in (("BoostFlameL", "Exhaust_L"), ("BoostFlameR", "Exhaust_R")):
+        bp.component(name, STATIC_MESH_COMP, "Body", socket=socket, static_mesh=SM_EXHAUST_FLAME, visible=False, **NO_COLLISION)
+    # Phase 7 Task 16 (spec §7.1): the wreck's fire on the bonnet, shown by DestroyVehicle (replaces the stock P_Smoke emitter)
+    bp.component("WreckFire", STATIC_MESH_COMP, "Body", static_mesh=SM_EXHAUST_FLAME, override_materials=[MI_FX_FLAME],
+                 relative_location={"vector": list(WRECK_FIRE_AT)}, relative_rotation={"rotator": {"pitch": 90.0}},
+                 relative_scale3d={"vector": list(WRECK_FIRE_SCALE)}, visible=False, cast_shadow=False, **NO_COLLISION)
     H, E = "Dead Fire|Health", "Dead Fire|Enter Exit"
     bp.variable("MaxHealth", "float", "100", H, editable=True)
     bp.variable("Health", "float", "100", H)
@@ -107,8 +348,14 @@ def build() -> Blueprint:
     bp.variable("LastDriver", "object:" + CONTROLLER, "", E)
     I = "Dead Fire|Items"
     bp.variable("WreckHopImpulse", "float", "600", I, editable=True)
-    bp.variable("WreckSmokeEffect", "object:" + PARTICLE_SYSTEM, "", I, editable=True)
-    bp.default("WreckSmokeEffect", "/Game/StarterContent/Particles/P_Smoke")
+    bp.remove_variable("WreckSmokeEffect")  # Phase 7 Task 16: the stock P_Smoke emitter, replaced by SpawnWreckSmoke and WreckFire
+    # Phase 7 Task 16 (spec §5.5, §7.1): tyre smoke and the wreck's smoke (TickTyreSmoke, SpawnWreckSmoke)
+    EF = "Dead Fire|Effects"
+    for name, default in (("TyreSmokeInterval", 0.08), ("TyreSmokeLateral", 500.0), ("WreckSmokeInterval", 0.15)):
+        bp.variable(name, "float", repr(default), EF, editable=True)
+        bp.default(name, default)
+    bp.variable("WreckSmokeTint", "struct:" + LINEAR_COLOR, "", EF, editable=True)
+    bp.default("WreckSmokeTint", {"color": WRECK_SMOKE_TINT})
     bp.variable("BoostRemaining", "float", "0", I)
     bp.variable("ShieldRemaining", "float", "0", I)
     bp.variable("BoostDuration", "float", "2", I, editable=True)
@@ -129,8 +376,82 @@ def build() -> Blueprint:
     bp.variable("VehicleName", "string", "SEDAN", ST, editable=True)
     bp.variable("ThrottleScale", "float", "1", ST, editable=True)
     bp.variable("TopSpeedKPH", "float", "0", ST, editable=True)  # 0 = no limiter
-    bp.variable("PaintMaterial", "object:" + MATERIAL_INTERFACE, "", ST, editable=True)  # none = the template paint
+    bp.variable("PaintMaterial", "object:" + MATERIAL_INTERFACE, "", ST, editable=True)  # none = the Body mesh's own slot material
     bp.variable("PaintSlot", "int", str(PAINT_SLOT), ST, editable=True)
+    # Phase 7 Task 13 (spec §6.1): the class's paint goes on the Body's slot 0 (class defaults: written every apply)
+    bp.default("PaintMaterial", VEHICLES[0].paint)
+    bp.default("PaintSlot", PAINT_SLOT)
+    LK = "Dead Fire|Look"
+    for name, spec, default, value in (("BodyMesh", "object:" + STATIC_MESH, "", art_mesh(VEHICLES[0].body)),
+                                       ("bHasLightBar", "bool", "true" if VEHICLES[0].light_bar else "false", VEHICLES[0].light_bar),
+                                       ("WheelMesh", "object:" + STATIC_MESH, "", SM_WHEEL),
+                                       ("RimMesh", "object:" + STATIC_MESH, "", SM_WHEEL_RIM),
+                                       ("CharredMaterial", "object:" + MATERIAL_INTERFACE, "", MI_PAINT_CHARRED)):
+        bp.variable(name, spec, default, LK, editable=True)
+        bp.default(name, value)
+    # Phase 7 Task 7 (spec §5.2): handling data, read by the arcade handling from Task 8; no behaviour change yet.
+    # SteerAtSpeed, GripAssist and DownforceG are per class (class defaults from VEHICLES, like ThrottleScale).
+    HD = "Dead Fire|Handling"
+    row0 = VEHICLES[0]
+    for name, default in (("SteerRiseRate", 4), ("SteerReturnRate", 7), ("SteerAtSpeed", row0.steer_at_speed), ("SteerSpeedRef", 150),
+                          ("GripAssist", row0.grip_assist), ("DriftGrip", 0.3), ("DownforceG", row0.downforce_g), ("DownforceCap", 1960),
+                          ("StabilityDamping", 2.0), ("CenterOfMassZ", -25), ("DriftMinSpeed", 40), ("DriftExitSpeed", 25),
+                          ("DriftSteerMin", 0.3), ("DriftYawAccel", 120), ("DriftBoostMinSeconds", 1.0), ("DriftBoostSpeed", 500),
+                          ("AirDelay", 0.25), ("AirDamping", 1.5), ("AirLevelAccel", 180), ("AirControlAccel", 90), ("GroundProbe", 150),
+                          ("ResetMaxSpeed", 15), ("ResetCooldown", 3), ("ResetLift", 150)):
+        bp.variable(name, "float", repr(float(default)), HD, editable=True)
+        bp.default(name, float(default))
+    # Phase 7 Task 9 (spec §5.2): the arcade layer's state. ArcadeSteer / ArcadeThrottle / bArcadeHandbrake are the inputs the
+    # layer reads, written by TickDriveOverrides every frame (player: smoothed steer + held handbrake; AI: its own inputs).
+    HS = "Dead Fire|Handling State"
+    for name, spec, default in (("SmoothedSteer", "float", "0.0"), ("bDrifting", "bool", "false"), ("DriftStartTime", "float", "0.0"),
+                                ("AirborneSince", "float", "-1.0"), ("bGrounded", "bool", "false"), ("DriftBoostCount", "int", "0"),
+                                ("ArcadeSteer", "float", "0.0"), ("ArcadeThrottle", "float", "0.0"), ("bArcadeHandbrake", "bool", "false"),
+                                ("bHandbrakeHeld", "bool", "false"),
+                                # Phase 7 Task 10: the reset cooldown's clock, look-back, the chase rotation the arm returns to,
+                                # and the look-back snap (the arm's rotation lag stays off for one frame after a turn)
+                                ("LastResetTime", "float", "-1000.0"), ("bLookBack", "bool", "false"),
+                                ("ArmBaseRotation", "struct:" + ROTATOR, ""), ("bSnapArm", "bool", "false")):
+        bp.variable(name, spec, default, HS)
+    bp.default("AirborneSince", -1.0)
+    bp.default("LastResetTime", -1000.0)
+    bp.dispatcher("OnDriftBoost", [])
+    # Phase 7 Task 10 (spec §5.3): the chase camera and the camera shakes
+    CAM = "Dead Fire|Camera"
+    for name, default in (("FOVInterpSpeed", 4), ("ChaseLagSpeed", 10), ("ChaseRotationLagSpeed", 8), ("LandShakeAirTime", 0.5)):
+        bp.variable(name, "float", repr(float(default)), CAM, editable=True)
+        bp.default(name, float(default))
+    bp.variable("LightShake", "class:" + CAMERA_SHAKE_BASE, "", CAM, editable=True)
+    bp.default("LightShake", "class:" + BP_SHAKE_LIGHT)
+    # Phase 7 Task 11 (spec §5.4): the engine loop per class (VEHICLES engine_sound), the crash sound, the crash threshold (a
+    # hit's normal impulse, kg cm/s, set from the logged run in Task 11 Step 3) and its cooldown; LastCrashTime is state
+    AU = "Dead Fire|Audio"
+    bp.variable("EngineSound", "object:" + SOUND_BASE, "", AU, editable=True)
+    bp.default("EngineSound", art_sound(VEHICLES[0].engine_sound))
+    bp.variable("CrashSound", "object:" + SOUND_BASE, "", AU, editable=True)
+    bp.default("CrashSound", SW_CRASH)
+    for name, default in (("CrashImpulse", CRASH_IMPULSE), ("CrashCooldown", 0.5)):
+        bp.variable(name, "float", repr(float(default)), AU, editable=True)
+        bp.default(name, float(default))
+    bp.variable("LastCrashTime", "float", "-1000.0", HS)
+    bp.default("LastCrashTime", -1000.0)
+    bp.variable("NextTyreSmokeTime", "float", "0.0", HS)  # Phase 7 Task 16: the next tyre-smoke puff, game seconds
+    # Phase 7 Task 16 (spec §7.2, §7.5): the tyre pop and the rocket launch
+    for name, sound in (("TirePopSound", SW_TIRE_POP), ("RocketLaunchSound", SW_ROCKET_LAUNCH)):
+        bp.variable(name, "object:" + SOUND_BASE, "", AU, editable=True)
+        bp.default(name, sound)
+    # Phase 7 Task 17 (spec §7.5): the boost and shield sounds, the blocked hit's flash on the bubble, and the look's state (the
+    # bubble's dynamic material, its own glow, and whether the bubble shows, so the shield's end is heard once)
+    for name, sound in (("BoostSound", SW_BOOST), ("ShieldUpSound", SW_SHIELD_UP), ("ShieldDownSound", SW_SHIELD_DOWN),
+                        ("ShieldHitSound", SW_SHIELD_HIT)):
+        bp.variable(name, "object:" + SOUND_BASE, "", AU, editable=True)
+        bp.default(name, sound)
+    for name, default in (("ShieldHitGlow", 3.0), ("ShieldHitSeconds", 0.15)):
+        bp.variable(name, "float", repr(default), EF, editable=True)
+        bp.default(name, default)
+    bp.variable("ShieldMID", "object:" + MID, "", HS)
+    bp.variable("ShieldBaseGlow", "float", "1.0", HS)
+    bp.variable("bShieldShown", "bool", "false", HS)
 
     bp.dispatcher("OnVehicleDamaged", ["Damage:float", "TireIndex:int"])
     bp.dispatcher("OnTireBlown", ["TireIndex:int"])
@@ -139,7 +460,7 @@ def build() -> Blueprint:
     bp.dispatcher("OnOccupantExited", ["Character:" + obj_spec(BP_CHARACTER)])
 
     # ---- InitTires: Tires = four fresh entries ----
-    g = bp.function("InitTires", doc="Four fresh tires at TireMaxHealth.")
+    g = bp.function("InitTires", doc="Four fresh tires at TireMaxHealth (the wheels show their tyres again).")
     clear = g.call_array("KismetArrayLibrary", "Array_Clear", tire_elem(), pure=False)
     arr = tires_get(g)
     g.link(arr, "Tires", clear, "TargetArray")
@@ -159,7 +480,85 @@ def build() -> Blueprint:
         g.exec(prev, add)
         prev = add
     zero = g.var_set("BlownTireCount", INT, default="0")
-    g.exec(prev, zero)
+    g.exec(prev, zero, g.call_self("RefreshWheels"))  # Phase 7 Task 13
+
+    # ---- Phase 7 Task 13 (spec §6.1, §7.5): the car's look ----
+    g = bp.function("RefreshWheels", doc="Each wheel shows RimMesh while its tyre is blown, else WheelMesh (Tires index i is the i-th wheel: FL, FR, RL, RR).")
+    prev = [("entry", "then")]
+    for i, (name, bone) in enumerate(CAR_WHEELS):
+        get = g.call_array("KismetArrayLibrary", "Array_Get", tire_elem(), inputs=[Pin("Index", INT, default=str(i))],
+                           outputs=[Pin("Item", STRUCT, "out", struct_ref_tire())])
+        g.link(tires_get(g), "Tires", get, "TargetArray")
+        br = break_tire(g)
+        g.link(get, "Item", br, TIRE.rsplit(".", 1)[1])
+        b = g.branch()
+        g.note(b, "%s blown?" % bone)
+        g.link(br, member(S_TIRE, "bBlown"), b, "Condition")
+        for src in prev:
+            g.link(src[0], src[1], b, "execute")
+        rim = set_mesh(g, name, src=(g.var_get("RimMesh", OBJECT, cls_ref(STATIC_MESH)), "RimMesh"))
+        tyre = set_mesh(g, name, src=(g.var_get("WheelMesh", OBJECT, cls_ref(STATIC_MESH)), "WheelMesh"))
+        g.link(b, "then", rim, "execute")
+        g.link(b, "else", tyre, "execute")
+        prev = [(rim, "then"), (tyre, "then")]
+
+    g = bp.function("ApplyPaint", doc="PaintMaterial, when set, on the Body's PaintSlot (BeginPlay; SpawnNPCs after giving a rival the gang paint).")
+    paint = g.var_get("PaintMaterial", OBJECT, cls_ref(MATERIAL_INTERFACE))
+    has_paint = is_valid(g)
+    g.link(paint, "PaintMaterial", has_paint, "Object")
+    bpaint = g.branch()
+    g.note(bpaint, "a paint of its own?")
+    g.link(has_paint, "ReturnValue", bpaint, "Condition")
+    g.link_entry("then", bpaint, "execute")
+    put = set_body_material(g, (g.var_get("PaintSlot", INT), "PaintSlot"), (paint, "PaintMaterial"))
+    g.link(bpaint, "then", put, "execute")
+
+    RCL = gen(BPC_RACER)
+    g = bp.function("RefreshRoofWeapon", locals=["Racer:object:" + RCL],
+                    doc="The roof weapon shows the driver's held weapon: SM_DF_RoofLauncher while its racer holds an RPG, else SM_DF_RoofGun "
+                        "while it holds a Gun, else hidden (also with no driver or outside a race). Called after ApplyItem, on "
+                        "GrantItem and respawn, and on Enter/Exit.")
+    to_gm = cast_to(g, BP_GM)
+    g.link(get_game_mode(g), "ReturnValue", to_gm, "Object")
+    g.link_entry("then", to_gm, "execute")
+    hide = set_shown(g, "RoofWeapon", "false")
+    g.link(to_gm, "CastFailed", hide, "execute")
+    driver = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    find = g.call_on(GMC, "FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RCL, "out")], pure=True)
+    g.link(to_gm, as_pin(BP_GM), find, "self")
+    g.link(driver, "ReturnValue", find, "C")
+    keep = g.local_set("Racer", OBJECT, sub_object=cls_ref(RCL))
+    g.link(find, "Racer", keep, "Racer")
+    g.link(to_gm, "then", keep, "execute")
+    has_racer = is_valid(g)
+    g.link(keep, "Output_Get", has_racer, "Object")
+    bracer = g.branch()
+    g.note(bracer, "a driver with a racer?")
+    g.link(has_racer, "ReturnValue", bracer, "Condition")
+    g.exec(keep, bracer)
+    g.link(bracer, "else", hide, "execute")
+
+    def holds(item):
+        n = g.call_on(RCL, "HasType", inputs=[enum_pin("Type", E_ITEM_TYPE, default=item)], outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+        g.link(g.local_get("Racer", OBJECT, cls_ref(RCL)), "Racer", n, "self")
+        return n
+
+    brpg = g.branch()
+    g.note(brpg, "holds an RPG? (wins over a Gun)")
+    g.link(holds(ITEM_RPG), "ReturnValue", brpg, "Condition")
+    g.link(bracer, "then", brpg, "execute")
+    launcher = set_mesh(g, "RoofWeapon", asset=SM_ROOF_LAUNCHER)
+    g.link(brpg, "then", launcher, "execute")
+    bgun = g.branch()
+    g.note(bgun, "holds a Gun?")
+    g.link(holds(ITEM_GUN), "ReturnValue", bgun, "Condition")
+    g.link(brpg, "else", bgun, "execute")
+    gun = set_mesh(g, "RoofWeapon", asset=SM_ROOF_GUN)
+    g.link(bgun, "then", gun, "execute")
+    g.link(bgun, "else", hide, "execute")
+    show = set_shown(g, "RoofWeapon", "true")
+    g.link(launcher, "then", show, "execute")
+    g.link(gun, "then", show, "execute")
 
     # ---- GetSpeedKPH ----
     g = bp.function("GetSpeedKPH", doc="Absolute forward speed in km/h.", outputs=["KPH:float"], pure=True)
@@ -292,7 +691,8 @@ def build() -> Blueprint:
     g.link_extra(loop2, "Completed", "result", "execute")
 
     # ---- ApplyTireDamage(Index, Damage) ----
-    g = bp.function("ApplyTireDamage", doc="Takes health off one tire; at 0 it is blown and the count and OnTireBlown update.", inputs=["Index:int", "Damage:float"])
+    g = bp.function("ApplyTireDamage", doc="Takes health off one tire; at 0 it is blown, the count and OnTireBlown update and the wheel shows its rim.",
+                    inputs=["Index:int", "Damage:float"])
     get = g.call_array("KismetArrayLibrary", "Array_Get", tire_elem(), inputs=[Pin("Index", INT)],
                        outputs=[Pin("Item", STRUCT, "out", struct_ref_tire())])
     ta = tires_get(g)
@@ -335,7 +735,16 @@ def build() -> Blueprint:
     g.link(bb, "then", setc, "execute")
     fire = g.call_delegate("OnTireBlown", [Pin("TireIndex", INT)])
     g.link_entry("Index", fire, "TireIndex")
-    g.exec(setc, fire)
+    refresh = g.call_self("RefreshWheels")  # Phase 7 Task 13: the blown wheel shows its bare rim
+    g.exec(setc, fire, refresh)
+    # Phase 7 Task 16 (spec §7.1): the pop at the wheel: sparks, SW_DF_TirePop and a light shake for a player driver
+    wheel_at = g.call_on(SCENE_COMP, "GetSocketLocation", inputs=[Pin("InSocketName", NAME)], outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(mesh(g), "Mesh", wheel_at, "self")
+    g.link(br, member(S_TIRE, "BoneName"), wheel_at, "InSocketName")
+    sp_first, sp_last, _ = spawn_fx(g, BP_FX_SPARKS, transform_at(g, (wheel_at, "ReturnValue")))
+    g.exec(refresh, sp_first)
+    pop = play_sound_at(g, (g.var_get("TirePopSound", OBJECT, cls_ref(SOUND_BASE)), "TirePopSound"), (wheel_at, "ReturnValue"))
+    g.exec(sp_last, pop, driver_shake(g))
 
     # ---- BlowNearestTire(Point, Damage): explosion tire blast on the wheel socket nearest the point (spec §5) ----
     g = bp.function("BlowNearestTire", doc="Explosion tire blast on the wheel nearest the point (skipped when wrecked or shielded).", inputs=["Point:struct:" + VECTOR, "Damage:float"], locals=["Best:int=-1", "BestDist:float=1000000000"])
@@ -401,7 +810,13 @@ def build() -> Blueprint:
     bsh = g.branch()
     g.link(shielded, "ReturnValue", bsh, "Condition")
     g.link(bdead, "else", bsh, "execute")
-    g.link(bsh, "else", btire, "execute")  # shielded: nothing happens (spec §2)
+    g.link(bsh, "else", btire, "execute")  # shielded: nothing happens (spec §2) but the bubble's flash
+    real = _f(g, "Greater_FloatFloat", ("entry", "Damage"), "0.0", BOOL)  # Phase 7 Task 17 (spec §7.5): a blocked hit flashes the bubble
+    bblock = g.branch()
+    g.note(bblock, "a real hit blocked? flash the bubble")
+    g.link(real[0], real[1], bblock, "Condition")
+    g.link(bsh, "then", bblock, "execute")
+    g.link(bblock, "then", g.call_self("ShieldHit"), "execute")
     apply = g.call_self("ApplyTireDamage", inputs=[Pin("Index", INT), Pin("Damage", FLOAT)])
     g.link_entry("TireIndex", apply, "Index")
     g.link_entry("Damage", apply, "Damage")
@@ -421,18 +836,30 @@ def build() -> Blueprint:
     g.link_entry("TireIndex", fire, "TireIndex")
     g.exec(apply, fire)
     g.exec(seth, fire)
+    # Phase 7 Task 10 (spec §5.3): a hit taken shakes the driver's view (players only)
+    hit = _f(g, "Greater_FloatFloat", ("entry", "Damage"), "0.0", BOOL)
+    bhit = g.branch()
+    g.note(bhit, "a real hit? shake the driver's view")
+    g.link(hit[0], hit[1], bhit, "Condition")
+    g.exec(fire, bhit)
+    hit_shake = driver_shake(g)
+    g.link(bhit, "then", hit_shake, "execute")
+    hit_hud = g.call_self("ShowDriverDamage")  # Phase 7 Task 18 (spec §7.6): and the driver's damage vignette
+    g.exec(hit_shake, hit_hud)
     h2 = g.var_get("Health", FLOAT)
     le = compare(g, "LessEqual_FloatFloat", FLOAT, b="0.0")
     g.link(h2, "Health", le, "A")
     bdie = g.branch()
     g.link(le, "ReturnValue", bdie, "Condition")
-    g.exec(fire, bdie)
+    g.exec(hit_hud, bdie)
+    g.link(bhit, "else", bdie, "execute")
     kill = g.call_self("DestroyVehicle", inputs=[obj_pin("Killer", CONTROLLER)])
     g.link_entry("Instigator", kill, "Killer")
     g.link(bdie, "then", kill, "execute")
 
     # ---- DestroyVehicle(Killer) ----
-    g = bp.function("DestroyVehicle", doc="Wrecks the car once: handbrake, hop, smoke, effects-only explosion, OnVehicleDestroyed, the GameMode notified.", inputs=["Killer:object:" + CONTROLLER])
+    g = bp.function("DestroyVehicle", doc="Wrecks the car once: handbrake, charred paint and trim, hop, smoke, effects-only explosion, OnVehicleDestroyed, "
+                    "the GameMode notified.", inputs=["Killer:object:" + CONTROLLER])
     dead = g.var_get("bIsDestroyed", BOOL)
     b = g.branch()
     g.link(dead, "bIsDestroyed", b, "Condition")
@@ -440,7 +867,10 @@ def build() -> Blueprint:
     mark = g.var_set("bIsDestroyed", BOOL, default="true")
     g.link(b, "else", mark, "execute")
     hb = set_handbrake(g, "true")
-    g.exec(mark, hb)
+    # Phase 7 Task 13 (spec §6.1): the wreck's paint (slot 0) and trim (slot 1) turn to CharredMaterial
+    charred = [set_body_material(g, None, (g.var_get("CharredMaterial", OBJECT, cls_ref(MATERIAL_INTERFACE)), "CharredMaterial"), slot=str(i))
+               for i in (0, 1)]
+    g.exec(mark, hb, *charred)
     # Phase 3 wreck effects (spec §5): hop, smoke, then the effects-only explosion through the GameMode
     m = mesh(g)
     hop = g.call_on(PRIMITIVE, "AddImpulse", inputs=[struct_pin("Impulse", VECTOR), Pin("BoneName", NAME, default="None"),
@@ -451,21 +881,11 @@ def build() -> Blueprint:
     hi = g.var_get("WreckHopImpulse", FLOAT)
     g.link(hi, "WreckHopImpulse", hopv, "Z")
     g.link(hopv, "ReturnValue", hop, "Impulse")
-    g.exec(hb, hop)
-    smoke_fx = g.var_get("WreckSmokeEffect", OBJECT, cls_ref(PARTICLE_SYSTEM))
-    m2 = mesh(g)
-    smoke = g.call_static(GAMEPLAY, "SpawnEmitterAttached",
-                          inputs=[obj_pin("EmitterTemplate", PARTICLE_SYSTEM), obj_pin("AttachToComponent", SCENE_COMP),
-                                  Pin("AttachPointName", NAME, default="None"), struct_pin("Location", VECTOR, default="0,0,100"),
-                                  struct_pin("Rotation", ROTATOR), struct_pin("Scale", VECTOR, default="1,1,1"),
-                                  native_enum_pin("LocationType", "/Script/Engine.EAttachLocation", "KeepRelativeOffset"),
-                                  Pin("bAutoDestroy", BOOL, default="false"),
-                                  native_enum_pin("PoolingMethod", "/Script/Engine.EPSCPoolMethod", "None"),
-                                  Pin("bAutoActivate", BOOL, default="true")],
-                          outputs=[obj_pin("ReturnValue", "/Script/Engine.ParticleSystemComponent", "out")])
-    g.link(smoke_fx, "WreckSmokeEffect", smoke, "EmitterTemplate")
-    g.link(m2, "Mesh", smoke, "AttachToComponent")
-    g.exec(hop, smoke)
+    g.exec(charred[-1], hop)
+    # Phase 7 Task 16 (spec §7.1): the fire on the bonnet and a looping timer for the dark smoke (SpawnWreckSmoke)
+    burn = set_shown(g, "WreckFire", "true")
+    smoke = timer(g, "SpawnWreckSmoke", (g.var_get("WreckSmokeInterval", FLOAT), "WreckSmokeInterval"))
+    g.exec(hop, burn, smoke)
     fire = g.call_delegate("OnVehicleDestroyed", [obj_pin("Vehicle", VC), obj_pin("Killer", CONTROLLER)])
     me = g.self_node()
     g.link(me, "self", fire, "Vehicle")
@@ -493,13 +913,21 @@ def build() -> Blueprint:
     g.exec(boom, notify)
 
     # ---- TeleportAndStop(NewTransform) ----
-    g = bp.function("TeleportAndStop", doc="Moves the car and zeroes its velocity (respawns and tests).", inputs=["NewTransform:struct:" + TRANSFORM])
+    g = bp.function("TeleportAndStop", doc="Clears the drive state, cuts the camera lag for a frame, moves the car and zeroes its velocity "
+                    "(respawns, resets and tests).",
+                    inputs=["NewTransform:struct:" + TRANSFORM])
+    clear = g.call_self("ClearDriveState")  # Phase 7 Task 10 (Review Focus 5): no look-back or drift carried over a respawn
+    g.link_entry("then", clear, "execute")
+    # the chase camera cuts to the new spot: the spring arm's location lag has no teleport detection (it would fly in from the
+    # old spot for ~0.5 s); ClearDriveState already cut the rotation lag, and TickCamera turns both back on a frame later
+    no_lag = arm_set(g, "bEnableCameraLag", BOOL, "false")
+    cut = g.var_set("bSnapArm", BOOL, default="true")
     m = mesh(g)
     lin = g.call_on(PRIMITIVE, "SetPhysicsLinearVelocity",
                     inputs=[struct_pin("NewVel", VECTOR, default="0,0,0"), Pin("bAddToCurrent", BOOL, default="false"),
                             Pin("BoneName", NAME, default="None")])
     g.link(m, "Mesh", lin, "self")
-    g.link_entry("then", lin, "execute")
+    g.exec(clear, no_lag, cut, lin)
     m2 = mesh(g)
     ang = g.call_on(PRIMITIVE, "SetPhysicsAngularVelocityInDegrees",
                     inputs=[struct_pin("NewAngVel", VECTOR, default="0,0,0"), Pin("bAddToCurrent", BOOL, default="false"),
@@ -652,7 +1080,7 @@ def build() -> Blueprint:
     g.link(me4, "self", f2, "Vehicle")
     g.exec(f1, f2)
     r_true = result_bool(g, "true")
-    g.exec(f2, r_true)
+    g.exec(f2, g.call_self("RefreshRoofWeapon"), r_true)  # Phase 7 Task 13: the new driver's held weapon on the roof
 
     # ---- ExitVehicle -> bool ----
     g = bp.function("ExitVehicle", doc="The driver gets out beside the car and the controller possesses the character.", outputs=["ReturnValue:bool"],
@@ -670,8 +1098,10 @@ def build() -> Blueprint:
     g.exec(find, bf)
     r_false2 = result_bool(g, "false")
     g.link(bf, "else", r_false2, "execute")
+    clear = g.call_self("ClearDriveState")  # Phase 7 Task 10 (Review Focus 5): the parked car keeps no look-back or drift
+    g.link(bf, "then", clear, "execute")
     hb = set_handbrake(g, "true")
-    g.link(bf, "then", hb, "execute")
+    g.exec(clear, hb)
     th = set_throttle(g, "0.0")
     g.exec(hb, th)
     occ = g.var_get("Occupant", OBJECT, cls_ref(CC))
@@ -726,7 +1156,7 @@ def build() -> Blueprint:
     g.link(me, "self", f2, "Vehicle")
     g.exec(f1, f2)
     r_true = result_bool(g, "true")
-    g.exec(f2, r_true)
+    g.exec(f2, g.call_self("RefreshRoofWeapon"), r_true)  # Phase 7 Task 13: no driver, no roof weapon
 
     # ---- EjectOccupant: un-stow beside the car without possession changes (used by respawn) ----
     g = bp.function("EjectOccupant", doc="Puts the occupant beside the car without changing possession (respawn).", locals=["Leaving:" + obj_spec(BP_CHARACTER)])
@@ -768,7 +1198,9 @@ def build() -> Blueprint:
     g.exec(clearcv, clearo)
 
     # ---- TickDriveOverrides(DeltaSeconds): parked/wrecked cars brake; blown tires cap the throttle ----
-    g = bp.function("TickDriveOverrides", doc="Per-frame input: parked or wrecked cars brake; blown tires cap the throttle.", inputs=["DeltaSeconds:float"])
+    g = bp.function("TickDriveOverrides", doc="Per-frame input: parked or wrecked cars brake; blown tires cap the throttle; the player's steering is "
+                    "smoothed and scaled with speed; writes the inputs the arcade layer reads (ArcadeSteer/Throttle/Handbrake).",
+                    inputs=["DeltaSeconds:float"])
     dead = g.var_get("bIsDestroyed", BOOL)
     ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     valid = is_valid(g)
@@ -815,6 +1247,43 @@ def build() -> Blueprint:
     th = set_throttle(g)
     g.link(drive_throttle(g, (mul, "ReturnValue")), "Throttle", th, "Throttle")
     g.link(bai, "else", th, "execute")
+    # Phase 7 Task 9 (spec §5.1, §5.2): the player's steering is smoothed and scaled down with speed; the AI's is not [call],
+    # because the AI controller already computes its own line. Each branch then writes the inputs the arcade layer reads.
+    sm = g.call_self("SmoothSteer", inputs=[Pin("Current", FLOAT), Pin("Target", FLOAT), Pin("DeltaSeconds", FLOAT)],
+                     outputs=[Pin("Steer", FLOAT, "out")], pure=True)
+    g.link(g.var_get("SmoothedSteer", FLOAT), "SmoothedSteer", sm, "Current")
+    g.link(g.input_axis_value("MoveRight"), "ReturnValue", sm, "Target")
+    g.link_entry("DeltaSeconds", sm, "DeltaSeconds")
+    ss = g.var_set("SmoothedSteer", FLOAT)
+    g.link(sm, "Steer", ss, "SmoothedSteer")
+    g.exec(th, ss)
+    sc = g.call_self("ComputeSteerScale", inputs=[Pin("SpeedKPH", FLOAT)], outputs=[Pin("Scale", FLOAT, "out")], pure=True)
+    g.link(g.call_self("GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True), "KPH", sc, "SpeedKPH")
+    steer = _f(g, "Multiply_FloatFloat", (ss, "Output_Get"), (sc, "Scale"))
+    st = set_steering(g)
+    g.link(steer[0], steer[1], st, "Steering")
+    g.exec(ss, st)
+
+    def arcade_inputs(prev, steer_src, throttle_src, handbrake_src, steer_default=None, throttle_default=None, handbrake_default=None,
+                      reset_player=False, parked=False):
+        """ArcadeSteer, ArcadeThrottle, bArcadeHandbrake := the sources (or literals); reset_player also clears the player's
+        smoothed steer and held handbrake (a parked or AI-driven car starts clean when a player takes it); parked ends a drift."""
+        chain = []
+        for name, cat, src, lit in (("ArcadeSteer", FLOAT, steer_src, steer_default), ("ArcadeThrottle", FLOAT, throttle_src, throttle_default),
+                                    ("bArcadeHandbrake", BOOL, handbrake_src, handbrake_default)):
+            s = g.var_set(name, cat, default=lit)
+            if src is not None:
+                g.link(src[0], src[1], s, name)
+            chain.append(s)
+        if reset_player:
+            chain += [g.var_set("SmoothedSteer", FLOAT, default="0.0"), g.var_set("bHandbrakeHeld", BOOL, default="false")]
+        if parked:
+            chain.append(g.var_set("bDrifting", BOOL, default="false"))  # a parked or wrecked car brakes: no drift, no boost
+        g.exec(prev, *chain)
+
+    arcade_inputs(hb, None, None, None, "0.0", "0.0", "true", reset_player=True, parked=True)
+    arcade_inputs(hb_ai, _fvar(g, "AISteering"), _fvar(g, "AIThrottle"), _fvar(g, "bAIHandbrake", BOOL), reset_player=True)
+    arcade_inputs(st, (ss, "Output_Get"), (g.input_axis_value("MoveForward"), "ReturnValue"), _fvar(g, "bHandbrakeHeld", BOOL))
 
     # ComputeDriveThrottle(Input, SpeedKPH) -> Throttle (Phase 5 spec §3.2): the car's throttle scale, and a speed limiter
     # that cuts positive throttle at TopSpeedKPH (0 = none); braking and reverse are only scaled, never cut
@@ -843,6 +1312,350 @@ def build() -> Blueprint:
     g.link_result(pick, "ReturnValue", "Throttle")
     g.link_entry("then", "result", "execute")
 
+    # ---- Phase 7 Task 8: the handling math (pure; spec §5.2), used by the arcade driving layer ----
+    def fm(g, fn, a=None, b=None):
+        return math2(g, fn, FLOAT, a, b)
+
+    def var(g, name):
+        return (g.var_get(name, FLOAT), name)
+
+    def ln(g, src, node, pin):
+        g.link(src[0], src[1], node, pin)
+
+    def clamp01(g, src):
+        c = g.call_static(MATH, "FClamp", inputs=[Pin("Value", FLOAT), Pin("Min", FLOAT, default="0.0"), Pin("Max", FLOAT, default="1.0")],
+                          outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+        ln(g, src, c, "Value")
+        return (c, "ReturnValue")
+
+    def pick(g, cond, a, b):
+        """SelectFloat: a when cond, else b (a, b = source tuples or literal strings)."""
+        n = g.call_static(MATH, "SelectFloat", inputs=[Pin("A", FLOAT, default=a if isinstance(a, str) else None),
+                                                       Pin("B", FLOAT, default=b if isinstance(b, str) else None), Pin("bPickA", BOOL)],
+                          outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+        if not isinstance(a, str):
+            ln(g, a, n, "A")
+        if not isinstance(b, str):
+            ln(g, b, n, "B")
+        ln(g, cond, n, "bPickA")
+        return (n, "ReturnValue")
+
+    def ratio(g, src_pin, ref):
+        d = fm(g, "Divide_FloatFloat", b=ref if isinstance(ref, str) else None)
+        g.link_entry(src_pin, d, "A")
+        if not isinstance(ref, str):
+            ln(g, ref, d, "B")
+        return (d, "ReturnValue")
+
+    g = bp.function("ComputeSteerScale", doc="lerp(1, SteerAtSpeed, clamp(SpeedKPH / SteerSpeedRef, 0, 1)): less steering at speed.",
+                    inputs=["SpeedKPH:float"], outputs=["Scale:float"], pure=True)
+    alpha = clamp01(g, ratio(g, "SpeedKPH", var(g, "SteerSpeedRef")))
+    lp = g.call_static(MATH, "Lerp", inputs=[Pin("A", FLOAT, default="1.0"), Pin("B", FLOAT), Pin("Alpha", FLOAT)],
+                       outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    ln(g, var(g, "SteerAtSpeed"), lp, "B")
+    ln(g, alpha, lp, "Alpha")
+    g.link_result(lp, "ReturnValue", "Scale")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("SmoothSteer", doc="Moves Current toward Target at SteerRiseRate when Target is larger and on the same side, else at SteerReturnRate; never overshoots.",
+                    inputs=["Current:float", "Target:float", "DeltaSeconds:float"], outputs=["Steer:float"], pure=True)
+    abs_t = g.call_static(MATH, "Abs", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("Target", abs_t, "A")
+    abs_c = g.call_static(MATH, "Abs", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("Current", abs_c, "A")
+    larger = compare(g, "Greater_FloatFloat", FLOAT)
+    g.link(abs_t, "ReturnValue", larger, "A")
+    g.link(abs_c, "ReturnValue", larger, "B")
+    prod = fm(g, "Multiply_FloatFloat")
+    g.link_entry("Current", prod, "A")
+    g.link_entry("Target", prod, "B")
+    same = compare(g, "GreaterEqual_FloatFloat", FLOAT, b="0.0")
+    g.link(prod, "ReturnValue", same, "A")
+    rising = and_bool(g)
+    g.link(larger, "ReturnValue", rising, "A")
+    g.link(same, "ReturnValue", rising, "B")
+    rate = pick(g, (rising, "ReturnValue"), var(g, "SteerRiseRate"), var(g, "SteerReturnRate"))
+    step = fm(g, "Multiply_FloatFloat")
+    ln(g, rate, step, "A")
+    g.link_entry("DeltaSeconds", step, "B")
+    neg = fm(g, "Multiply_FloatFloat", b="-1.0")
+    g.link(step, "ReturnValue", neg, "A")
+    diff = fm(g, "Subtract_FloatFloat")
+    g.link_entry("Target", diff, "A")
+    g.link_entry("Current", diff, "B")
+    cl = g.call_static(MATH, "FClamp", inputs=[Pin("Value", FLOAT), Pin("Min", FLOAT), Pin("Max", FLOAT)],
+                       outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(diff, "ReturnValue", cl, "Value")
+    g.link(neg, "ReturnValue", cl, "Min")
+    g.link(step, "ReturnValue", cl, "Max")
+    res = fm(g, "Add_FloatFloat")
+    g.link_entry("Current", res, "A")
+    g.link(cl, "ReturnValue", res, "B")
+    g.link_result(res, "ReturnValue", "Steer")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("ComputeDownforce", doc="min(DownforceG x 980 x (SpeedKPH / 100)^2, DownforceCap) in cm/s^2.",
+                    inputs=["SpeedKPH:float"], outputs=["Accel:float"], pure=True)
+    sq = g.call_static(MATH, "Square", inputs=[Pin("A", FLOAT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    ln(g, ratio(g, "SpeedKPH", "100.0"), sq, "A")
+    gm = fm(g, "Multiply_FloatFloat", b="980.0")
+    ln(g, var(g, "DownforceG"), gm, "A")
+    raw = fm(g, "Multiply_FloatFloat")
+    g.link(gm, "ReturnValue", raw, "A")
+    g.link(sq, "ReturnValue", raw, "B")
+    mn = g.call_static(MATH, "FMin", inputs=[Pin("A", FLOAT), Pin("B", FLOAT)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(raw, "ReturnValue", mn, "A")
+    ln(g, var(g, "DownforceCap"), mn, "B")
+    g.link_result(mn, "ReturnValue", "Accel")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("ComputeGripAccel", doc="-LateralSpeed x GripAssist (x DriftGrip while drifting): the sideways grip acceleration.",
+                    inputs=["LateralSpeed:float", "bDriftingNow:bool"], outputs=["Accel:float"], pure=True)
+    gr = fm(g, "Multiply_FloatFloat")
+    ln(g, var(g, "GripAssist"), gr, "A")
+    ln(g, pick(g, ("entry", "bDriftingNow"), var(g, "DriftGrip"), "1.0"), gr, "B")
+    lat = fm(g, "Multiply_FloatFloat")
+    g.link_entry("LateralSpeed", lat, "A")
+    g.link(gr, "ReturnValue", lat, "B")
+    ng = fm(g, "Multiply_FloatFloat", b="-1.0")
+    g.link(lat, "ReturnValue", ng, "A")
+    g.link_result(ng, "ReturnValue", "Accel")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("ComputeTargetFOV", doc="90 + 15 x clamp(SpeedKPH / 160, 0, 1) + 8 while boosting.",
+                    inputs=["SpeedKPH:float", "bBoosting:bool"], outputs=["FOV:float"], pure=True)
+    sp = fm(g, "Multiply_FloatFloat", b="15.0")
+    ln(g, clamp01(g, ratio(g, "SpeedKPH", "160.0")), sp, "A")
+    bo = pick(g, ("entry", "bBoosting"), "8.0", "0.0")
+    a1 = fm(g, "Add_FloatFloat", a="90.0")
+    g.link(sp, "ReturnValue", a1, "B")
+    a2 = fm(g, "Add_FloatFloat")
+    g.link(a1, "ReturnValue", a2, "A")
+    ln(g, bo, a2, "B")
+    g.link_result(a2, "ReturnValue", "FOV")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("ComputeEnginePitch", doc="0.6 + 1.4 x clamp(RPMRatio, 0, 1).", inputs=["RPMRatio:float"], outputs=["Pitch:float"], pure=True)
+    cr = clamp01(g, ("entry", "RPMRatio"))
+    pm = fm(g, "Multiply_FloatFloat", b="1.4")
+    ln(g, cr, pm, "A")
+    pa = fm(g, "Add_FloatFloat", a="0.6")
+    g.link(pm, "ReturnValue", pa, "B")
+    g.link_result(pa, "ReturnValue", "Pitch")
+    g.link_entry("then", "result", "execute")
+
+    # ---- Phase 7 Task 9: the arcade layer (spec §5.1, §5.2); forces and torques are mass-independent (bAccelChange) ----
+    # Long frames: a damping acceleration -Value x Rate acts for the frame's physics time (at most DeltaSeconds; headless runs
+    # throttle to 3 fps, so DeltaSeconds is about 0.33 s), so LimitDamping caps it at |Value| / DeltaSeconds: one frame can
+    # remove all of a slide or a spin, never reverse it.
+    g = bp.function("LimitDamping", doc="Caps a damping acceleration at |Value| / DeltaSeconds, so one long frame never reverses Value.",
+                    inputs=["Accel:float", "Value:float", "DeltaSeconds:float"], outputs=["Limited:float"], pure=True)
+    dt = _f(g, "FMax", ("entry", "DeltaSeconds"), "0.001")
+    cap = _f(g, "Divide_FloatFloat", _f(g, "Abs", ("entry", "Value")), dt)
+    cl = g.call_static(MATH, "FClamp", inputs=[Pin("Value", FLOAT), Pin("Min", FLOAT), Pin("Max", FLOAT)],
+                       outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("Accel", cl, "Value")
+    ln(g, _f(g, "Multiply_FloatFloat", cap, "-1.0"), cl, "Min")
+    ln(g, cap, cl, "Max")
+    g.link_result(cl, "ReturnValue", "Limited")
+    g.link_entry("then", "result", "execute")
+
+    g = bp.function("IsGrounded", doc="A Visibility line trace from the actor origin GroundProbe cm straight down hits (self ignored).",
+                    outputs=["ReturnValue:bool"])
+    origin = self_actor_location(g)
+    below = g.call_static(MATH, "Subtract_VectorVector", inputs=[struct_pin("A", VECTOR), struct_pin("B", VECTOR)],
+                          outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(origin, "ReturnValue", below, "A")
+    probe = g.call_static(MATH, "MakeVector", inputs=[Pin("X", FLOAT, default="0.0"), Pin("Y", FLOAT, default="0.0"), Pin("Z", FLOAT)],
+                          outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    ln(g, _fvar(g, "GroundProbe"), probe, "Z")
+    g.link(probe, "ReturnValue", below, "B")
+    tr = g.call_static(SYS, "LineTraceSingle",
+                       inputs=[Pin("WorldContextObject", OBJECT, hidden=True), struct_pin("Start", VECTOR), struct_pin("End", VECTOR),
+                               Pin("TraceChannel", "byte", default="TraceTypeQuery1"), Pin("bTraceComplex", BOOL, default="false"),
+                               Pin("DrawDebugType", "byte", default="None"), Pin("bIgnoreSelf", BOOL, default="true")],
+                       outputs=[struct_pin("OutHit", HIT_RESULT, "out"), Pin("ReturnValue", BOOL, "out")])
+    g.link(origin, "ReturnValue", tr, "Start")
+    g.link(below, "ReturnValue", tr, "End")
+    g.link_entry("then", tr, "execute")
+    r = g.function_result([Pin("ReturnValue", BOOL)])
+    g.link(tr, "ReturnValue", r, "ReturnValue")
+    g.exec(tr, r)
+
+    g = bp.function("UpdateDrift", inputs=["Steer:float", "SpeedKPH:float", "bHandbrake:bool"],
+                    doc="Drift starts with the handbrake, |Steer| >= DriftSteerMin, SpeedKPH >= DriftMinSpeed and grounded; it ends on "
+                        "a handbrake release, below DriftExitSpeed or airborne. A release after DriftBoostMinSeconds kicks the car "
+                        "forward by DriftBoostSpeed (DriftBoostCount, OnDriftBoost).")
+    bd = g.branch()
+    g.note(bd, "drifting already?")
+    ln(g, _fvar(g, "bDrifting", BOOL), bd, "Condition")
+    g.link_entry("then", bd, "execute")
+    # start
+    steer_ok = _f(g, "GreaterEqual_FloatFloat", _f(g, "Abs", ("entry", "Steer")), _fvar(g, "DriftSteerMin"), BOOL)
+    fast = _f(g, "GreaterEqual_FloatFloat", ("entry", "SpeedKPH"), _fvar(g, "DriftMinSpeed"), BOOL)
+    start = and_bool(g)
+    g.link_entry("bHandbrake", start, "A")
+    ln(g, steer_ok, start, "B")
+    start2 = and_bool(g)
+    g.link(start, "ReturnValue", start2, "A")
+    ln(g, fast, start2, "B")
+    start3 = and_bool(g)
+    g.link(start2, "ReturnValue", start3, "A")
+    ln(g, _fvar(g, "bGrounded", BOOL), start3, "B")
+    bs = g.branch()
+    g.note(bs, "handbrake + steer + speed + grounded?")
+    g.link(start3, "ReturnValue", bs, "Condition")
+    g.link(bd, "else", bs, "execute")
+    on = g.var_set("bDrifting", BOOL, default="true")
+    g.link(bs, "then", on, "execute")
+    since = g.var_set("DriftStartTime", FLOAT)
+    g.link(game_time(g), "ReturnValue", since, "DriftStartTime")
+    g.exec(on, since)
+    # end
+    released = not_bool(g)
+    g.link_entry("bHandbrake", released, "A")
+    slow = _f(g, "Less_FloatFloat", ("entry", "SpeedKPH"), _fvar(g, "DriftExitSpeed"), BOOL)
+    airborne = not_bool(g)
+    ln(g, _fvar(g, "bGrounded", BOOL), airborne, "A")
+    end1 = or_bool(g)
+    g.link(released, "ReturnValue", end1, "A")
+    ln(g, slow, end1, "B")
+    end2 = or_bool(g)
+    g.link(end1, "ReturnValue", end2, "A")
+    g.link(airborne, "ReturnValue", end2, "B")
+    be = g.branch()
+    g.note(be, "released, too slow or airborne?")
+    g.link(end2, "ReturnValue", be, "Condition")
+    g.link(bd, "then", be, "execute")
+    off = g.var_set("bDrifting", BOOL, default="false")
+    g.link(be, "then", off, "execute")
+    held = _f(g, "Subtract_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "DriftStartTime"))
+    long_enough = _f(g, "GreaterEqual_FloatFloat", held, _fvar(g, "DriftBoostMinSeconds"), BOOL)
+    boost_ok = and_bool(g)
+    g.link(released, "ReturnValue", boost_ok, "A")
+    ln(g, long_enough, boost_ok, "B")
+    bb = g.branch()
+    g.note(bb, "ended by a release after DriftBoostMinSeconds?")
+    g.link(boost_ok, "ReturnValue", bb, "Condition")
+    g.exec(off, bb)
+    kick = _mesh_call(g, "AddImpulse", "Impulse", _vscale(g, _self_vec(g, "GetActorForwardVector"), _fvar(g, "DriftBoostSpeed")), "bVelChange")
+    g.link(bb, "then", kick, "execute")
+    count = g.var_set("DriftBoostCount", INT)
+    inc = math2(g, "Add_IntInt", INT, b="1")
+    ln(g, _fvar(g, "DriftBoostCount", INT), inc, "A")
+    g.link(inc, "ReturnValue", count, "DriftBoostCount")
+    fire = g.call_delegate("OnDriftBoost")
+    g.exec(kick, count, fire)
+
+    g = bp.function("TickArcade", inputs=["DeltaSeconds:float"],
+                    doc="Per-frame arcade handling: ground probe and drift state; the handbrake input (held, but not while drifting); grounded: grip assist, downforce, stability or "
+                        "drift yaw; airborne past AirDelay: pitch/roll damping, levelling, and air control for the player's car.")
+    probe_hit = g.call_self("IsGrounded", outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link_entry("then", probe_hit, "execute")
+    sg = g.var_set("bGrounded", BOOL)
+    g.link(probe_hit, "ReturnValue", sg, "bGrounded")
+    g.exec(probe_hit, sg)
+    bg = g.branch()
+    g.link(sg, "Output_Get", bg, "Condition")
+    g.exec(sg, bg)
+    landed = g.var_set("AirborneSince", FLOAT, default="-1.0")
+    # Phase 7 Task 10 (spec §5.3): landing after more than LandShakeAirTime in the air shakes the driver's view
+    was_up = and_bool(g)
+    ln(g, _f(g, "GreaterEqual_FloatFloat", _fvar(g, "AirborneSince"), "0.0", BOOL), was_up, "A")
+    ln(g, _f(g, "Greater_FloatFloat", _f(g, "Subtract_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "AirborneSince")),
+             _fvar(g, "LandShakeAirTime"), BOOL), was_up, "B")
+    bland = g.branch()
+    g.note(bland, "landing after more than LandShakeAirTime in the air?")
+    g.link(was_up, "ReturnValue", bland, "Condition")
+    g.link(bg, "then", bland, "execute")
+    land_shake = driver_shake(g)
+    g.link(bland, "then", land_shake, "execute")
+    g.exec(land_shake, landed)
+    g.link(bland, "else", landed, "execute")
+    took_off = g.branch()
+    g.note(took_off, "just left the ground?")
+    ln(g, _f(g, "Less_FloatFloat", _fvar(g, "AirborneSince"), "0.0", BOOL), took_off, "Condition")
+    g.link(bg, "else", took_off, "execute")
+    mark = g.var_set("AirborneSince", FLOAT)
+    g.link(game_time(g), "ReturnValue", mark, "AirborneSince")
+    g.link(took_off, "then", mark, "execute")
+    kph = lambda: (g.call_self("GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True), "KPH")
+    upd = g.call_self("UpdateDrift", inputs=[Pin("Steer", FLOAT), Pin("SpeedKPH", FLOAT), Pin("bHandbrake", BOOL)])
+    ln(g, _fvar(g, "ArcadeSteer"), upd, "Steer")
+    # the drift rules use the speed over the ground: a car sliding sideways at 60 km/h is not "below 25 km/h" just because
+    # its forward component is (GetSpeedKPH is the forward speed)
+    ground_speed = g.call_static(MATH, "VSize", inputs=[struct_pin("A", VECTOR)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    ln(g, _self_vec(g, "GetVelocity"), ground_speed, "A")
+    ln(g, _f(g, "Multiply_FloatFloat", (ground_speed, "ReturnValue"), "0.036"), upd, "SpeedKPH")
+    ln(g, _fvar(g, "bArcadeHandbrake", BOOL), upd, "bHandbrake")
+    for src, pin in ((landed, "then"), (mark, "then"), (took_off, "else")):
+        g.link(src, pin, upd, "execute")
+    # the handbrake button starts and holds a drift, but the wheels are not locked while drifting [call]: the arcade yaw
+    # turns the car, and locked rear wheels scrubbed a full-lock drift from 80 km/h to 4 km/h in 1 s (a spin, no boost)
+    lock = and_bool(g)
+    ln(g, _fvar(g, "bArcadeHandbrake", BOOL), lock, "A")
+    no_drift = not_bool(g)
+    ln(g, _fvar(g, "bDrifting", BOOL), no_drift, "A")
+    g.link(no_drift, "ReturnValue", lock, "B")
+    hb_in = mv_call(g, "SetHandbrakeInput", inputs=[Pin("bNewHandbrake", BOOL)])
+    g.link(lock, "ReturnValue", hb_in, "bNewHandbrake")
+    g.exec(upd, hb_in)
+    smoke = g.call_self("TickTyreSmoke")  # Phase 7 Task 16 (spec §5.5)
+    ground = g.branch()
+    g.note(ground, "on the ground?")
+    ln(g, _fvar(g, "bGrounded", BOOL), ground, "Condition")
+    g.exec(hb_in, smoke, ground)
+    # grounded: grip assist on the sideways speed (x DriftGrip while drifting), then downforce
+    right, up = _self_vec(g, "GetActorRightVector"), _self_vec(g, "GetActorUpVector")
+    lateral = _vbin(g, "Dot_VectorVector", _self_vec(g, "GetVelocity"), right)
+    grip = g.call_self("ComputeGripAccel", inputs=[Pin("LateralSpeed", FLOAT), Pin("bDriftingNow", BOOL)], outputs=[Pin("Accel", FLOAT, "out")], pure=True)
+    ln(g, lateral, grip, "LateralSpeed")
+    ln(g, _fvar(g, "bDrifting", BOOL), grip, "bDriftingNow")
+    f_grip = _mesh_call(g, "AddForce", "Force", _vscale(g, right, _limited(g, (grip, "Accel"), lateral)), "bAccelChange")
+    g.link(ground, "then", f_grip, "execute")
+    down = g.call_self("ComputeDownforce", inputs=[Pin("SpeedKPH", FLOAT)], outputs=[Pin("Accel", FLOAT, "out")], pure=True)
+    ln(g, kph(), down, "SpeedKPH")
+    f_down = _mesh_call(g, "AddForce", "Force", _vscale(g, up, _f(g, "Multiply_FloatFloat", (down, "Accel"), "-1.0")), "bAccelChange")
+    g.exec(f_grip, f_down)
+    bdr = g.branch()
+    g.note(bdr, "drifting?")
+    ln(g, _fvar(g, "bDrifting", BOOL), bdr, "Condition")
+    g.exec(f_down, bdr)
+    # drifting: yaw acceleration = steer x DriftYawAccel (positive steer turns right, a positive yaw rate about up)
+    yaw_acc = _f(g, "Multiply_FloatFloat", _fvar(g, "ArcadeSteer"), _fvar(g, "DriftYawAccel"))
+    t_drift = _mesh_call(g, "AddTorqueInDegrees", "Torque", _vscale(g, up, yaw_acc), "bAccelChange")
+    g.link(bdr, "then", t_drift, "execute")
+    # not drifting, steering near the centre: stability damps the yaw rate
+    centred = _f(g, "Less_FloatFloat", _f(g, "Abs", _fvar(g, "ArcadeSteer")), "0.1", BOOL)
+    bst = g.branch()
+    g.note(bst, "|steer| < 0.1?")
+    ln(g, centred, bst, "Condition")
+    g.link(bdr, "else", bst, "execute")
+    yaw_rate = _vbin(g, "Dot_VectorVector", _ang_vel(g), up)
+    damp_yaw = _f(g, "Multiply_FloatFloat", _f(g, "Multiply_FloatFloat", yaw_rate, _fvar(g, "StabilityDamping")), "-1.0")
+    t_stab = _mesh_call(g, "AddTorqueInDegrees", "Torque", _vscale(g, up, _limited(g, damp_yaw, yaw_rate)), "bAccelChange")
+    g.link(bst, "then", t_stab, "execute")
+    # airborne for longer than AirDelay: damp pitch and roll rates, level toward world up, and (player) air control
+    in_air = _f(g, "Subtract_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "AirborneSince"))
+    bair = g.branch()
+    g.note(bair, "airborne longer than AirDelay?")
+    ln(g, _f(g, "Greater_FloatFloat", in_air, _fvar(g, "AirDelay"), BOOL), bair, "Condition")
+    g.link(ground, "else", bair, "execute")
+    fwd, right2, up2 = _self_vec(g, "GetActorForwardVector"), _self_vec(g, "GetActorRightVector"), _self_vec(g, "GetActorUpVector")
+    w = _ang_vel(g)
+    pitch_rate, roll_rate = _vbin(g, "Dot_VectorVector", w, right2), _vbin(g, "Dot_VectorVector", w, fwd)
+    damp = lambda rate: _limited(g, _f(g, "Multiply_FloatFloat", _f(g, "Multiply_FloatFloat", rate, _fvar(g, "AirDamping")), "-1.0"), rate)
+    damping = _vbin(g, "Add_VectorVector", _vscale(g, right2, damp(pitch_rate)), _vscale(g, fwd, damp(roll_rate)))
+    levelling = _vscale(g, _vbin(g, "Cross_VectorVector", up2, "0,0,1"), _fvar(g, "AirLevelAccel"))
+    # air control: throttle pitches (forward = nose down, a positive rate about right), steer rolls (right = right side down,
+    # a negative rate about forward); AI cars get none [call]
+    control_gain = pick(g, _fvar(g, "bAIControlled", BOOL), "0.0", _fvar(g, "AirControlAccel"))
+    control = _vscale(g, _vbin(g, "Add_VectorVector", _vscale(g, right2, _fvar(g, "ArcadeThrottle")),
+                               _vscale(g, fwd, _f(g, "Multiply_FloatFloat", _fvar(g, "ArcadeSteer"), "-1.0"))), control_gain)
+    total = _vbin(g, "Add_VectorVector", _vbin(g, "Add_VectorVector", damping, levelling), control)
+    t_air = _mesh_call(g, "AddTorqueInDegrees", "Torque", total, "bAccelChange")
+    g.link(bair, "then", t_air, "execute")
+
     # SetAIInput(Throttle, Steering, bHandbrake): what TickDriveOverrides applies while bAIControlled
     g = bp.function("SetAIInput", inputs=["Throttle:float", "Steering:float", "bHandbrake:bool"],
                     doc="The AI controller's inputs; TickDriveOverrides applies them every frame while bAIControlled.")
@@ -854,6 +1667,254 @@ def build() -> Blueprint:
     s3 = g.var_set("bAIHandbrake", BOOL)
     g.link_entry("bHandbrake", s3, "bAIHandbrake")
     g.exec(s1, s2, s3)
+
+    # ---- Phase 7 Task 16: tyre smoke (spec §5.5) and the wreck's smoke (spec §7.1), only near the player's camera ----
+    g = bp.function("TickTyreSmoke", doc="Spec §5.5: on the ground and drifting or sliding (|lateral speed| > TyreSmokeLateral), a "
+                    "BP_DFFxPuff at each rear wheel every TyreSmokeInterval, only within %g cm of the player's camera "
+                    "(GameMode.IsNearPlayerView; Review Focus 2)." % FX_VIEW_RADIUS)
+    lateral = _vbin(g, "Dot_VectorVector", _self_vec(g, "GetVelocity"), _self_vec(g, "GetActorRightVector"))
+    sliding = _f(g, "Greater_FloatFloat", _f(g, "Abs", lateral), _fvar(g, "TyreSmokeLateral"), BOOL)
+    smoky = or_bool(g)
+    ln(g, _fvar(g, "bDrifting", BOOL), smoky, "A")
+    ln(g, sliding, smoky, "B")
+    on_ground = and_bool(g)
+    ln(g, _fvar(g, "bGrounded", BOOL), on_ground, "A")
+    g.link(smoky, "ReturnValue", on_ground, "B")
+    due = _f(g, "GreaterEqual_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "NextTyreSmokeTime"), BOOL)
+    go = and_bool(g)
+    g.link(on_ground, "ReturnValue", go, "A")
+    ln(g, due, go, "B")
+    b = g.branch()
+    g.note(b, "on the ground, drifting or sliding, and the next puff due?")
+    g.link(go, "ReturnValue", b, "Condition")
+    g.link_entry("then", b, "execute")
+    near = near_player_view(g, _self_vec(g, "K2_GetActorLocation"), (b, "then"))
+    nxt = g.var_set("NextTyreSmokeTime", FLOAT)
+    ln(g, _f(g, "Add_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "TyreSmokeInterval")), nxt, "NextTyreSmokeTime")
+    g.link(near, "then", nxt, "execute")
+    prev = (nxt, "then")
+    for wheel in ("WheelRL", "WheelRR"):
+        first, last, _ = spawn_fx(g, BP_FX_PUFF, transform_at(g, comp_location(g, wheel)))
+        g.link(prev[0], prev[1], first, "execute")
+        prev = (last, "then")
+
+    g = bp.function("SpawnWreckSmoke", doc="The wreck's looping timer (every WreckSmokeInterval from DestroyVehicle): a BP_DFFxPuff "
+                    "darkened by WreckSmokeTint over the WreckFire while within %g cm of the player's camera; the timer stops if the "
+                    "car is no longer wrecked." % FX_VIEW_RADIUS)
+    wrecked = g.branch()
+    g.note(wrecked, "still a wreck?")
+    ln(g, _fvar(g, "bIsDestroyed", BOOL), wrecked, "Condition")
+    g.link_entry("then", wrecked, "execute")
+    g.link(wrecked, "else", timer(g, "SpawnWreckSmoke", None, clear=True), "execute")
+    above = _vbin(g, "Add_VectorVector", comp_location(g, "WreckFire"), "0,0,60")
+    near = near_player_view(g, above, (wrecked, "then"))
+    tint = (g.var_get("WreckSmokeTint", STRUCT, struct_ref(LINEAR_COLOR)), "WreckSmokeTint")
+    first, _, _ = spawn_fx(g, BP_FX_PUFF, transform_at(g, above), tint_src=tint)
+    g.link(near, "then", first, "execute")
+
+    # ---- Phase 7 Task 10: reset, look-back, the chase camera, camera shakes (spec §5.2 Reset, §5.3) ----
+    g = bp.function("PlayDriverShake", inputs=["Shake:class:" + CAMERA_SHAKE_BASE, "Scale:float"],
+                    doc="Plays a camera shake on the driver's view when a player drives this car (an AI driver has no view).")
+    ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    to_pc = g.cast(PLAYER_CONTROLLER)
+    g.note(to_pc, "driven by a player?")
+    g.link(ctrl, "ReturnValue", to_pc, "Object")
+    g.link_entry("then", to_pc, "execute")
+    shake = start_camera_shake(g, (to_pc, as_pin(PLAYER_CONTROLLER)), ("entry", "Shake"), ("entry", "Scale"))
+    g.link(to_pc, "then", shake, "execute")
+
+    # Phase 7 Task 18 (spec §7.6): a hit taken shows the damage vignette on the driving player's race HUD
+    g = bp.function("ShowDriverDamage", doc="The damage vignette (WBP_DFRaceHUD.ShowDamage) on the race HUD of the player driving this car.")
+    ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    to_pc = g.cast(PLAYER_CONTROLLER)
+    g.note(to_pc, "driven by a player?")
+    g.link(ctrl, "ReturnValue", to_pc, "Object")
+    g.link_entry("then", to_pc, "execute")
+    hud = g.call_on(PLAYER_CONTROLLER, "GetHUD", outputs=[obj_pin("ReturnValue", "/Script/Engine.HUD", "out")], pure=True)
+    g.link(to_pc, as_pin(PLAYER_CONTROLLER), hud, "self")
+    to_hud = cast_to(g, BP_HUD)
+    g.link(hud, "ReturnValue", to_hud, "Object")
+    g.link(to_pc, "then", to_hud, "execute")
+    widget = g.var_get_on(gen(BP_HUD), "HUDWidget", OBJECT, cls_ref(USER_WIDGET))
+    g.link(to_hud, as_pin(BP_HUD), widget, "self")
+    to_race = cast_to(g, WBP_HUD)
+    g.link(widget, "HUDWidget", to_race, "Object")
+    g.link(to_hud, "then", to_race, "execute")
+    show = g.call_on(gen(WBP_HUD), "ShowDamage")
+    g.link(to_race, as_pin(WBP_HUD), show, "self")
+    g.link(to_race, "then", show, "execute")
+
+    g = bp.function("ResetCar", outputs=["ReturnValue:bool"],
+                    doc="Spec §5.2: below ResetMaxSpeed km/h over the ground and ResetCooldown s after the last reset, the car is lifted "
+                        "ResetLift cm with pitch and roll zeroed and its velocities zeroed (TeleportAndStop): no death, no position gain. "
+                        "Refused (false) otherwise, and for a wreck.")
+    ground_kph = g.call_static(MATH, "VSize", inputs=[struct_pin("A", VECTOR)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    ln(g, _self_vec(g, "GetVelocity"), ground_kph, "A")
+    fast = _f(g, "GreaterEqual_FloatFloat", _f(g, "Multiply_FloatFloat", (ground_kph, "ReturnValue"), "0.036"), _fvar(g, "ResetMaxSpeed"), BOOL)
+    cooling = _f(g, "Less_FloatFloat", _f(g, "Subtract_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "LastResetTime")),
+                 _fvar(g, "ResetCooldown"), BOOL)
+    refuse = or_bool(g)
+    ln(g, _fvar(g, "bIsDestroyed", BOOL), refuse, "A")
+    ln(g, fast, refuse, "B")
+    refuse2 = or_bool(g)
+    g.link(refuse, "ReturnValue", refuse2, "A")
+    ln(g, cooling, refuse2, "B")
+    br = g.branch()
+    g.note(br, "wrecked, too fast or cooling down?")
+    g.link(refuse2, "ReturnValue", br, "Condition")
+    g.link_entry("then", br, "execute")
+    g.link(br, "then", result_bool(g, "false"), "execute")
+    stamp = g.var_set("LastResetTime", FLOAT)
+    g.link(game_time(g), "ReturnValue", stamp, "LastResetTime")
+    g.link(br, "else", stamp, "execute")
+    lift = g.call_static(MATH, "MakeVector", inputs=[Pin("X", FLOAT, default="0.0"), Pin("Y", FLOAT, default="0.0"), Pin("Z", FLOAT)],
+                         outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    ln(g, _fvar(g, "ResetLift"), lift, "Z")
+    lifted = _vbin(g, "Add_VectorVector", (self_actor_location(g), "ReturnValue"), (lift, "ReturnValue"))
+    rot = g.call_self_native(ACTOR, "K2_GetActorRotation", outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    yaw = g.call_static(MATH, "BreakRotator", inputs=[struct_pin("InRot", ROTATOR)],
+                        outputs=[Pin("Roll", FLOAT, "out"), Pin("Pitch", FLOAT, "out"), Pin("Yaw", FLOAT, "out")], pure=True)
+    g.link(rot, "ReturnValue", yaw, "InRot")
+    level = g.call_static(MATH, "MakeRotator", inputs=[Pin("Roll", FLOAT, default="0.0"), Pin("Pitch", FLOAT, default="0.0"), Pin("Yaw", FLOAT)],
+                          outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    g.link(yaw, "Yaw", level, "Yaw")
+    xf = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
+                                                        struct_pin("Scale", VECTOR, default="1,1,1")],
+                       outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
+    ln(g, lifted, xf, "Location")
+    g.link(level, "ReturnValue", xf, "Rotation")
+    tp = g.call_self("TeleportAndStop", inputs=[struct_pin("NewTransform", TRANSFORM)])
+    g.link(xf, "ReturnValue", tp, "NewTransform")
+    g.exec(stamp, tp)
+    said = log_line(g, "reset ", name_of(g, (g.self_node(), "self")))
+    g.exec(tp, said)
+    g.exec(said, result_bool(g, "true"))
+
+    g = bp.function("SetLookBack", inputs=["bOn:bool"],
+                    doc="Look-back (spec §5.3): the spring arm turns to the rear (ArmBaseRotation + 180 degrees of yaw) or back to the chase "
+                        "view; the turn is a cut, not a swing (the arm's rotation lag is off until TickCamera's next frame).")
+    s = g.var_set("bLookBack", BOOL)
+    g.link_entry("bOn", s, "bLookBack")
+    g.link_entry("then", s, "execute")
+    base = g.call_static(MATH, "BreakRotator", inputs=[struct_pin("InRot", ROTATOR)],
+                         outputs=[Pin("Roll", FLOAT, "out"), Pin("Pitch", FLOAT, "out"), Pin("Yaw", FLOAT, "out")], pure=True)
+    g.link(g.var_get("ArmBaseRotation", STRUCT, struct_ref(ROTATOR)), "ArmBaseRotation", base, "InRot")
+    turned = _f(g, "Add_FloatFloat", (base, "Yaw"), pick(g, ("entry", "bOn"), "180.0", "0.0"))
+    want = g.call_static(MATH, "MakeRotator", inputs=[Pin("Roll", FLOAT), Pin("Pitch", FLOAT), Pin("Yaw", FLOAT)],
+                         outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    g.link(base, "Roll", want, "Roll")
+    g.link(base, "Pitch", want, "Pitch")
+    ln(g, turned, want, "Yaw")
+    turn = g.call_on(SCENE_COMP, "K2_SetRelativeRotation", inputs=[struct_pin("NewRotation", ROTATOR), Pin("bSweep", BOOL, default="false"),
+                                                                   Pin("bTeleport", BOOL, default="false")],
+                     outputs=[struct_pin("SweepHitResult", HIT_RESULT, "out")])
+    arm = spring_arm(g)
+    g.link(arm[0], arm[1], turn, "self")
+    g.link(want, "ReturnValue", turn, "NewRotation")
+    no_lag = arm_set(g, "bEnableCameraRotationLag", BOOL, "false")
+    snap = g.var_set("bSnapArm", BOOL, default="true")
+    g.exec(s, turn, no_lag, snap)
+
+    g = bp.function("ClearDriveState", doc="Ends look-back (the arm faces forward again), any drift (no boost), the smoothed steer and the held "
+                    "handbrake. Called on exit, on TeleportAndStop (respawns, resets) and on pause, where a key release can be missed.")
+    back = g.call_self("SetLookBack", inputs=[Pin("bOn", BOOL, default="false")])
+    g.link_entry("then", back, "execute")
+    g.exec(back, g.var_set("bDrifting", BOOL, default="false"), g.var_set("SmoothedSteer", FLOAT, default="0.0"),
+           g.var_set("bHandbrakeHeld", BOOL, default="false"))
+
+    g = bp.function("TickCamera", inputs=["DeltaSeconds:float"],
+                    doc="A player's car only: the chase camera's FOV moves toward ComputeTargetFOV(speed, boosting) at FOVInterpSpeed /s "
+                        "(spec §5.3); the spring arm's rotation and location lag come back on the frame after a look-back or teleport cut.")
+    mine = g.call_self_native(PAWN, "IsPlayerControlled", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    bpl = g.branch()
+    g.note(bpl, "driven by a player?")
+    g.link(mine, "ReturnValue", bpl, "Condition")
+    g.link_entry("then", bpl, "execute")
+    target = g.call_self("ComputeTargetFOV", inputs=[Pin("SpeedKPH", FLOAT), Pin("bBoosting", BOOL)], outputs=[Pin("FOV", FLOAT, "out")], pure=True)
+    ln(g, (g.call_self("GetSpeedKPH", outputs=[Pin("KPH", FLOAT, "out")], pure=True), "KPH"), target, "SpeedKPH")
+    ln(g, _f(g, "Greater_FloatFloat", _fvar(g, "BoostRemaining"), "0.0", BOOL), target, "bBoosting")
+    cam = chase_camera(g)
+    fov = g.var_get_on(CAMERA_COMP, "FieldOfView", FLOAT)
+    g.link(cam[0], cam[1], fov, "self")
+    step = g.call_static(MATH, "FInterpTo", inputs=[Pin("Current", FLOAT), Pin("Target", FLOAT), Pin("DeltaTime", FLOAT), Pin("InterpSpeed", FLOAT)],
+                         outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(fov, "FieldOfView", step, "Current")
+    g.link(target, "FOV", step, "Target")
+    g.link_entry("DeltaSeconds", step, "DeltaTime")
+    ln(g, _fvar(g, "FOVInterpSpeed"), step, "InterpSpeed")
+    set_fov = g.call_on(CAMERA_COMP, "SetFieldOfView", inputs=[Pin("InFieldOfView", FLOAT)])
+    cam2 = chase_camera(g)
+    g.link(cam2[0], cam2[1], set_fov, "self")
+    g.link(step, "ReturnValue", set_fov, "InFieldOfView")
+    g.link(bpl, "then", set_fov, "execute")
+    bsnap = g.branch()
+    g.note(bsnap, "a look-back or teleport cut this frame? keep the lag off once more")
+    ln(g, _fvar(g, "bSnapArm", BOOL), bsnap, "Condition")
+    g.exec(set_fov, bsnap)
+    g.link(bsnap, "then", g.var_set("bSnapArm", BOOL, default="false"), "execute")
+    rot_on = arm_set(g, "bEnableCameraRotationLag", BOOL, "true")
+    g.link(bsnap, "else", rot_on, "execute")
+    g.exec(rot_on, arm_set(g, "bEnableCameraLag", BOOL, "true"))
+
+    # ---- Phase 7 Task 11: engine, skid and crash audio (spec §5.4) ----
+    g = bp.function("TickAudio", inputs=["DeltaSeconds:float"],
+                    doc="Spec §5.4, every frame: EngineAudio's pitch = ComputeEnginePitch(engine rpm / max rpm) and its volume = 0.35 + "
+                        "0.65 x |throttle input| (clamped to 1), 0 for a parked or wrecked car (engine off) [call]; SkidAudio's volume = "
+                        "clamp((|lateral speed| - 300) / 700, 0, 1) on the ground, 0 in the air.")
+    rpm = mv_call(g, "GetEngineRotationSpeed", outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    max_rpm = mv_call(g, "GetEngineMaxRotationSpeed", outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    pitch = g.call_self("ComputeEnginePitch", inputs=[Pin("RPMRatio", FLOAT)], outputs=[Pin("Pitch", FLOAT, "out")], pure=True)
+    ln(g, _f(g, "SafeDivide", (rpm, "ReturnValue"), (max_rpm, "ReturnValue")), pitch, "RPMRatio")
+    set_pitch = audio_call(g, "EngineAudio", "SetPitchMultiplier", inputs=[Pin("NewPitchMultiplier", FLOAT)])
+    g.link(pitch, "Pitch", set_pitch, "NewPitchMultiplier")
+    g.link_entry("then", set_pitch, "execute")
+    # a car nobody drives (parked, the menu's showcase cars) or a wreck has its engine off: TickDriveOverrides' "parked"
+    driver = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    has_driver = is_valid(g)
+    g.link(driver, "ReturnValue", has_driver, "Object")
+    intact = not_bool(g)
+    ln(g, _fvar(g, "bIsDestroyed", BOOL), intact, "A")
+    running = and_bool(g)
+    g.link(has_driver, "ReturnValue", running, "A")
+    g.link(intact, "ReturnValue", running, "B")
+    throttle = _f(g, "FMin", _f(g, "Abs", _fvar(g, "ArcadeThrottle")), "1.0")
+    volume = _f(g, "Add_FloatFloat", "0.35", _f(g, "Multiply_FloatFloat", throttle, "0.65"))
+    set_vol = audio_call(g, "EngineAudio", "SetVolumeMultiplier", inputs=[Pin("NewVolumeMultiplier", FLOAT)])
+    ln(g, pick(g, (running, "ReturnValue"), volume, "0.0"), set_vol, "NewVolumeMultiplier")
+    lateral = _vbin(g, "Dot_VectorVector", _self_vec(g, "GetVelocity"), _self_vec(g, "GetActorRightVector"))
+    slip = clamp01(g, _f(g, "Divide_FloatFloat", _f(g, "Subtract_FloatFloat", _f(g, "Abs", lateral), "300.0"), "700.0"))
+    set_skid = audio_call(g, "SkidAudio", "SetVolumeMultiplier", inputs=[Pin("NewVolumeMultiplier", FLOAT)])
+    ln(g, pick(g, _fvar(g, "bGrounded", BOOL), slip, "0.0"), set_skid, "NewVolumeMultiplier")
+    g.exec(set_pitch, set_vol, set_skid)
+
+    g = bp.function("HandleCrashHit", inputs=["NormalImpulse:struct:" + VECTOR, "Location:struct:" + VECTOR], outputs=["ReturnValue:bool"],
+                    doc="Spec §5.4: a hit whose normal impulse is above CrashImpulse, at least CrashCooldown s after the last crash, plays "
+                        "CrashSound at the contact and gives the driver a light camera shake (§5.3). Returns whether it did.")
+    size = g.call_static(MATH, "VSize", inputs=[struct_pin("A", VECTOR)], outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link_entry("NormalImpulse", size, "A")
+    hard = _f(g, "Greater_FloatFloat", (size, "ReturnValue"), _fvar(g, "CrashImpulse"), BOOL)
+    since = _f(g, "Subtract_FloatFloat", (game_time(g), "ReturnValue"), _fvar(g, "LastCrashTime"))
+    ready = _f(g, "GreaterEqual_FloatFloat", since, _fvar(g, "CrashCooldown"), BOOL)
+    crash = and_bool(g)
+    ln(g, hard, crash, "A")
+    ln(g, ready, crash, "B")
+    bc = g.branch()
+    g.note(bc, "hard enough, and CrashCooldown since the last crash?")
+    g.link(crash, "ReturnValue", bc, "Condition")
+    g.link_entry("then", bc, "execute")
+    g.link(bc, "else", result_bool(g, "false"), "execute")
+    stamp = g.var_set("LastCrashTime", FLOAT)
+    g.link(game_time(g), "ReturnValue", stamp, "LastCrashTime")
+    g.link(bc, "then", stamp, "execute")
+    bang = g.call_static(GAMEPLAY, "PlaySoundAtLocation",
+                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("Sound", SOUND_BASE), struct_pin("Location", VECTOR),
+                                 struct_pin("Rotation", ROTATOR), Pin("VolumeMultiplier", FLOAT, default="1.0"),
+                                 Pin("PitchMultiplier", FLOAT, default="1.0"), Pin("StartTime", FLOAT, default="0.0"),
+                                 obj_pin("AttenuationSettings", "/Script/Engine.SoundAttenuation"),
+                                 obj_pin("ConcurrencySettings", "/Script/Engine.SoundConcurrency"), obj_pin("OwningActor", ACTOR)])
+    g.link(g.var_get("CrashSound", OBJECT, cls_ref(SOUND_BASE)), "CrashSound", bang, "Sound")
+    g.link_entry("Location", bang, "Location")
+    g.exec(stamp, bang, driver_shake(g), result_bool(g, "true"))
 
     # ---- Phase 3: effects and item use (spec 2026-10-30 §2) ----
     g = bp.function("IsShielded", doc="A shield is running.", outputs=["ReturnValue:bool"], pure=True)
@@ -880,22 +1941,57 @@ def build() -> Blueprint:
                     inputs=[struct_pin("NewVel", VECTOR), Pin("bAddToCurrent", BOOL, default="true"), Pin("BoneName", NAME, default="None")])
     g.link(m, "Mesh", vel, "self")
     g.link(kick, "ReturnValue", vel, "NewVel")
-    g.exec(sb, vel)
+    g.exec(sb, vel, car_sound(g, "BoostSound"), g.call_self("RefreshEffectLook"))  # Phase 7 Task 17: the sound, the flames at once
 
-    g = bp.function("ActivateShield", doc="Starts the shield timer.")
+    g = bp.function("ActivateShield", doc="Starts the shield timer (the shield-up sound; the bubble shows at once).")
     dur = g.var_get("ShieldDuration", FLOAT)
     ss = g.var_set("ShieldRemaining", FLOAT)
     g.link(dur, "ShieldDuration", ss, "ShieldRemaining")
     g.link_entry("then", ss, "execute")
+    g.exec(ss, car_sound(g, "ShieldUpSound"), g.call_self("RefreshEffectLook"))  # Phase 7 Task 17
 
-    g = bp.function("ClearEffects", doc="Ends boost and shield.")
+    g = bp.function("ClearEffects", doc="Ends boost and shield (silently: a restart or a respawn, not the shield running out).")
     cb = g.var_set("BoostRemaining", FLOAT, default="0.0")
     cs = g.var_set("ShieldRemaining", FLOAT, default="0.0")
     g.link_entry("then", cb, "execute")
-    g.exec(cb, cs)
+    g.exec(cb, cs, g.var_set("bShieldShown", BOOL, default="false"), g.call_self("RefreshEffectLook"))  # Phase 7 Task 17
+
+    # ---- Phase 7 Task 17 (spec §7.5): the items on the car: boost flames, the shield bubble and its sounds ----
+    g = bp.function("RefreshEffectLook", doc="BoostFlameL/R show while BoostRemaining > 0 and ShieldBubble while IsShielded(); "
+                    "the shield's end (shown, now not shielded) plays ShieldDownSound.")
+    boosting = _f(g, "Greater_FloatFloat", _fvar(g, "BoostRemaining"), "0.0", BOOL)
+    flames = [set_shown(g, name, src=boosting) for name in ("BoostFlameL", "BoostFlameR")]
+    g.link_entry("then", flames[0], "execute")
+    g.exec(*flames)
+    shielded = (g.call_self("IsShielded", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True), "ReturnValue")
+    unshielded = not_bool(g)
+    g.link(shielded[0], shielded[1], unshielded, "A")
+    ended = and_bool(g)
+    g.link(g.var_get("bShieldShown", BOOL), "bShieldShown", ended, "A")
+    g.link(unshielded, "ReturnValue", ended, "B")
+    bend = g.branch()
+    g.note(bend, "the shield just ran out?")
+    g.link(ended, "ReturnValue", bend, "Condition")
+    g.exec(flames[-1], bend)
+    down = car_sound(g, "ShieldDownSound")
+    g.link(bend, "then", down, "execute")
+    keep = g.var_set("bShieldShown", BOOL)
+    g.link(shielded[0], shielded[1], keep, "bShieldShown")
+    g.exec(down, keep)
+    g.link(bend, "else", keep, "execute")
+    g.exec(keep, set_shown(g, "ShieldBubble", src=shielded))
+
+    g = bp.function("ShieldHit", doc="A blocked hit: ShieldHitSound, and the bubble glows ShieldHitGlow for ShieldHitSeconds.")
+    flash = mid_glow(g, (g.var_get("ShieldHitGlow", FLOAT), "ShieldHitGlow"))
+    g.link_entry("then", flash, "execute")
+    g.exec(flash, car_sound(g, "ShieldHitSound"), timer(g, "EndShieldHit", (g.var_get("ShieldHitSeconds", FLOAT), "ShieldHitSeconds"), looping=False))
+
+    g = bp.function("EndShieldHit", doc="The bubble's flash is over: its own glow again (ShieldBaseGlow).")
+    g.link_entry("then", mid_glow(g, (g.var_get("ShieldBaseGlow", FLOAT), "ShieldBaseGlow")), "execute")
 
     # TickEffects(DeltaSeconds): sustained boost force; both timers run down to 0
-    g = bp.function("TickEffects", doc="Per-frame boost force; both effect timers run down.", inputs=["DeltaSeconds:float"])
+    g = bp.function("TickEffects", doc="Per-frame boost force; both effect timers run down; the flames and the bubble follow them "
+                    "(RefreshEffectLook).", inputs=["DeltaSeconds:float"])
     br_ = g.var_get("BoostRemaining", FLOAT)
     on = compare(g, "Greater_FloatFloat", FLOAT, b="0.0")
     g.link(br_, "BoostRemaining", on, "A")
@@ -929,7 +2025,7 @@ def build() -> Blueprint:
             g.link(b, "else", setv, "execute")
             first = setv
         else:
-            g.exec(first, setv)
+            g.exec(first, setv, g.call_self("RefreshEffectLook"))  # Phase 7 Task 17: flames and bubble follow the timers
 
     # CanUseItem(Type): the gun waits for its cooldown (no charge wasted on a dry press); every other item is always usable
     WC = gen(BPC_WEAPON)
@@ -1064,7 +2160,8 @@ def build() -> Blueprint:
     g.link(me, "self", sp, "Owner")
     g.exec(tr, sp)
     launched = log_line(g, "rocket fired at ", vec_str(g, (at, "ReturnValue")), " (muzzle blocked: ", bool_str(g, (tr, "ReturnValue")), ")")
-    g.exec(sp, launched)
+    whoosh = play_sound_at(g, (g.var_get("RocketLaunchSound", OBJECT, cls_ref(SOUND_BASE)), "RocketLaunchSound"), (at, "ReturnValue"))  # Task 16
+    g.exec(sp, whoosh, launched)
     ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
     sic = g.var_set_on(PROJC, "InstigatorController", OBJECT, sub_object=cls_ref(CONTROLLER))
     g.link(sp, "ReturnValue", sic, "self")
@@ -1106,9 +2203,9 @@ def build() -> Blueprint:
                          outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
     g.link(at, "ReturnValue", lift, "A")
     rot = g.call_self_native(ACTOR, "K2_GetActorRotation", outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
-    # the spawn transform's scale becomes the root (Shell) scale, overriding the template's 0.5
+    # the spawn transform's scale becomes the root (Shell) scale: 1, the mine's own size (Phase 7 Task 17; the stock sphere was 0.5)
     xf = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
-                                                        struct_pin("Scale", VECTOR, default="0.5,0.5,0.5")],
+                                                        struct_pin("Scale", VECTOR, default="1,1,1")],
                        outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
     g.link(lift, "ReturnValue", xf, "Location")
     g.link(rot, "ReturnValue", xf, "Rotation")
@@ -1178,7 +2275,7 @@ def build() -> Blueprint:
     g.link(cast, as_pin(BP_GM), info, "self")
     g.link(cons, "Type", info, "Type")
     log = log_line(g, "used ", (info, "Name"), " by ", name_of(g, (ctrl, "ReturnValue")))
-    g.exec(ap, log)
+    g.exec(ap, g.call_self("RefreshRoofWeapon"), log)  # Phase 7 Task 13: a used-up Gun or RPG leaves the roof
     g.exec(log, result_bool(g, "true"))
 
     # CycleItem(): next slot of the driver's inventory
@@ -1193,9 +2290,17 @@ def build() -> Blueprint:
     g.link(ctrl, "ReturnValue", cy, "C")
     g.link(cast, "then", cy, "execute")
 
+    # ---- Construction script (Phase 7 Task 13, spec §6.1): the class's body, and its light bar if it has one ----
+    g = bp.construction_script()
+    par = g.call_parent(gen(SEDAN), "UserConstructionScript")
+    g.link_entry("then", par, "execute")
+    body = set_mesh(g, "Body", src=(g.var_get("BodyMesh", OBJECT, cls_ref(STATIC_MESH)), "BodyMesh"))
+    bar = set_shown(g, "LightBar", src=(g.var_get("bHasLightBar", BOOL), "bHasLightBar"))
+    g.exec(par, body, bar)
+
     # ---- Event graph ----
     g = bp.event_graph()
-    g.section("Begin Play: fresh tires, full health, the paint")
+    g.section("Begin Play: fresh tires, full health, the paint, the gun seen to fire from the roof weapon")
     bpl = g.begin_play(col=0, row=1)
     par = g.call_parent(gen(SEDAN), "ReceiveBeginPlay", col=1, row=1)
     init = g.call_self("InitTires", col=2, row=1)
@@ -1203,28 +2308,101 @@ def build() -> Blueprint:
     full = g.var_set("Health", FLOAT)  # Phase 5: a child with more MaxHealth starts full
     g.link(g.var_get("MaxHealth", FLOAT), "MaxHealth", full, "Health")
     g.exec(init, full)
-    paint = g.var_get("PaintMaterial", OBJECT, cls_ref(MATERIAL_INTERFACE))
-    has_paint = is_valid(g)
-    g.link(paint, "PaintMaterial", has_paint, "Object")
-    bpaint = g.branch()
-    g.note(bpaint, "a paint of its own?")
-    g.link(has_paint, "ReturnValue", bpaint, "Condition")
-    g.exec(full, bpaint)
-    sm = g.call_on(PRIMITIVE, "SetMaterial", inputs=[Pin("ElementIndex", INT), obj_pin("Material", MATERIAL_INTERFACE)])
-    g.link(mesh(g), "Mesh", sm, "self")
-    g.link(g.var_get("PaintSlot", INT), "PaintSlot", sm, "ElementIndex")
-    g.link(paint, "PaintMaterial", sm, "Material")
-    g.link(bpaint, "then", sm, "execute")
+    # Phase 7 Task 9 (spec §5.2): a lower centre of mass (the vehicle re-reads it through OnRecalculatedMassProperties)
+    com = g.call_on(PRIMITIVE, "SetCenterOfMass", inputs=[struct_pin("CenterOfMassOffset", VECTOR), Pin("BoneName", NAME, default="None")])
+    g.link(mesh(g), "Mesh", com, "self")
+    com_v = g.call_static(MATH, "MakeVector", inputs=[Pin("X", FLOAT, default="0.0"), Pin("Y", FLOAT, default="0.0"), Pin("Z", FLOAT)],
+                          outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(g.var_get("CenterOfMassZ", FLOAT), "CenterOfMassZ", com_v, "Z")
+    g.link(com_v, "ReturnValue", com, "CenterOfMassOffset")
+    g.exec(full, com)
+    # Phase 7 Task 11 (spec §5.4): hit events for the crash sound. A skeletal body notifies only when the component AND its
+    # physics-asset body ask for it (FBodyInstance::BuildBodyFilterData); the Sedan physics asset's body
+    # does not, so no OnComponentHit ever fired. USkeletalMeshComponent::SetNotifyRigidBodyCollision sets it on every body.
+    notify = g.call_on(PRIMITIVE, "SetNotifyRigidBodyCollision", inputs=[Pin("bNewNotifyRigidBodyCollision", BOOL, default="true")])
+    g.link(mesh(g), "Mesh", notify, "self")
+    g.exec(com, notify)
+    # Phase 7 Task 10 (spec §5.3): the chase rotation look-back returns to, and the camera lags; the SpringArm is the Sedan
+    # Blueprint's component (component_defaults only reach native components), so its members are set here
+    base = g.var_set("ArmBaseRotation", STRUCT, sub_object=struct_ref(ROTATOR))
+    rel = g.var_get_on(SCENE_COMP, "RelativeRotation", STRUCT, struct_ref(ROTATOR))
+    arm = spring_arm(g)
+    g.link(arm[0], arm[1], rel, "self")
+    g.link(rel, "RelativeRotation", base, "ArmBaseRotation")
+    lag = arm_set(g, "bEnableCameraLag", BOOL, "true")
+    lag_speed = arm_set(g, "CameraLagSpeed", FLOAT, src=(g.var_get("ChaseLagSpeed", FLOAT), "ChaseLagSpeed"))
+    rot_lag = arm_set(g, "bEnableCameraRotationLag", BOOL, "true")
+    rot_speed = arm_set(g, "CameraRotationLagSpeed", FLOAT, src=(g.var_get("ChaseRotationLagSpeed", FLOAT), "ChaseRotationLagSpeed"))
+    g.exec(notify, base, lag, lag_speed, rot_lag, rot_speed)
+    # Phase 7 Task 11 (spec §5.4): the engine loop of this class; SetSound restarts a playing component (auto-activation
+    # already started the template's sound), Play starts it when nothing was playing
+    engine = audio_call(g, "EngineAudio", "SetSound", inputs=[obj_pin("NewSound", SOUND_BASE)])
+    g.link(g.var_get("EngineSound", OBJECT, cls_ref(SOUND_BASE)), "EngineSound", engine, "NewSound")
+    g.exec(rot_speed, engine)
+    bplay = g.branch()
+    g.note(bplay, "the engine loop playing already?")
+    g.link(audio_call(g, "EngineAudio", "IsPlaying", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True), "ReturnValue", bplay, "Condition")
+    g.exec(engine, bplay)
+    start = audio_call(g, "EngineAudio", "Play", inputs=[Pin("StartTime", FLOAT, default="0.0")])
+    g.link(bplay, "else", start, "execute")
+    paint = g.call_self("ApplyPaint")  # Phase 7 Task 13: the paint goes on the Body
+    g.link(bplay, "then", paint, "execute")
+    g.link(start, "then", paint, "execute")
+    # Phase 7 Task 16 (spec §6.1, §7.2): the gun's shots are seen to leave from the roof weapon (its Muzzle socket when it shows one)
+    origin = g.var_set_on(gen(BPC_WEAPON), "VisualOrigin", OBJECT, sub_object=cls_ref(SCENE_COMP))
+    g.link(g.var_get("Weapon", OBJECT, cls_ref(gen(BPC_WEAPON))), "Weapon", origin, "self")
+    g.link(*look_comp(g, "RoofWeapon"), origin, "VisualOrigin")
+    g.exec(paint, origin)
+    # Phase 7 Task 17 (spec §7.5): the shield bubble's dynamic material (a blocked hit flashes its Glow) and its own glow
+    bubble = g.call_on(PRIMITIVE, "CreateDynamicMaterialInstance", inputs=[Pin("ElementIndex", INT, default="0"),
+                                                                          obj_pin("SourceMaterial", MATERIAL_INTERFACE),
+                                                                          Pin("OptionalName", NAME, default="None")],
+                       outputs=[obj_pin("ReturnValue", MID, "out")])
+    g.link(*look_comp(g, "ShieldBubble"), bubble, "self")
+    keep_mid = g.var_set("ShieldMID", OBJECT, sub_object=cls_ref(MID))
+    g.link(bubble, "ReturnValue", keep_mid, "ShieldMID")
+    own = g.call_on(MID, "K2_GetScalarParameterValue", inputs=[Pin("ParameterName", NAME, default="Glow")], outputs=[Pin("ReturnValue", FLOAT, "out")])
+    g.link(bubble, "ReturnValue", own, "self")
+    keep_glow = g.var_set("ShieldBaseGlow", FLOAT)
+    g.link(own, "ReturnValue", keep_glow, "ShieldBaseGlow")
+    g.exec(origin, bubble, keep_mid, own, keep_glow)
 
-    g.section("Tick: drive overrides, then item effects")
+    g.section("Tick: drive overrides, the arcade layer, item effects, the chase camera, then the engine and skid sounds")
     tick = g.tick(col=0, row=2)
     part = g.call_parent(gen(SEDAN), "ReceiveTick", [Pin("DeltaSeconds", FLOAT)], col=1, row=2)
     g.link(tick, "DeltaSeconds", part, "DeltaSeconds")
     ov = g.call_self("TickDriveOverrides", inputs=[Pin("DeltaSeconds", FLOAT)], col=2, row=2)
     g.link(tick, "DeltaSeconds", ov, "DeltaSeconds")
+    arcade = g.call_self("TickArcade", inputs=[Pin("DeltaSeconds", FLOAT)])
+    g.link(tick, "DeltaSeconds", arcade, "DeltaSeconds")
     fx = g.call_self("TickEffects", inputs=[Pin("DeltaSeconds", FLOAT)], col=3, row=2)
     g.link(tick, "DeltaSeconds", fx, "DeltaSeconds")
-    g.exec(tick, part, ov, fx)
+    camera = g.call_self("TickCamera", inputs=[Pin("DeltaSeconds", FLOAT)])
+    g.link(tick, "DeltaSeconds", camera, "DeltaSeconds")
+    sound = g.call_self("TickAudio", inputs=[Pin("DeltaSeconds", FLOAT)])
+    g.link(tick, "DeltaSeconds", sound, "DeltaSeconds")
+    g.exec(tick, part, ov, arcade, fx, camera, sound)
+
+    g.section("Crash: a hard hit plays the crash sound at the contact and shakes the driver's view (spec §5.4)")
+    hit = g.component_event("Mesh", "OnComponentHit", PRIMITIVE,
+                            [obj_pin("HitComponent", PRIMITIVE), obj_pin("OtherActor", ACTOR), obj_pin("OtherComp", PRIMITIVE),
+                             struct_pin("NormalImpulse", VECTOR), struct_pin("Hit", HIT_RESULT)],
+                            "ComponentHitSignature__DelegateSignature")
+    contact = g.call_static(GAMEPLAY, "BreakHitResult", inputs=[struct_pin("Hit", HIT_RESULT)],
+                            outputs=[struct_pin("ImpactPoint", VECTOR, "out")], pure=True)
+    g.link(hit, "Hit", contact, "Hit")
+    crash = g.call_self("HandleCrashHit", inputs=[struct_pin("NormalImpulse", VECTOR), struct_pin("Location", VECTOR)],
+                        outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link(hit, "NormalImpulse", crash, "NormalImpulse")
+    g.link(contact, "ImpactPoint", crash, "Location")
+    g.exec(hit, crash)
+
+    g.section("Handbrake: held state for the drift rules (replaces the template's binding, so it sets the input too)")
+    hba = g.input_action("Handbrake")
+    for pin, value in (("Pressed", "true"), ("Released", "false")):
+        held = g.var_set("bHandbrakeHeld", BOOL, default=value)
+        g.link(hba, pin, held, "execute")
+        g.exec(held, set_handbrake(g, value))
 
     g.section("Point damage: route by hit bone (tire or body)")
     pd = g.event(ACTOR, "ReceivePointDamage",
@@ -1270,6 +2448,15 @@ def build() -> Blueprint:
     ni = g.input_action("NextItem", col=0, row=8)
     cy = g.call_self("CycleItem", col=1, row=8)
     g.link(ni, "Pressed", cy, "execute")
+    g.section("Reset: back on the wheels where the car stands (spec §5.2)")
+    ra = g.input_action("ResetCar")
+    rs = g.call_self("ResetCar", outputs=[Pin("ReturnValue", BOOL, "out")])
+    g.link(ra, "Pressed", rs, "execute")
+    g.section("Look back: the rear view while held (spec §5.3)")
+    la = g.input_action("LookBack")
+    for pin, value in (("Pressed", "true"), ("Released", "false")):
+        lb = g.call_self("SetLookBack", inputs=[Pin("bOn", BOOL, default=value)])
+        g.link(la, pin, lb, "execute")
     return bp
 
 
@@ -1286,10 +2473,23 @@ def build_children() -> list:
         child.default("VehicleName", row.name)
         child.default("ThrottleScale", float(row.throttle_scale))
         child.default("TopSpeedKPH", float(row.top_speed))
+        child.default("SteerAtSpeed", float(row.steer_at_speed))
+        child.default("GripAssist", float(row.grip_assist))
+        child.default("DownforceG", float(row.downforce_g))
         child.default("BoostDuration", float(row.boost_duration))
         child.default("BoostKickSpeed", float(row.boost_kick))
-        if row.paint:
-            child.default("PaintMaterial", row.paint)
+        # a state variable's default is not inherited by the runner (only the tunables are): "never reset" must hold from
+        # game time 0, or the first ResetCooldown seconds of a race would refuse a reset
+        child.default("LastResetTime", -1000.0)
+        child.default("LastCrashTime", -1000.0)  # Task 11: the same for the crash cooldown
+        child.default("EngineSound", art_sound(row.engine_sound))
+        # Phase 7 Task 13 (spec §6.1): the class's paint, body and light bar; the hidden Mesh set on the child's own class
+        # defaults too (an inherited native component's override, like the mass below)
+        child.default("PaintMaterial", row.paint)
+        child.default("BodyMesh", art_mesh(row.body))
+        child.default("bHasLightBar", row.light_bar)
+        child.component_default("Mesh", "visible", False)
+        child.component_default("Mesh", "visibility_based_anim_tick_option", TICK_REFRESH_BONES)
         if row.mass_factor:
             child.component_default("VehicleMovement", "mass", SEDAN_MASS * row.mass_factor)
         out.append(child)

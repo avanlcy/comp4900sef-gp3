@@ -1,0 +1,95 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_SpeedFOV",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "The player's car teleported onto the strip (more than 100 m): the next frame its chase camera is within 10 m of the car (no camera lag across a teleport); after 1 s at rest its FOV is 90 +- 0.5; held at 160 km/h for 3 s it is 105 +- 1 (spec \u00a75.3: 90 + 15 x clamp(speed / 160), interpolated at 4 /s). Its spring arm has camera lag 10 and rotation lag 8 again. The off-track grace is raised while the car is on the strip (restored on every finish), physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Grace0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "FOVRest",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "FOVFast",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "KPHFast",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Jump",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "CamGap",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "bHold",
+   "type": "bool",
+   "default": "false",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "HoldCar",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
+   "default": "",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "HoldGM",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFRaceGameMode.BP_DFRaceGameMode_C",
+   "default": "",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

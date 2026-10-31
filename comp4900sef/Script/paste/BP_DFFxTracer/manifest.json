@@ -1,0 +1,124 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxTracer",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "A hitscan shot's tracer: SetEnds(Start, End) stands the yellow beam at Start, aims it at End and stretches it.",
+ "components": [
+  {
+   "name": "Beam",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxBeam",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.0,
+      0.6,
+      0.6
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxTracer"
+    ]
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "SetEnds",
+   "inputs": [
+    "Start:struct:/Script/CoreUObject.Vector",
+    "End:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Stands the tracer at Start, aims it at End and stretches the beam to |End - Start|."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "SetEnds",
+   "file": "SetEnds.txt",
+   "links": [
+    [
+     "entry",
+     "Start",
+     "DFN_K2Node_CallFunction_0",
+     "NewLocation"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Start",
+     "DFN_K2Node_CallFunction_1",
+     "Start"
+    ],
+    [
+     "entry",
+     "End",
+     "DFN_K2Node_CallFunction_1",
+     "Target"
+    ],
+    [
+     "entry",
+     "Start",
+     "DFN_K2Node_CallFunction_3",
+     "V1"
+    ],
+    [
+     "entry",
+     "End",
+     "DFN_K2Node_CallFunction_3",
+     "V2"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "Lifetime": 0.08,
+  "StartScale": 1.0,
+  "EndScale": 1.0,
+  "FadeExponent": 1.0,
+  "RiseSpeed": 0.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

@@ -1,0 +1,74 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_ResetCooldown",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A reset at rest returns true; a second one 1.0 s later, with the car below 15 km/h again, returns false (3 s cooldown); a third one 3.5 s after the first returns true. SEDAN on the drive strip, raw AI controller (its racer component is the racer), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "KPH1",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Z1",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Lift2",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "KPH2",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Elapsed1",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Elapsed2",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

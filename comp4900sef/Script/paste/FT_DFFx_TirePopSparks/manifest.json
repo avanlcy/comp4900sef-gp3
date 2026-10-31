@@ -1,0 +1,39 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_TirePopSparks",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.1: blowing a tyre (ApplyTireDamage(0, 100) on a fresh car) spawns exactly one BP_DFFxSparks within 15 m of the car in the same frame (it lives 0.25 s), within 30 cm of the front-left wheel bone.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Sparks",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Spark",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFFxSparks.BP_DFFxSparks_C",
+   "default": "",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

@@ -177,6 +177,8 @@ Top speed (within ±5 % of the measured Phase 6 value, per car), throttle scale,
 ### 5.7 AI
 The layer applies to AI cars, so `bAIHandbrake` can make an AI car drift. That is acceptable if the AI suite stays green and the balance re-run (§10) shows pace within 5 %. Otherwise drift is skipped for `bAIControlled` cars (decided in plan Task 9).
 
+**Decided in plan Task 9 (2026-10-31): drift stays on for AI cars.** No `FT_DFAI_*` test failed with the layer on (all 16 green in the 89-test suite), and the AI cannot start a drift: it applies the handbrake only to park, with steering 0, below the drift rule's |steer| ≥ 0.3. The §10 balance re-run (7F) still checks the pace; if it moves more than 5 %, add `NOT bAIControlled` to the drift start rule then.
+
 ## 6. Cars, character, weapons
 
 ### 6.1 Cars **[call]**

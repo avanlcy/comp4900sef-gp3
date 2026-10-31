@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_RoofWeaponShowsHeldItem",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1: the player's car shows no roof weapon after a restart; a granted Gun shows SM_DF_RoofGun; a granted RPG shows SM_DF_RoofLauncher (RPG wins when both are held); ClearInventory and RefreshRoofWeapon hide it; using the last Gun charge hides it again.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

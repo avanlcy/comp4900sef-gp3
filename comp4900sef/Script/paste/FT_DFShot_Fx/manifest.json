@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShot_Fx",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Phase 7 Task 15 capture: each BP_DFFx effect at mid-life on the look-dev floor, the LootBurst tinted with the random crate's colour (placed in L_DF_LookDev for a capture run only).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

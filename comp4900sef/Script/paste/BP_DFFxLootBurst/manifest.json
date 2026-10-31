@@ -1,0 +1,123 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxLootBurst",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "A crate opening: a ring, a star and bits in white MI_DF_FxBurst; spawn it tinted with the item's colour (df.spawn_fx).",
+ "components": [
+  {
+   "name": "Ring",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxRing",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      15.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      3.0,
+      3.0,
+      2.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBurst"
+    ]
+   }
+  },
+  {
+   "name": "Star",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxStar",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      90.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.4,
+      1.4,
+      1.4
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBurst"
+    ]
+   }
+  },
+  {
+   "name": "Bits",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxChunk",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      40.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      2.4,
+      2.4,
+      2.4
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBurst"
+    ]
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "Lifetime": 0.6,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.0,
+  "RiseSpeed": 0.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

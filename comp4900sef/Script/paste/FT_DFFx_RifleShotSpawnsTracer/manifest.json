@@ -1,0 +1,46 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_RifleShotSpawnsTracer",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.2, \u00a77.2: a fresh BP_DFCharacter fires (Fire: the trace from its camera). In the frame of the shot exactly one BP_DFFxTracer and one BP_DFFxMuzzle stand within 15 m of it, and the tracer starts within 30 cm of the Rifle's Muzzle socket (the Weapon's VisualOrigin is the Rifle).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Tracers",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Muzzles",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Tracer",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFFxTracer.BP_DFFxTracer_C",
+   "default": "",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

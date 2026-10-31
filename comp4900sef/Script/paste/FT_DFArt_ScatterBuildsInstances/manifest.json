@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_ScatterBuildsInstances",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a78.3: a spawned BP_DFScatter given SM_DF_Rock01, three transforms and bBlocking false, then RebuildInstances (what its construction script runs; a deferred spawn cannot be generated), has 3 instances of SM_DF_Rock01, NoCollision, culled at 30000 cm. Rebuilt with bBlocking true it still has 3 (the old ones are cleared) and collides (BlockAll).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

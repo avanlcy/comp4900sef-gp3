@@ -1,0 +1,20 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFShakeLight",
+ "parent": "/Script/GameplayCameras.MatineeCameraShake",
+ "description": "Light camera shake: a landing after more than 0.5 s in the air, a hit taken.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "OscillationDuration": 0.25,
+  "RotOscillation.Pitch.Amplitude": 1.5,
+  "RotOscillation.Pitch.Frequency": 30.0,
+  "RotOscillation.Yaw.Amplitude": 1.0,
+  "RotOscillation.Yaw.Frequency": 25.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

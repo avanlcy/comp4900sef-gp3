@@ -1,0 +1,231 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "parent": "/Script/Engine.Actor",
+ "description": "A short-lived mesh-shell effect (spec \u00a77.1): its FxShell meshes grow and fade over Lifetime, then it destroys itself. Children add the shells; Tint multiplies their colour.",
+ "components": [
+  {
+   "name": "FxRoot",
+   "class": "/Script/Engine.SceneComponent",
+   "parent": "",
+   "properties": {}
+  }
+ ],
+ "variables": [
+  {
+   "name": "Lifetime",
+   "type": "float",
+   "default": "1.0",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "StartScale",
+   "type": "float",
+   "default": "0.3",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "EndScale",
+   "type": "float",
+   "default": "1.0",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "FadeExponent",
+   "type": "float",
+   "default": "1.5",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "RiseSpeed",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "LightStart",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "Tint",
+   "type": "struct:/Script/CoreUObject.LinearColor",
+   "default": "(R=1.000000,G=1.000000,B=1.000000,A=1.000000)",
+   "category": "Dead Fire|Effect",
+   "editable": true
+  },
+  {
+   "name": "Shells",
+   "type": "array<object:/Script/Engine.StaticMeshComponent>",
+   "default": "",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  },
+  {
+   "name": "BaseScales",
+   "type": "array<struct:/Script/CoreUObject.Vector>",
+   "default": "",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  },
+  {
+   "name": "MIDs",
+   "type": "array<object:/Script/Engine.MaterialInstanceDynamic>",
+   "default": "",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  },
+  {
+   "name": "BaseColors",
+   "type": "array<struct:/Script/CoreUObject.LinearColor>",
+   "default": "",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  },
+  {
+   "name": "FlashLight",
+   "type": "object:/Script/Engine.PointLightComponent",
+   "default": "",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  },
+  {
+   "name": "Age",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Effect State",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "UpdateLook",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The look at the current Age: each shell's scale = its base x lerp(StartScale, EndScale, 1 - (1 - t)^2), each material's Fade = (1 - t)^FadeExponent, the flash light at LightStart x (1 - t); t = Age / Lifetime, clamped to 0..1."
+  },
+  {
+   "name": "ApplyTint",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Each shell material's Color = Tint x the Color its material instance had (BaseColors)."
+  },
+  {
+   "name": "SetTint",
+   "inputs": [
+    "Color:struct:/Script/CoreUObject.LinearColor"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Tint := Color, and re-tints the shells when BeginPlay has made their materials: call it right after the spawn (df.spawn_fx)."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "UpdateLook",
+   "file": "UpdateLook.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ApplyTint",
+   "file": "ApplyTint.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_MacroInstance_0",
+     "Exec"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SetTint",
+   "file": "SetTint.txt",
+   "links": [
+    [
+     "entry",
+     "Color",
+     "DFN_K2Node_VariableSet_0",
+     "Tint"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "Lifetime": 1.0,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.5,
+  "RiseSpeed": 0.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

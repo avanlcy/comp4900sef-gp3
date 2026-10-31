@@ -469,6 +469,26 @@ class Graph:
         return self._add("K2Node_CallDelegate", ['DelegateReference=(MemberParent=%s,MemberName="%s")'
                                                  % (cls_ref(owner_class), name)], pins, col, row)
 
+    def add_delegate(self, owner_class: str, delegate: str, signature: str, signature_package: str, col=None, row=None) -> Node:
+        """'Bind Event to <delegate>' (UK2Node_AddDelegate) on self, for an inherited native multicast delegate; link a custom
+        event's OutputDelegate to its Delegate pin, e.g. add_delegate(FT, 'OnTestFinished',
+        'FunctionalTestEventSignature__DelegateSignature', '/Script/FunctionalTesting')."""
+        pins = [Pin("execute", EXEC), Pin("then", EXEC, "out"), Pin("self", OBJECT, sub_object=cls_ref(owner_class)),
+                Pin("Delegate", DELEGATE, member_ref="(MemberParent=Package'\"%s\"',MemberName=\"%s\")" % (signature_package, signature))]
+        props = ['DelegateReference=(MemberParent=%s,MemberName="%s",bSelfContext=True)' % (cls_ref(owner_class), delegate)]
+        return self._add("K2Node_AddDelegate", props, pins, col, row)
+
+    def add_delegate_on(self, owner_class: str, delegate: str, col=None, row=None) -> Node:
+        """'Bind Event to <delegate>' (UK2Node_AddDelegate) on another object (link 'self' to it) for an event dispatcher a
+        Blueprint class declares (its signature is <delegate>__DelegateSignature in that class). Link a custom event's
+        OutputDelegate to the Delegate pin: when the custom event is reconstructed it takes the dispatcher's parameters
+        (UK2Node_CustomEvent::ReconstructNode), so give it pins named as the dispatcher's parameters. Binding the same event
+        again does nothing (the multicast delegate adds it uniquely)."""
+        pins = [Pin("execute", EXEC), Pin("then", EXEC, "out"), Pin("self", OBJECT, sub_object=cls_ref(owner_class)),
+                Pin("Delegate", DELEGATE, member_ref='(MemberParent=%s,MemberName="%s__DelegateSignature")' % (cls_ref(owner_class), delegate))]
+        props = ['DelegateReference=(MemberParent=%s,MemberName="%s")' % (cls_ref(owner_class), delegate)]
+        return self._add("K2Node_AddDelegate", props, pins, col, row)
+
     def call_parent(self, parent_class: str, fn: str, params: Optional[List[Pin]] = None, col=None, row=None) -> Node:
         """'Call Parent Function' for an overridden event, e.g. call_parent(gen(SEDAN), 'ReceiveBeginPlay')."""
         pins = [Pin("execute", EXEC), Pin("then", EXEC, "out"), Pin("self", OBJECT, hidden=True, sub_category="self")] + [
@@ -893,6 +913,7 @@ class Blueprint:
         self.defaults: Dict[str, object] = {}
         self.component_defaults: Dict[str, Dict[str, object]] = {}  # inherited component -> {property: value}
         self.required: List[dict] = []  # support assets the runner creates when missing
+        self.removed_variables: List[str] = []  # variables an earlier version declared; the runner deletes them from the asset
 
     def component_default(self, component: str, prop: str, value) -> None:
         """Class-default value of a property on an inherited (native or parent) component, e.g.
@@ -903,12 +924,22 @@ class Blueprint:
         """An asset this Blueprint needs to exist (created by the runner through unreal.<cls> / unreal.<factory>())."""
         self.required.append({"asset": asset, "class": cls, "factory": factory})
 
-    def component(self, name: str, cls: str, parent: str = "", **props) -> None:
-        self.components.append({"name": name, "class": cls, "parent": parent, "properties": props})
+    def component(self, name: str, cls: str, parent: str = "", socket: str = "", **props) -> None:
+        """socket: the parent's socket or bone the component attaches to (the runner sets it through the plugin's
+        SetComponentSocket). Written to the manifest only when given, so components without one keep their manifest."""
+        c = {"name": name, "class": cls, "parent": parent, "properties": props}
+        if socket:
+            c["socket"] = socket
+        self.components.append(c)
 
     def variable(self, name: str, type_spec: str, default: str = "", category: str = "", editable: bool = False) -> None:
         self.variables.append({"name": name, "type": type_spec, "default": default, "category": category,
                                "editable": editable})
+
+    def remove_variable(self, name: str) -> None:
+        """A variable an earlier version of the generator declared and this one no longer does: the runner removes it from
+        the asset (the plugin's RemoveVariable), so neither it nor its default (e.g. a stock asset) lingers there."""
+        self.removed_variables.append(name)
 
     def dispatcher(self, name: str, params: Optional[List[str]] = None) -> None:
         self.dispatchers.append({"name": name, "params": params or []})
@@ -937,11 +968,12 @@ class Blueprint:
         return g
 
     def default(self, name: str, value) -> None:
-        """Class-default value set on the CDO after compiling (numbers, bools, strings, or asset paths)."""
+        """Class-default value set on the CDO after compiling (numbers, bools, strings, or asset paths). A dotted name
+        sets a member of a struct property, e.g. default("RotOscillation.Pitch.Amplitude", 1.5)."""
         self.defaults[name] = value
 
     def manifest(self) -> dict:
-        return {
+        m = {
             "kind": "blueprint", "asset": self.asset, "parent": self.parent, "description": self.description,
             "components": self.components, "variables": self.variables, "dispatchers": self.dispatchers,
             "functions": self.functions,
@@ -952,6 +984,9 @@ class Blueprint:
             "component_defaults": self.component_defaults,
             "requires": self.required,
         }
+        if self.removed_variables:  # only where used, so every other manifest stays as it was
+            m["removed_variables"] = self.removed_variables
+        return m
 
     def write(self, out_dir: str) -> str:
         d = os.path.join(out_dir, self.name)
@@ -971,7 +1006,9 @@ class WidgetBlueprint(Blueprint):
     """A UMG Widget Blueprint: designer tree (applied by the runner through the plugin) plus graphs.
 
     widget(name, cls, parent, props, slot): cls like '/Script/UMG.TextBlock'; parent None = the root panel.
-    props: text, font_size, color [r,g,b,a], justify (Left|Center|Right), percent, fill_color, brush_color,
+    props: text, font_size, font_object ("/Game/..." Font asset), typeface_font_name (its typeface entry, e.g. "Default"),
+           color [r,g,b,a], justify (Left|Center|Right), percent, fill_color, brush_color, texture ("/Game/..." texture for an
+           Image's brush, drawn at the texture's size), sounds ([hover, click] SoundBase assets of a Button's style),
            width_override, height_override, visibility (Visible|Collapsed|HitTestInvisible|...), or any property name.
     slot (canvas): anchors [minx,miny,maxx,maxy], alignment [x,y], position [x,y], size [w,h], auto_size bool.
     slot (boxes): padding [l,t,r,b], h_align (Left|Center|Right|Fill), v_align.

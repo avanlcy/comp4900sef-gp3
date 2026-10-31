@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_TracerSpansEnds",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.1: SetEnds(origin + (0, 0, 100), origin + (1000, 0, 100)) on a BP_DFFxTracer puts it at Start aimed at End with the beam 1000 cm long: its world bounds are 950-1050 cm in X, centred at +500 +- 25 cm. Kept alive (Lifetime and life span 10 s) and ticking before the test, 0.5 s later it has ticked (Age > 0) and still spans the shot: Tick scales from the base SetEnds updated, not the 1 m beam it was spawned with.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

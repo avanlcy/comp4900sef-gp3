@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFHUD_CratePromptNearCrate",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.6, \u00a77.4: the player's car stands on the start line (below exit speed, on the road) with a crate 20 m to its side: FindNearestCrate finds it and the race HUD's warning line reads 'CRATE NEARBY - E TO GET OUT'. With the crate moved 60 m away it does not.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

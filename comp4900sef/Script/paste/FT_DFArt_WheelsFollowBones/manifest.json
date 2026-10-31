@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_WheelsFollowBones",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1: a SEDAN on the drive strip (raw AI controller) drives 2 s at full throttle with steer 0.5. At the end each wheel component is within 5 cm of its bone's socket on the hidden Mesh, and WheelFL's rotation in the car's frame differs from its start (the bone spins and steers it). Physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "FLRot0",
+   "type": "struct:/Script/CoreUObject.Rotator",
+   "default": "",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

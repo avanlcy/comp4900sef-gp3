@@ -89,7 +89,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "The three item slots (selected in amber), the effect line and the key hint."
+   "doc": "The three item slots (icon, charges, the selected one framed), the effect line and the key hint."
   },
   {
    "name": "RefreshWarning",
@@ -102,7 +102,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP."
+   "doc": "WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP > CRATE NEARBY (in a car, stopped)."
   },
   {
    "name": "Refresh",
@@ -112,6 +112,60 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "Every frame: stats, clock, panels, then the car or foot details."
+  },
+  {
+   "name": "HitMarker",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The player's shot hit a car or a character: the crosshair turns red at 1.3x for 0.15 s (EndHitMarker)."
+  },
+  {
+   "name": "EndHitMarker",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The crosshair back to white at 1x."
+  },
+  {
+   "name": "ShowDamage",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A hit taken by the player's car (its TakeDamageInternal) or character: the red vignette for 0.3 s."
+  },
+  {
+   "name": "HideDamage",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The vignette off."
+  },
+  {
+   "name": "ShowDrift",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A drift boost of the player's car: DRIFT for 0.6 s."
+  },
+  {
+   "name": "HideDrift",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "DRIFT off."
   }
  ],
  "graphs": [
@@ -380,13 +434,13 @@
     [
      "entry",
      "Racer",
-     "DFN_K2Node_VariableGet_6",
+     "DFN_K2Node_VariableGet_9",
      "self"
     ],
     [
      "entry",
      "Racer",
-     "DFN_K2Node_VariableGet_10",
+     "DFN_K2Node_VariableGet_16",
      "self"
     ],
     [
@@ -398,13 +452,13 @@
     [
      "entry",
      "Car",
-     "DFN_K2Node_VariableGet_15",
+     "DFN_K2Node_VariableGet_24",
      "self"
     ],
     [
      "entry",
      "Car",
-     "DFN_K2Node_VariableGet_16",
+     "DFN_K2Node_VariableGet_25",
      "self"
     ]
    ],
@@ -479,6 +533,12 @@
      "GM",
      "DFN_K2Node_CallFunction_26",
      "self"
+    ],
+    [
+     "entry",
+     "GM",
+     "DFN_K2Node_CallFunction_34",
+     "self"
     ]
    ],
    "layout": {
@@ -509,6 +569,120 @@
    }
   },
   {
+   "name": "HitMarker",
+   "file": "HitMarker.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EndHitMarker",
+   "file": "EndHitMarker.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowDamage",
+   "file": "ShowDamage.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "HideDamage",
+   "file": "HideDamage.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowDrift",
+   "file": "ShowDrift.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "HideDrift",
+   "file": "HideDrift.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "EventGraph",
    "file": "EventGraph.txt",
    "links": [],
@@ -524,6 +698,31 @@
  "root_class": "/Script/UMG.CanvasPanel",
  "root_name": "Root",
  "tree": [
+  {
+   "name": "Vignette",
+   "class": "/Script/UMG.Image",
+   "parent": "",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Vignette",
+    "visibility": "Collapsed"
+   },
+   "slot": {
+    "anchors": [
+     0,
+     0,
+     1,
+     1
+    ],
+    "position": [
+     0,
+     0
+    ],
+    "size": [
+     0,
+     0
+    ]
+   }
+  },
   {
    "name": "StatsBox",
    "class": "/Script/UMG.VerticalBox",
@@ -562,7 +761,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -592,7 +793,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -622,7 +825,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -652,7 +857,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -682,7 +889,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -712,7 +921,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "anchors": [
@@ -774,7 +985,9 @@
      0,
      0.8
     ],
-    "justify": "Right"
+    "justify": "Right",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Right"
@@ -799,7 +1012,9 @@
      0,
      0.8
     ],
-    "justify": "Right"
+    "justify": "Right",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Right"
@@ -847,7 +1062,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -902,7 +1119,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -948,7 +1167,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -985,16 +1206,37 @@
    "slot": {}
   },
   {
-   "name": "CrosshairText",
+   "name": "CrosshairImage",
+   "class": "/Script/UMG.Image",
+   "parent": "",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Crosshair"
+   },
+   "slot": {
+    "anchors": [
+     0.5,
+     0.5,
+     0.5,
+     0.5
+    ],
+    "alignment": [
+     0.5,
+     0.5
+    ],
+    "auto_size": true
+   }
+  },
+  {
+   "name": "DriftText",
    "class": "/Script/UMG.TextBlock",
    "parent": "",
    "props": {
-    "text": "+",
-    "font_size": 32,
+    "text": "DRIFT",
+    "font_size": 56,
     "color": [
      1,
-     1,
-     1,
+     0.75,
+     0.2,
      1
     ],
     "shadow": [
@@ -1003,14 +1245,17 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default",
+    "visibility": "Collapsed"
    },
    "slot": {
     "anchors": [
      0.5,
+     0.28,
      0.5,
-     0.5,
-     0.5
+     0.28
     ],
     "alignment": [
      0.5,
@@ -1038,7 +1283,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "anchors": [
@@ -1073,7 +1320,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "anchors": [
@@ -1131,7 +1380,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -1153,42 +1404,95 @@
    }
   },
   {
-   "name": "Slot0Text",
-   "class": "/Script/UMG.TextBlock",
+   "name": "ItemSlot0",
+   "class": "/Script/UMG.SizeBox",
    "parent": "ItemRow",
    "props": {
-    "text": "-",
-    "font_size": 24,
-    "color": [
-     1,
-     1,
-     1,
-     1
-    ],
-    "shadow": [
-     0,
-     0,
-     0,
-     0.8
-    ],
-    "justify": "Left"
+    "width_override": 80,
+    "height_override": 80
    },
    "slot": {
     "padding": [
-     12,
+     8,
      0,
-     12,
+     8,
      0
     ]
    }
   },
   {
-   "name": "Slot1Text",
-   "class": "/Script/UMG.TextBlock",
-   "parent": "ItemRow",
+   "name": "ItemStack0",
+   "class": "/Script/UMG.Overlay",
+   "parent": "ItemSlot0",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "ItemFrame0",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack0",
    "props": {
-    "text": "-",
-    "font_size": 24,
+    "brush_color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "visibility": "Collapsed"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill"
+   }
+  },
+  {
+   "name": "ItemBack0",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack0",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.55
+    ]
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     4,
+     4,
+     4,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ItemIcon0",
+   "class": "/Script/UMG.Image",
+   "parent": "ItemStack0",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Icon_Empty"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  {
+   "name": "ItemCount0",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemStack0",
+   "props": {
+    "text": "",
+    "font_size": 22,
     "color": [
      1,
      1,
@@ -1201,24 +1505,111 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Right",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
+   },
+   "slot": {
+    "h_align": "Right",
+    "v_align": "Bottom",
+    "padding": [
+     0,
+     0,
+     7,
+     3
+    ]
+   }
+  },
+  {
+   "name": "ItemSlot1",
+   "class": "/Script/UMG.SizeBox",
+   "parent": "ItemRow",
+   "props": {
+    "width_override": 80,
+    "height_override": 80
    },
    "slot": {
     "padding": [
-     12,
+     8,
      0,
-     12,
+     8,
      0
     ]
    }
   },
   {
-   "name": "Slot2Text",
-   "class": "/Script/UMG.TextBlock",
-   "parent": "ItemRow",
+   "name": "ItemStack1",
+   "class": "/Script/UMG.Overlay",
+   "parent": "ItemSlot1",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "ItemFrame1",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack1",
    "props": {
-    "text": "-",
-    "font_size": 24,
+    "brush_color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "visibility": "Collapsed"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill"
+   }
+  },
+  {
+   "name": "ItemBack1",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack1",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.55
+    ]
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     4,
+     4,
+     4,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ItemIcon1",
+   "class": "/Script/UMG.Image",
+   "parent": "ItemStack1",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Icon_Empty"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  {
+   "name": "ItemCount1",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemStack1",
+   "props": {
+    "text": "",
+    "font_size": 22,
     "color": [
      1,
      1,
@@ -1231,14 +1622,135 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Right",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
+   },
+   "slot": {
+    "h_align": "Right",
+    "v_align": "Bottom",
+    "padding": [
+     0,
+     0,
+     7,
+     3
+    ]
+   }
+  },
+  {
+   "name": "ItemSlot2",
+   "class": "/Script/UMG.SizeBox",
+   "parent": "ItemRow",
+   "props": {
+    "width_override": 80,
+    "height_override": 80
    },
    "slot": {
     "padding": [
-     12,
+     8,
      0,
-     12,
+     8,
      0
+    ]
+   }
+  },
+  {
+   "name": "ItemStack2",
+   "class": "/Script/UMG.Overlay",
+   "parent": "ItemSlot2",
+   "props": {},
+   "slot": {}
+  },
+  {
+   "name": "ItemFrame2",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack2",
+   "props": {
+    "brush_color": [
+     1,
+     0.75,
+     0.2,
+     1
+    ],
+    "visibility": "Collapsed"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill"
+   }
+  },
+  {
+   "name": "ItemBack2",
+   "class": "/Script/UMG.Border",
+   "parent": "ItemStack2",
+   "props": {
+    "brush_color": [
+     0,
+     0,
+     0,
+     0.55
+    ]
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     4,
+     4,
+     4,
+     4
+    ]
+   }
+  },
+  {
+   "name": "ItemIcon2",
+   "class": "/Script/UMG.Image",
+   "parent": "ItemStack2",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Icon_Empty"
+   },
+   "slot": {
+    "h_align": "Fill",
+    "v_align": "Fill",
+    "padding": [
+     10,
+     10,
+     10,
+     10
+    ]
+   }
+  },
+  {
+   "name": "ItemCount2",
+   "class": "/Script/UMG.TextBlock",
+   "parent": "ItemStack2",
+   "props": {
+    "text": "",
+    "font_size": 22,
+    "color": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "shadow": [
+     0,
+     0,
+     0,
+     0.8
+    ],
+    "justify": "Right",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
+   },
+   "slot": {
+    "h_align": "Right",
+    "v_align": "Bottom",
+    "padding": [
+     0,
+     0,
+     7,
+     3
     ]
    }
   },
@@ -1261,7 +1773,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",

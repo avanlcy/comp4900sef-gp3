@@ -212,7 +212,7 @@
      0
     ],
     "size": [
-     560,
+     600,
      0
     ]
    }
@@ -242,7 +242,7 @@
    "parent": "Column",
    "props": {
     "text": "CHOOSE A TRACK",
-    "font_size": 48,
+    "font_size": 40,
     "color": [
      1,
      0.75,
@@ -255,7 +255,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -285,7 +287,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -316,6 +320,8 @@
      0.8
     ],
     "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default",
     "wrap_text_at": 480.0
    },
    "slot": {
@@ -346,7 +352,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -376,7 +384,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "padding": [
@@ -407,6 +417,8 @@
      0.8
     ],
     "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default",
     "wrap_text_at": 480.0
    },
    "slot": {
@@ -436,7 +448,12 @@
    "name": "LeftButton",
    "class": "/Script/UMG.Button",
    "parent": "NavRow",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -465,7 +482,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -473,7 +492,12 @@
    "name": "RightButton",
    "class": "/Script/UMG.Button",
    "parent": "NavRow",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -502,7 +526,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -510,7 +536,12 @@
    "name": "RaceButton",
    "class": "/Script/UMG.Button",
    "parent": "NavRow",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {}
   },
   {
@@ -532,7 +563,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -540,7 +573,12 @@
    "name": "BackButton",
    "class": "/Script/UMG.Button",
    "parent": "Column",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -570,7 +608,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   }

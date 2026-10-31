@@ -2,7 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFProjectile",
  "parent": "/Script/Engine.Actor",
- "description": "The rocket: flies on its projectile movement and explodes on whatever it hits.",
+ "description": "The rocket: flies on its projectile movement with its flame, smoke trail and engine sound, and explodes on whatever it hits.",
  "components": [
   {
    "name": "Collision",
@@ -19,33 +19,64 @@
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "Collision",
    "properties": {
-    "static_mesh": "/Game/StarterContent/Shapes/Shape_Sphere",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Rocket",
     "relative_scale3d": {
      "vector": [
-      0.3,
-      0.3,
-      0.3
+      1.0,
+      1.0,
+      1.0
      ]
     },
     "call:set_collision_profile_name": "NoCollision",
-    "override_materials": [
-     "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
-    ]
+    "override_materials": []
    }
+  },
+  {
+   "name": "Exhaust",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_ExhaustFlame",
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxFlame"
+    ],
+    "relative_scale3d": {
+     "vector": [
+      1.0,
+      0.7,
+      0.7
+     ]
+    },
+    "cast_shadow": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Exhaust"
   },
   {
    "name": "Trail",
    "class": "/Script/Engine.ParticleSystemComponent",
    "parent": "Collision",
    "properties": {
-    "template": "/Game/StarterContent/Particles/P_Fire",
+    "template": null,
+    "auto_activate": false,
+    "visible": false,
     "relative_scale3d": {
      "vector": [
-      0.3,
-      0.3,
-      0.3
+      1.0,
+      1.0,
+      1.0
      ]
     }
+   }
+  },
+  {
+   "name": "LoopAudio",
+   "class": "/Script/Engine.AudioComponent",
+   "parent": "Collision",
+   "properties": {
+    "auto_activate": true,
+    "sound": "/Game/DeadFire/Art/Sounds/SW_DF_RocketLoop"
    }
   },
   {
@@ -97,10 +128,26 @@
    "default": "false",
    "category": "Dead Fire|Rocket",
    "editable": false
+  },
+  {
+   "name": "TrailPuffInterval",
+   "type": "float",
+   "default": "0.05",
+   "category": "Dead Fire|Rocket",
+   "editable": true
   }
  ],
  "dispatchers": [],
  "functions": [
+  {
+   "name": "SpawnTrailPuff",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A BP_DFFxPuff at the exhaust while the rocket is within 8000 cm of the player's camera."
+  },
   {
    "name": "Explode",
    "inputs": [],
@@ -112,6 +159,25 @@
   }
  ],
  "graphs": [
+  {
+   "name": "SpawnTrailPuff",
+   "file": "SpawnTrailPuff.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
   {
    "name": "Explode",
    "file": "Explode.txt",
@@ -141,7 +207,9 @@
    }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "TrailPuffInterval": 0.05
+ },
  "component_defaults": {},
  "requires": []
 }

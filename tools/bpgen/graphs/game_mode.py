@@ -12,12 +12,20 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_CHECKPOINT, BP_GM, BP_GS, BP_HUD, 
                 PLAYER_CONTROLLER, ROTATOR, S_RESULT, STRING, STRUCT, TRANSFORM, VECTOR, Blueprint, Graph, Node, Pin,
                 and_bool, as_pin, compare, enum_is, enum_pin, enum_ref, enum_spec, game_time, gen, get_player_controller,
                 is_valid, math2, member, not_bool, obj_pin, obj_spec, or_bool, struct_path, struct_pin, struct_spec,
-                log_line, name_of, int_str, BP_BOMB, BP_EXPLOSIVE_DAMAGE, BP_PROJECTILE, CLASS, DAMAGE_TYPE, PARTICLE_SYSTEM, PRIMITIVE,
+                log_line, name_of, int_str, BP_BOMB, BP_EXPLOSIVE_DAMAGE, BP_PROJECTILE, CLASS, DAMAGE_TYPE, PRIMITIVE,
                 SKEL_MESH_COMP, SOUND_BASE, get_all_actors_of_class, native_enum_pin)
 from bpgen import struct_ref  # noqa: E402
 from df import BP_AI, BP_GM_TEST, S_ITEM_STACK, TEXT, enum_value  # noqa: E402  (Phase 4)
 from df import BP_GI, BP_GM_SWITCHBACK, CLASS, LEVELS, game_instance  # noqa: E402  (Phase 5)
 from df import SYS  # noqa: E402  (Phase 6)
+from df import MATERIAL_INTERFACE, MI_PAINT_GANG  # noqa: E402  (Phase 7 Task 13)
+from df import (BP_FX, BP_FX_EXPLOSION, BP_SHAKE_HEAVY, CAMERA_SHAKE_BASE, DECAL_COMP, MI_SCORCH, SCORCH_LIFE, SCORCH_SIZE,  # noqa: E402
+                SW_EXPLOSION, spawn_fx)  # Task 16
+from df import (EMPTY_ICON, ITEM_LOOK, LINEAR_COLOR, RANDOM_LOOK, TEXTURE_2D, art_icon, asset_object,  # noqa: E402
+                linear_colour)  # Task 17
+from df import BP_LOOTBOX, SW_CHECKPOINT, SW_LAP  # noqa: E402  (Task 18)
+from df import BP_DEBRIS  # noqa: E402  (Task 21)
+from df import MI_TRIM_GANG, SCENE_COMP, STATIC_MESH_COMP, TRIM_SLOT  # noqa: E402  (Task 22)
 
 GIC = gen(BP_GI)  # Phase 5
 GMC, GSC, PCC, VC, CC, CPC, TC, RC, HUDC = (gen(BP_GM), gen(BP_GS), gen(BP_PC), gen(BP_VEHICLE), gen(BP_CHARACTER),
@@ -26,6 +34,7 @@ RESULT = struct_path(S_RESULT)
 ARR = "KismetArrayLibrary"
 PLAYER_START = "/Script/Engine.PlayerStart"
 TIME_UP, DEATH_LIMIT = 1, 2  # E_DFRaceEndReason indices: None, TimeUp, DeathLimit
+NO_CRATE_CM = 1.0e9  # Phase 7 Task 18: FindNearestCrate's Distance when no crate is left (farther than any level)
 
 
 # ---------- small helpers ----------
@@ -100,6 +109,28 @@ def racer_elem():
 def ret(g, **values):
     """Function result with literal defaults, e.g. ret(g, ReturnValue='false')."""
     return g.function_result([Pin(k, "bool" if v in ("true", "false") else STRING, default=v) for k, v in values.items()])
+
+
+def add_rival_look(bp: Blueprint) -> None:
+    """Task 22 (controller ruling, spec §3): ApplyRivalLook(Car), the one place a rival's car gets the Fire syndicate look; SpawnNPCs
+    and RespawnRacer's NPC branch (a replacement car) both call it. Only the player's car keeps the navy paint, white trim and
+    blue light bar."""
+    g = bp.function("ApplyRivalLook", inputs=["Car:" + obj_spec(BP_VEHICLE)],
+                    doc="A rival's car in the Fire syndicate look (spec §3): NPCPaint on its paint slot (ApplyPaint), NPCTrim on its Body's "
+                        "trim slot, and no light bar (bHasLightBar off as well, so a construction-script rerun keeps it hidden).")
+    car = ("entry", "Car")
+    gang = set_on(g, VC, "PaintMaterial", OBJECT, car, value=(g.var_get("NPCPaint", OBJECT, cls_ref(MATERIAL_INTERFACE)), "NPCPaint"),
+                  sub=cls_ref(MATERIAL_INTERFACE))
+    g.link_entry("then", gang, "execute")
+    repaint = call(g, VC, "ApplyPaint", car)
+    trim = g.call_on(PRIMITIVE, "SetMaterial", inputs=[Pin("ElementIndex", INT, default=str(TRIM_SLOT)), obj_pin("Material", MATERIAL_INTERFACE)])
+    g.link(get_on(g, VC, "Body", OBJECT, car, sub=cls_ref(STATIC_MESH_COMP)), "Body", trim, "self")
+    g.link(g.var_get("NPCTrim", OBJECT, cls_ref(MATERIAL_INTERFACE)), "NPCTrim", trim, "Material")
+    no_bar = set_on(g, VC, "bHasLightBar", BOOL, car, default="false")
+    hide = g.call_on(SCENE_COMP, "SetVisibility", inputs=[Pin("bNewVisibility", BOOL, default="false"),
+                                                          Pin("bPropagateToChildren", BOOL, default="false")])
+    g.link(get_on(g, VC, "LightBar", OBJECT, car, sub=cls_ref(STATIC_MESH_COMP)), "LightBar", hide, "self")
+    g.exec(gang, repaint, trim, no_bar, hide)
 
 
 # ---------- game state ----------
@@ -179,15 +210,25 @@ def build_mode() -> Blueprint:
     bp.dispatcher("OnRacerRespawned", ["Racer:object:" + CONTROLLER])
     bp.dispatcher("OnItemPickedUp", ["Racer:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE)])
     X = "Dead Fire|Explosions"
-    bp.variable("ExplosionEffect", "object:" + PARTICLE_SYSTEM, "", X, editable=True)
+    # Phase 7 Task 16 (spec §7.3): the explosion effect (BP_DFFxExplosion), the scorch decal and SW_DF_Explosion replace the
+    # stock P_Explosion and Explosion_Cue; the old ExplosionEffect variable is deleted from the asset with its stock default
+    bp.remove_variable("ExplosionEffect")
+    bp.variable("ExplosionFxClass", "class:" + gen(BP_FX), "", X, editable=True)
+    bp.variable("ScorchMaterial", "object:" + MATERIAL_INTERFACE, "", X, editable=True)
     bp.variable("ExplosionSound", "object:" + SOUND_BASE, "", X, editable=True)
     bp.variable("ExplosiveDamageType", "class:" + DAMAGE_TYPE, "", X, editable=True)
     bp.variable("TireBlastDamage", "float", "30", X, editable=True)
     bp.variable("ExplosionImpulse", "float", "800", X, editable=True)
-    bp.default("ExplosionEffect", "/Game/StarterContent/Particles/P_Explosion")
-    bp.default("ExplosionSound", "/Game/StarterContent/Audio/Explosion_Cue")
+    bp.default("ExplosionFxClass", "class:" + BP_FX_EXPLOSION)
+    bp.default("ScorchMaterial", MI_SCORCH)
+    bp.default("ExplosionSound", SW_EXPLOSION)
     bp.default("ExplosiveDamageType", "class:" + BP_EXPLOSIVE_DAMAGE)
     bp.dispatcher("OnExplosion", ["Location:struct:" + VECTOR, "Radius:float"])
+    # Phase 7 Task 18 (spec §7.6): the player hears a chime at each gate and on each lap (PlaySound2D, players only)
+    bp.variable("CheckpointSound", "object:" + SOUND_BASE, "", R, editable=True)
+    bp.variable("LapSound", "object:" + SOUND_BASE, "", R, editable=True)
+    bp.default("CheckpointSound", SW_CHECKPOINT)
+    bp.default("LapSound", SW_LAP)
     bp.default("OnFootCharacterClass", "class:" + BP_CHARACTER)
     bp.default("DefaultPawnClass", "class:" + BP_VEHICLE)
     bp.default("PlayerControllerClass", "class:" + BP_PC)
@@ -202,6 +243,10 @@ def build_mode() -> Blueprint:
     bp.default("NPCCount", lvl.npcs)  # Phase 6: every rival's speed scale times this (the difficulty sets it, spec §3.4)
     bp.variable("RankInterval", "float", "0.5", A, editable=True)
     bp.variable("AIItemInterval", "float", "20", A, editable=True)  # 0 = NPCs get no items (spec §3.1)
+    bp.variable("NPCPaint", "object:" + MATERIAL_INTERFACE, "", A, editable=True)  # Phase 7 Task 13 (spec §6.1): the rivals' paint
+    bp.default("NPCPaint", MI_PAINT_GANG)
+    bp.variable("NPCTrim", "object:" + MATERIAL_INTERFACE, "", A, editable=True)  # Task 22 (spec §3): the rivals' flame-orange trim
+    bp.default("NPCTrim", MI_TRIM_GANG)
     bp.variable("NextAIItemTime", "float", "-1", S)
     # Phase 5 (spec 2026-10-30 phase 5 §4.2): a level can point the GameInstance at another save slot (the test level's DeadFireTest)
     bp.variable("SaveSlotOverride", "string", "", R, editable=True)
@@ -210,6 +255,7 @@ def build_mode() -> Blueprint:
     bp.default("PlayerVehicleClass", "class:" + BP_VEHICLE)
     bp.variable("RacerControllers", "array<object:%s>" % CONTROLLER, "", S)
     bp.variable("NextRankTime", "float", "0", S)
+    bp.variable("ScorchDecals", "array<object:%s>" % DECAL_COMP, "", S)  # Phase 7 Task 16: the live scorch decals (RestartRace removes them)
 
     race_state = lambda g: (g.var_get("RaceState", OBJECT, cls_ref(GSC)), "RaceState")
     racer_out = "Racer:object:" + RC
@@ -351,8 +397,24 @@ def build_mode() -> Blueprint:
     sett = set_on(g, GSC, "RemainingTime", FLOAT, race_state(g), value=(add, "ReturnValue"))
     g.link(pc, "then", sett, "execute")
 
+    def player_sound(g, sound_var, prev):
+        """Phase 7 Task 18: IsPlayer(C)? PlaySound2D(<sound_var>) (a UI sound: no position, no attenuation)."""
+        who = g.call_self("IsPlayer", inputs=[obj_pin("C", CONTROLLER)], outputs=[Pin("ReturnValue", BOOL, "out")])
+        g.link_entry("C", who, "C")
+        g.link(prev[0], prev[1], who, "execute")
+        b = branch_on(g, (who, "ReturnValue"), (who, "then"))
+        g.note(b, "the player's racer?")
+        play = g.call_static(GAMEPLAY, "PlaySound2D", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("Sound", SOUND_BASE),
+                                                              Pin("VolumeMultiplier", FLOAT, default="1.0"), Pin("PitchMultiplier", FLOAT, default="1.0"),
+                                                              Pin("StartTime", FLOAT, default="0.0"), obj_pin("ConcurrencySettings", "/Script/Engine.SoundConcurrency"),
+                                                              obj_pin("OwningActor", ACTOR), Pin("bIsUISound", BOOL, default="true")])
+        g.link(g.var_get(sound_var, OBJECT, cls_ref(SOUND_BASE)), sound_var, play, "Sound")
+        g.link(b, "then", play, "execute")
+        return play
+
     # NotifyLapCompleted(C)
-    g = bp.function("NotifyLapCompleted", doc="A lap: +1 lap, PointsPerLap, next gate back to 1.", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("NotifyLapCompleted", doc="A lap: +1 lap, PointsPerLap, next gate back to 1; the player hears LapSound and the gates' "
+                    "glow follows (RefreshGateHighlights).", inputs=["C:object:" + CONTROLLER])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
@@ -366,9 +428,12 @@ def build_mode() -> Blueprint:
     g.exec(laps, sc)
     nxt = set_on(g, RC, "NextCheckpointIndex", INT, (r, "Racer"), default="1")
     g.exec(sc, nxt)
+    lap_sound = player_sound(g, "LapSound", (nxt, "then"))
+    g.exec(lap_sound, g.call_self("RefreshGateHighlights"))  # Task 21: the player's next gate is 1 again
 
     # NotifyCheckpointPassed(C): Next = (Next + 1) mod Count (Count 0 -> Next + 1), then the time bonus
-    g = bp.function("NotifyCheckpointPassed", doc="Advances the racer's next gate (wrapping) and grants the time bonus.", inputs=["C:object:" + CONTROLLER])
+    g = bp.function("NotifyCheckpointPassed", doc="Advances the racer's next gate (wrapping) and grants the time bonus; the player hears "
+                    "CheckpointSound and the gates' glow follows (RefreshGateHighlights).", inputs=["C:object:" + CONTROLLER])
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
@@ -396,6 +461,8 @@ def build_mode() -> Blueprint:
     bonus = g.call_self("GrantCheckpointTimeBonus", inputs=[obj_pin("C", CONTROLLER)])
     g.link_entry("C", bonus, "C")
     g.exec(setn, bonus)
+    gate_sound = player_sound(g, "CheckpointSound", (bonus, "then"))
+    g.exec(gate_sound, g.call_self("RefreshGateHighlights"))  # Task 21: the player's next gate lights up
 
     # NotifyCheckpointReached(Racer, Checkpoint) -> bool
     g = bp.function("NotifyCheckpointReached", doc="A car crossed a gate: credited only when it is the racer's next gate and the race is active.", inputs=["Racer:object:" + CONTROLLER, "Checkpoint:" + obj_spec(BP_CHECKPOINT)],
@@ -446,6 +513,30 @@ def build_mode() -> Blueprint:
     yes = g.function_result([Pin("ReturnValue", BOOL, default="true")])
     g.exec(bonus, yes)
     g.exec(passed, yes)
+
+    # RefreshGateHighlights() (Phase 7 Task 21, spec §8.2): only the player's next gate glows
+    g = bp.function("RefreshGateHighlights", locals=["Next:int=-1"],
+                    doc="Lights the gate whose CheckpointIndex is the player's next gate (its racer's NextCheckpointIndex) and dims every "
+                        "other one (BP_DFCheckpoint.SetHighlighted); with no player racer every gate is dim.")
+    r = find_racer(g, (get_player_controller(g), "ReturnValue"))
+    has = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), ("entry", "then"))
+    g.note(has, "a player racer? (Simulate's plain controller has none)")
+    s_next = g.local_set("Next", INT)
+    link(g, (get_on(g, RC, "NextCheckpointIndex", INT, (r, "Racer")), "NextCheckpointIndex"), s_next, "Next")
+    g.link(has, "then", s_next, "execute")
+    loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(CPC)))
+    g.link(g.var_get("Checkpoints", OBJECT, cls_ref(CPC), container="Array"), "Checkpoints", loop, "Array")
+    g.link(s_next, "then", loop, "Exec")
+    g.link(has, "else", loop, "Exec")
+    gate = (loop, "Array Element")
+    live = branch_on(g, (valid(g, gate), "ReturnValue"), (loop, "LoopBody"))
+    g.note(live, "a live gate?")
+    is_next = compare(g, "EqualEqual_IntInt", INT)
+    link(g, (get_on(g, CPC, "CheckpointIndex", INT, gate), "CheckpointIndex"), is_next, "A")
+    g.link(g.local_get("Next", INT), "Next", is_next, "B")
+    light = call(g, CPC, "SetHighlighted", gate, inputs=[Pin("bOn", BOOL)])
+    g.link(is_next, "ReturnValue", light, "bOn")
+    g.link(live, "then", light, "execute")
 
     # HandleRacerDeath(C): count a life, game over at MaxDeaths, else schedule the respawn
     g = bp.function("HandleRacerDeath", doc="Counts a life; a player at MaxDeaths ends the race, otherwise a respawn is scheduled after RespawnDelay.", inputs=["C:object:" + CONTROLLER])
@@ -544,22 +635,52 @@ def build_mode() -> Blueprint:
     g.exec(log, death)
 
     # ---- Phase 3: explosions (spec 2026-10-30 §5) ----
-    # SpawnExplosion(Location, Damage, Radius, InstigatedBy, Causer, bBlowTires): particle + sound; full radial damage of the
-    # explosive type when Damage > 0; every vehicle in range (but the causer) gets a radial impulse and, if asked, a tire blast.
-    g = bp.function("SpawnExplosion", doc="The explosion rule: effects, full radial damage inside the radius, a shove and a tire blast for every car caught.", inputs=["Location:struct:" + VECTOR, "Damage:float", "Radius:float",
+    # SpawnExplosion(Location, Damage, Radius, InstigatedBy, Causer, bBlowTires): effect, scorch, shake and sound (Phase 7 Task 16,
+    # spec §7.3); full radial damage of the explosive type when Damage > 0; every vehicle in range (but the causer) gets a radial
+    # impulse and, if asked, a tire blast.
+    g = bp.function("SpawnExplosion", doc="The explosion rule: effect, scorch decal, heavy shake and sound; full radial damage inside the radius, a shove and a tire blast for every car caught.", inputs=["Location:struct:" + VECTOR, "Damage:float", "Radius:float",
                                               "InstigatedBy:object:" + CONTROLLER, "Causer:object:" + ACTOR, "bBlowTires:bool"],
                     locals=["Shooter:object:" + ACTOR])
-    fx = g.var_get("ExplosionEffect", OBJECT, cls_ref(PARTICLE_SYSTEM))
-    emit = g.call_static(GAMEPLAY, "SpawnEmitterAtLocation",
-                         inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("EmitterTemplate", PARTICLE_SYSTEM),
-                                 struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
-                                 struct_pin("Scale", VECTOR, default="1,1,1"), Pin("bAutoDestroy", BOOL, default="true"),
-                                 native_enum_pin("PoolingMethod", "/Script/Engine.EPSCPoolMethod", "None"),
-                                 Pin("bAutoActivateSystem", BOOL, default="true")],
-                         outputs=[obj_pin("ReturnValue", "/Script/Engine.ParticleSystemComponent", "out")])
-    g.link(fx, "ExplosionEffect", emit, "EmitterTemplate")
-    g.link_entry("Location", emit, "Location")
-    g.link_entry("then", emit, "execute")
+    at = g.call_static(MATH, "MakeTransform", inputs=[struct_pin("Location", VECTOR), struct_pin("Rotation", ROTATOR),
+                                                        struct_pin("Scale", VECTOR, default="1,1,1")],
+                       outputs=[struct_pin("ReturnValue", TRANSFORM, "out")], pure=True)
+    g.link_entry("Location", at, "Location")
+    fx_first, fx_last, _ = spawn_fx(g, BP_FX, (at, "ReturnValue"), class_src=(g.var_get("ExplosionFxClass", CLASS, cls_ref(gen(BP_FX))), "ExplosionFxClass"))
+    g.link_entry("then", fx_first, "execute")
+    # the scorch: a decal projected straight down (pitch -90), 4 m across (df.SCORCH_SIZE: DecalSize is a half-extent), 20 s of
+    # life over which it fades out (SetFadeOut drives the material's DecalLifetimeOpacity; its owner is the world settings,
+    # never destroyed with it); kept for RestartRace
+    down = g.call_static(MATH, "MakeRotator", inputs=[Pin("Roll", FLOAT, default="0.0"), Pin("Pitch", FLOAT, default="-90.0"),
+                                                      Pin("Yaw", FLOAT, default="0.0")],
+                         outputs=[struct_pin("ReturnValue", ROTATOR, "out")], pure=True)
+    decal = g.call_static(GAMEPLAY, "SpawnDecalAtLocation",
+                          inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("DecalMaterial", MATERIAL_INTERFACE),
+                                  struct_pin("DecalSize", VECTOR, default="%g,%g,%g" % SCORCH_SIZE), struct_pin("Location", VECTOR),
+                                  struct_pin("Rotation", ROTATOR), Pin("LifeSpan", FLOAT, default="%f" % SCORCH_LIFE)],
+                          outputs=[obj_pin("ReturnValue", DECAL_COMP, "out")])
+    g.link(g.var_get("ScorchMaterial", OBJECT, cls_ref(MATERIAL_INTERFACE)), "ScorchMaterial", decal, "DecalMaterial")
+    g.link_entry("Location", decal, "Location")
+    g.link(down, "ReturnValue", decal, "Rotation")
+    g.exec(fx_last, decal)
+    has_decal = branch_on(g, (valid(g, (decal, "ReturnValue")), "ReturnValue"), (decal, "then"))
+    g.note(has_decal, "a decal spawned? (none without a material, or on a dedicated server)")
+    fade = call(g, DECAL_COMP, "SetFadeOut", (decal, "ReturnValue"), inputs=[Pin("StartDelay", FLOAT, default="0.0"), Pin("Duration", FLOAT, default="%f" % SCORCH_LIFE),
+                                                                           Pin("DestroyOwnerAfterFade", BOOL, default="false")])
+    g.link(has_decal, "then", fade, "execute")
+    keep = g.call_array(ARR, "Array_Add", Pin("e", OBJECT, sub_object=cls_ref(DECAL_COMP)), inputs=[Pin("NewItem", OBJECT, "in", cls_ref(DECAL_COMP))],
+                        outputs=[Pin("ReturnValue", INT, "out")], pure=False)
+    g.link(g.var_get("ScorchDecals", OBJECT, cls_ref(DECAL_COMP), container="Array"), "ScorchDecals", keep, "TargetArray")
+    g.link(decal, "ReturnValue", keep, "NewItem")
+    g.exec(fade, keep)
+    shake = g.call_static(GAMEPLAY, "PlayWorldCameraShake",
+                          inputs=[Pin("WorldContextObject", OBJECT, hidden=True),
+                                  Pin("Shake", CLASS, sub_object=cls_ref(CAMERA_SHAKE_BASE), default_object=gen(BP_SHAKE_HEAVY)),
+                                  struct_pin("Epicenter", VECTOR), Pin("InnerRadius", FLOAT, default="500.0"),
+                                  Pin("OuterRadius", FLOAT, default="2500.0"), Pin("Falloff", FLOAT, default="1.0"),
+                                  Pin("bOrientShakeTowardsEpicenter", BOOL, default="false")])
+    g.link_entry("Location", shake, "Epicenter")
+    g.exec(keep, shake)
+    g.link(has_decal, "else", shake, "execute")
     snd = g.var_get("ExplosionSound", OBJECT, cls_ref(SOUND_BASE))
     play = g.call_static(GAMEPLAY, "PlaySoundAtLocation",
                          inputs=[Pin("WorldContextObject", OBJECT, hidden=True), obj_pin("Sound", SOUND_BASE), struct_pin("Location", VECTOR),
@@ -569,7 +690,7 @@ def build_mode() -> Blueprint:
                                  obj_pin("ConcurrencySettings", "/Script/Engine.SoundConcurrency"), obj_pin("OwningActor", ACTOR)])
     g.link(snd, "ExplosionSound", play, "Sound")
     g.link_entry("Location", play, "Location")
-    g.exec(emit, play)
+    g.exec(shake, play)
     # the shooter's own pawn: a point-blank blast starts inside its hull, and a trace from inside a body reports that body
     # at distance 0, so it would shield every other victim. It is ignored by the radial damage (no line-of-sight block)
     # and takes its self-damage directly afterwards (spec §2: your own explosives can hurt you).
@@ -685,6 +806,93 @@ def build_mode() -> Blueprint:
         g.link(loop, "LoopBody", kill, "execute")
         prev = (loop, "Completed")
 
+    # SweepEffects() (Phase 7 Task 16, Review Focus 3): RestartRace leaves no effect actor and no scorch decal behind; Task 21:
+    # nor a demolished rock's chunks
+    g = bp.function("SweepEffects", doc="Removes every live effect (BP_DFFx), rock chunk (BP_DFDebris) and scorch decal (RestartRace).")
+    prev = ("entry", "then")
+    for cls in (gen(BP_FX), gen(BP_DEBRIS)):
+        found = get_all_actors_of_class(g, cls)
+        g.link(prev[0], prev[1], found, "execute")
+        loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(cls)))
+        g.link(found, "OutActors", loop, "Array")
+        g.link(found, "then", loop, "Exec")
+        g.link(loop, "LoopBody", call(g, ACTOR, "K2_DestroyActor", (loop, "Array Element")), "execute")
+        prev = (loop, "Completed")
+    decals = lambda: (g.var_get("ScorchDecals", OBJECT, cls_ref(DECAL_COMP), container="Array"), "ScorchDecals")  # noqa: E731
+    dloop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(DECAL_COMP)))
+    link(g, decals(), dloop, "Array")
+    g.link(prev[0], prev[1], dloop, "Exec")
+    live = branch_on(g, (valid(g, (dloop, "Array Element")), "ReturnValue"), (dloop, "LoopBody"))
+    g.note(live, "not faded out already?")
+    # K2_DestroyComponent's Object pin is hidden and defaults to self; a spawned decal lets anyone destroy it
+    gone = call(g, "/Script/Engine.ActorComponent", "K2_DestroyComponent", (dloop, "Array Element"),
+                inputs=[obj_pin("Object", "/Script/CoreUObject.Object", hidden=True)])
+    g.link(live, "then", gone, "execute")
+    clear = g.call_array(ARR, "Array_Clear", Pin("e", OBJECT, sub_object=cls_ref(DECAL_COMP)), pure=False)
+    link(g, decals(), clear, "TargetArray")
+    g.link(dloop, "Completed", clear, "execute")
+
+    # IsNearPlayerView(Location, Radius) (Phase 7 Task 16, Review Focus 2): cosmetic smoke spawns only near the player's camera
+    g = bp.function("IsNearPlayerView", doc="The player's camera (GetPlayerCameraManager(0)) is within Radius of Location; false without one.",
+                    inputs=["Location:struct:" + VECTOR, "Radius:float"], outputs=["ReturnValue:bool"], pure=True)
+    cm = g.call_static(GAMEPLAY, "GetPlayerCameraManager", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("PlayerIndex", INT, default="0")],
+                       outputs=[obj_pin("ReturnValue", "/Script/Engine.PlayerCameraManager", "out")], pure=True)
+    has_cam = branch_on(g, (valid(g, (cm, "ReturnValue")), "ReturnValue"), ("entry", "then"))
+    g.note(has_cam, "a player camera?")
+    g.link(has_cam, "else", ret(g, ReturnValue="false"), "execute")
+    eye = g.call_on("/Script/Engine.PlayerCameraManager", "GetCameraLocation", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(cm, "ReturnValue", eye, "self")
+    gap = g.call_static(MATH, "Vector_Distance", inputs=[struct_pin("V1", VECTOR), struct_pin("V2", VECTOR)],
+                        outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    g.link(eye, "ReturnValue", gap, "V1")
+    g.link_entry("Location", gap, "V2")
+    within = compare(g, "LessEqual_FloatFloat", FLOAT)
+    g.link(gap, "ReturnValue", within, "A")
+    g.link_entry("Radius", within, "B")
+    r_near = g.function_result([Pin("ReturnValue", BOOL)])
+    g.link(within, "ReturnValue", r_near, "ReturnValue")
+    g.link(has_cam, "then", r_near, "execute")
+
+    # FindNearestCrate(Location) -> Crate, Distance (Phase 7 Task 18, spec §7.6): the race HUD's crate prompt
+    lootc = gen(BP_LOOTBOX)
+    g = bp.function("FindNearestCrate", doc="The nearest crate not yet collected (bCollected false) and its distance from Location; none "
+                    "and %g cm when there is none." % NO_CRATE_CM, inputs=["Location:struct:" + VECTOR],
+                    outputs=["Crate:" + obj_spec(BP_LOOTBOX), "Distance:float"], locals=["Best:" + obj_spec(BP_LOOTBOX), "BestDistance:float"])
+    far = g.local_set("BestDistance", FLOAT, default="%f" % NO_CRATE_CM)
+    g.link_entry("then", far, "execute")
+    none = g.local_set("Best", OBJECT, sub_object=cls_ref(lootc))
+    g.exec(far, none)
+    found = get_all_actors_of_class(g, lootc)
+    g.exec(none, found)
+    loop = g.for_each(Pin("e", OBJECT, sub_object=cls_ref(lootc)))
+    g.link(found, "OutActors", loop, "Array")
+    g.link(found, "then", loop, "Exec")
+    gap = g.call_static(MATH, "Vector_Distance", inputs=[struct_pin("V1", VECTOR), struct_pin("V2", VECTOR)],
+                        outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+    link(g, (actor_loc(g, (loop, "Array Element")), "ReturnValue"), gap, "V1")
+    g.link_entry("Location", gap, "V2")
+    closer = compare(g, "Less_FloatFloat", FLOAT)
+    g.link(gap, "ReturnValue", closer, "A")
+    g.link(g.local_get("BestDistance", FLOAT), "BestDistance", closer, "B")
+    taken = get_on(g, lootc, "bCollected", BOOL, (loop, "Array Element"))
+    open_ = not_bool(g)
+    g.link(taken, "bCollected", open_, "A")
+    both = and_bool(g)
+    g.link(open_, "ReturnValue", both, "A")
+    g.link(closer, "ReturnValue", both, "B")
+    b = branch_on(g, (both, "ReturnValue"), (loop, "LoopBody"))
+    g.note(b, "not collected and the nearest so far?")
+    keep = g.local_set("Best", OBJECT, sub_object=cls_ref(lootc))
+    g.link(loop, "Array Element", keep, "Best")
+    g.link(b, "then", keep, "execute")
+    keep_d = g.local_set("BestDistance", FLOAT)
+    g.link(gap, "ReturnValue", keep_d, "BestDistance")
+    g.exec(keep, keep_d)
+    r_crate = g.function_result([obj_pin("Crate", lootc), Pin("Distance", FLOAT)])
+    g.link(g.local_get("Best", OBJECT, cls_ref(lootc)), "Best", r_crate, "Crate")
+    g.link(g.local_get("BestDistance", FLOAT), "BestDistance", r_crate, "Distance")
+    g.link(loop, "Completed", r_crate, "execute")
+
     # ---- Phase 3: items (spec 2026-10-30 §2, §4) ----
     # GetItemInfo(Type) -> Name, BoxCharges, MaxCharges
     g = bp.function("GetItemInfo", doc="Item name, charges per crate and cap per racer, in one place.", inputs=["Type:" + enum_spec(E_ITEM_TYPE)], outputs=["Name:string", "BoxCharges:int", "MaxCharges:int"], pure=True)
@@ -699,8 +907,28 @@ def build_mode() -> Blueprint:
     r0 = g.function_result([Pin("Name", STRING, default="-"), Pin("BoxCharges", INT, default="0"), Pin("MaxCharges", INT, default="0")])
     g.link(prev[0], prev[1], r0, "execute")
 
+    # GetItemLook(Type, bRandom) -> Colour, Icon (Phase 7 Task 17, spec §3, §7.4): one place for an item's colour and icon (df.ITEM_LOOK,
+    # the art catalogue's hex colours in linear): the crate's stripe, icon and beacon, the loot burst and the HUD slot
+    g = bp.function("GetItemLook", doc="An item's colour (linear, spec §3) and icon; a random crate shows the random look whatever it rolled; "
+                    "no item: white and the empty icon.", inputs=["Type:" + enum_spec(E_ITEM_TYPE), "bRandom:bool"],
+                    outputs=["Colour:struct:" + LINEAR_COLOR, "Icon:object:" + TEXTURE_2D], pure=True)
+
+    def look(hex_colour, icon):
+        return g.function_result([struct_pin("Colour", LINEAR_COLOR, default=linear_colour(hex_colour)),
+                                  Pin("Icon", OBJECT, sub_object=cls_ref(TEXTURE_2D), default_object=asset_object(art_icon(icon)))])
+
+    b = branch_on(g, ("entry", "bRandom"), ("entry", "then"))
+    g.note(b, "a random crate?")
+    g.link(b, "then", look(*RANDOM_LOOK), "execute")
+    prev = (b, "else")
+    for idx in (ITEM_BOOST, ITEM_SHIELD, ITEM_BOMB, ITEM_GUN, ITEM_RPG):
+        b = branch_on(g, (enum_is(g, ("entry", "Type"), idx), "ReturnValue"), prev)
+        g.link(b, "then", look(*ITEM_LOOK[idx]), "execute")
+        prev = (b, "else")
+    g.link(prev[0], prev[1], look("FFFFFF", EMPTY_ICON), "execute")
+
     # GrantItem(C, Type, Charges) -> bool: into the racer's inventory, capped by GetItemInfo; stamps the pickup for the HUD
-    g = bp.function("GrantItem", doc="Puts an item into a controller's inventory (capped) and stamps the pickup for the HUD.", inputs=["C:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], outputs=["ReturnValue:bool"])
+    g = bp.function("GrantItem", doc="Puts an item into a controller's inventory (capped), stamps the pickup for the HUD and shows it on the car's roof.", inputs=["C:object:" + CONTROLLER, "Type:" + enum_spec(E_ITEM_TYPE), "Charges:int"], outputs=["ReturnValue:bool"])
     r = find_racer(g, ("entry", "C"))
     b = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"))
     g.link_entry("then", b, "execute")
@@ -727,8 +955,17 @@ def build_mode() -> Blueprint:
     g.link_entry("C", fire, "Racer")
     g.link_entry("Type", fire, "Type")
     g.exec(log, fire)
+    # Phase 7 Task 13 (spec §6.1): a racer in a car sees the new weapon on its roof
+    pawn = call(g, CONTROLLER, "K2_GetPawn", ("entry", "C"), outputs=[obj_pin("ReturnValue", PAWN, "out")], pure=True)
+    to_car = g.cast(VC)
+    g.note(to_car, "in a car?")
+    g.link(pawn, "ReturnValue", to_car, "Object")
+    g.exec(fire, to_car)
+    roof = call(g, VC, "RefreshRoofWeapon", (to_car, as_pin(BP_VEHICLE)))
+    g.link(to_car, "then", roof, "execute")
     r_yes = ret(g, ReturnValue="true")
-    g.exec(fire, r_yes)
+    g.exec(roof, r_yes)
+    g.link(to_car, "CastFailed", r_yes, "execute")
     r_no2 = ret(g, ReturnValue="false")
     g.link(ba, "else", r_no2, "execute")
 
@@ -782,8 +1019,10 @@ def build_mode() -> Blueprint:
     r4 = g.function_result([struct_pin("Transform", TRANSFORM)])
     g.link(b4, "else", r4, "execute")
 
+    add_rival_look(bp)
+
     # RespawnRacer(C): put the racer back in a car at the respawn point (players; AI respawn is Phase 4)
-    g = bp.function("RespawnRacer", doc="Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed.", inputs=["C:object:" + CONTROLLER],
+    g = bp.function("RespawnRacer", doc="Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed, the roof weapon refreshed.", inputs=["C:object:" + CONTROLLER],
                     locals=["Car:" + obj_spec(BP_VEHICLE), "SpawnAt:struct:" + TRANSFORM])
     pc = g.cast(PCC)
     g.link_entry("C", pc, "Object")
@@ -926,16 +1165,20 @@ def build_mode() -> Blueprint:
     g.exec(killa, s_new_ai)
     g.link(bwa, "else", s_new_ai, "execute")
     g.link(tpa, "then", sld, "execute")
-    g.link(s_new_ai, "then", sld, "execute")
+    # Phase 7 Task 13 (spec §6.1), Task 22 (spec §3): a rival's replacement car gets the Fire syndicate look too
+    rival = g.call_self("ApplyRivalLook", inputs=[obj_pin("Car", VC)])
+    link(g, car(), rival, "Car")
+    g.exec(s_new_ai, rival, sld)
     hb = call(g, "/Script/PhysXVehicles.WheeledVehicleMovementComponent", "SetHandbrakeInput",
               (get_on(g, VC, "VehicleMovement", OBJECT, car(), sub=cls_ref("/Script/PhysXVehicles.WheeledVehicleMovementComponent")), "VehicleMovement"),
               inputs=[Pin("bNewHandbrake", BOOL, default="false")])
     g.exec(sld, hb)
     ce = call(g, VC, "ClearEffects", car())  # Phase 3: no boost or shield carries over a respawn
-    g.exec(hb, ce)
+    roof = call(g, VC, "RefreshRoofWeapon", car())  # Phase 7 Task 13: a fresh car or a restart's cleared inventory on the roof
+    g.exec(hb, ce, roof)
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     g.link_entry("C", r, "C")
-    br = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (ce, "then"))
+    br = branch_on(g, (valid(g, (r, "Racer")), "ReturnValue"), (roof, "then"))
     zero = set_on(g, RC, "OffTrackSeconds", FLOAT, (r, "Racer"), default="0.0")
     g.link(br, "then", zero, "execute")
     fire = g.call_delegate("OnRacerRespawned", [obj_pin("Racer", CONTROLLER)])
@@ -1269,7 +1512,7 @@ def build_mode() -> Blueprint:
     # SpawnNPCs(Count): a grid behind the start line, alternating lanes, one AI controller per car
     g = bp.function("SpawnNPCs", inputs=["Count:int"],
                     locals=["Car:" + obj_spec(BP_VEHICLE), "AI:" + obj_spec(BP_AI), "SpawnAt:struct:" + TRANSFORM, "Side:float", "StartDistance:float"],
-                    doc="Spawns Count NPC cars with their controllers on a grid behind the start line, alternating lanes, and registers their racers.")
+                    doc="Spawns Count NPC cars (in NPCPaint) with their controllers on a grid behind the start line, alternating lanes, and registers their racers.")
     mt = g.var_get("MainTrack", OBJECT, cls_ref(TC))
     MT = (mt, "MainTrack")
     some = compare(g, "Greater_IntInt", INT, b="0")
@@ -1369,9 +1612,12 @@ def build_mode() -> Blueprint:
     s_car = g.local_set("Car", OBJECT, sub_object=cls_ref(VC))
     g.link(sp_car, "ReturnValue", s_car, "Car")
     g.exec(sp_car, s_car)
+    # Phase 7 Task 13 (spec §6.1), Task 22 (spec §3): rivals get the Fire syndicate look
+    rival = g.call_self("ApplyRivalLook", inputs=[obj_pin("Car", VC)])
+    link(g, (g.local_get("Car", OBJECT, cls_ref(VC)), "Car"), rival, "Car")
     sp_ai = g.spawn_actor(AIC)
     link(g, at(), sp_ai, "SpawnTransform")
-    g.exec(s_car, sp_ai)
+    g.exec(s_car, rival, sp_ai)
     s_ai = g.local_set("AI", OBJECT, sub_object=cls_ref(AIC))
     g.link(sp_ai, "ReturnValue", s_ai, "AI")
     g.exec(sp_ai, s_ai)
@@ -1688,7 +1934,8 @@ def build_mode() -> Blueprint:
 
     # RestartRace: a clean race without reloading the level (functional tests share one play session; also usable
     # for a future in-game "restart"): clock, result, racer stats, pending respawn, player back in a car at the start.
-    g = bp.function("RestartRace", doc="A clean race without reloading the level: clock, result, racer stats, items swept, player back on the line.", locals=["Player:object:" + PLAYER_CONTROLLER])
+    g = bp.function("RestartRace", doc="A clean race without reloading the level: clock, result, racer stats, items and effects swept, player back on the line, "
+                    "the next gate lit.", locals=["Player:object:" + PLAYER_CONTROLLER])
     unpause = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="false")],
                             outputs=[Pin("ReturnValue", BOOL, "out")])  # Phase 5: a restart from the pause menu resumes the world
     g.link_entry("then", unpause, "execute")
@@ -1710,7 +1957,8 @@ def build_mode() -> Blueprint:
     s_pl = g.local_set("Player", OBJECT, sub_object=cls_ref(PLAYER_CONTROLLER))
     g.link(pc0, "ReturnValue", s_pl, "Player")
     desp = g.call_self("DespawnNPCs")  # Phase 4: every race gets fresh NPCs
-    g.exec(s_res, desp, sweep, s_pl)
+    sweep_fx = g.call_self("SweepEffects")  # Phase 7 Task 16 (Review Focus 3): no effect or scorch carried into the new race
+    g.exec(s_res, desp, sweep, sweep_fx, s_pl)
     player = lambda: (g.local_get("Player", OBJECT, cls_ref(PLAYER_CONTROLLER)), "Player")
     r = g.call_self("FindRacer", inputs=[obj_pin("C", CONTROLLER)], outputs=[obj_pin("Racer", RC, "out")], pure=True)
     link(g, player(), r, "C")
@@ -1761,10 +2009,11 @@ def build_mode() -> Blueprint:
     s_nat = g.var_set("NextAIItemTime", FLOAT)
     g.link(first_item, "ReturnValue", s_nat, "NextAIItemTime")
     g.exec(ranks, s_nat)
+    g.exec(s_nat, g.call_self("RefreshGateHighlights"))  # Task 21: the player's next gate (1) glows
 
     # ---- event graph ----
     g = bp.event_graph()
-    g.section("Begin Play: find the GameState, start the clock, collect gates and tracks")
+    g.section("Begin Play: find the GameState, start the clock, collect gates and tracks, light the player's next gate")
     bpl = g.begin_play(col=0, row=1)
     par = g.call_parent(GAME_MODE_BASE, "ReceiveBeginPlay", col=1, row=1)
     gs = g.call_static(GAMEPLAY, "GetGameState", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
@@ -1796,6 +2045,7 @@ def build_mode() -> Blueprint:
     s_nat = g.var_set("NextAIItemTime", FLOAT)
     g.link(first_item, "ReturnValue", s_nat, "NextAIItemTime")
     g.exec(spawn, s_nat)
+    g.exec(s_nat, g.call_self("RefreshGateHighlights"))  # Task 21: the player's next gate glows from the start
 
     # HandleStartingNewPlayer: the parent spawns and possesses the car; then the on-foot character rides in it
     g.section("New player: the parent spawns the car; spawn the character and put it inside")

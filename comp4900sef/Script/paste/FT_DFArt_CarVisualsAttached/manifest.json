@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_CarVisualsAttached",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1, for SEDAN, BRUTE and VIPER: the physics Mesh is hidden but keeps refreshing its bones; Body (visible, SM_DF_Car_<X>) rides on Mesh; each wheel (SM_DF_Wheel) rides on Mesh at its wheel bone's socket; the light bar (SEDAN only) and the hidden roof weapon sit on the Body's Roof socket; the shield bubble and the boost flames start hidden. Every part is at world scale 1.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

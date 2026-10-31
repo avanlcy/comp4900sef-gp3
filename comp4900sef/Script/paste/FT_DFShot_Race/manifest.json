@@ -1,0 +1,26 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShot_Race",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Phase 7 Task 24 presentation capture: the race HUD on the grid, the rivals ahead, the player on foot, the summary with its unlock line and the item looks, on a shipped level's terrain (placed in L_TestTrack for a capture run only).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "TimeLimit": 90.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

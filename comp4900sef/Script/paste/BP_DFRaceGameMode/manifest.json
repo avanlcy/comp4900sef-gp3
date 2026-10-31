@@ -104,8 +104,15 @@
    "editable": false
   },
   {
-   "name": "ExplosionEffect",
-   "type": "object:/Script/Engine.ParticleSystem",
+   "name": "ExplosionFxClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFFx.BP_DFFx_C",
+   "default": "",
+   "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "ScorchMaterial",
+   "type": "object:/Script/Engine.MaterialInterface",
    "default": "",
    "category": "Dead Fire|Explosions",
    "editable": true
@@ -136,6 +143,20 @@
    "type": "float",
    "default": "800",
    "category": "Dead Fire|Explosions",
+   "editable": true
+  },
+  {
+   "name": "CheckpointSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Race",
+   "editable": true
+  },
+  {
+   "name": "LapSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Race",
    "editable": true
   },
   {
@@ -188,6 +209,20 @@
    "editable": true
   },
   {
+   "name": "NPCPaint",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
+   "name": "NPCTrim",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|AI",
+   "editable": true
+  },
+  {
    "name": "NextAIItemTime",
    "type": "float",
    "default": "-1",
@@ -226,6 +261,13 @@
    "name": "NextRankTime",
    "type": "float",
    "default": "0",
+   "category": "Dead Fire|Race|State",
+   "editable": false
+  },
+  {
+   "name": "ScorchDecals",
+   "type": "array<object:/Script/Engine.DecalComponent>",
+   "default": "",
    "category": "Dead Fire|Race|State",
    "editable": false
   }
@@ -325,7 +367,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "A lap: +1 lap, PointsPerLap, next gate back to 1."
+   "doc": "A lap: +1 lap, PointsPerLap, next gate back to 1; the player hears LapSound and the gates' glow follows (RefreshGateHighlights)."
   },
   {
    "name": "NotifyCheckpointPassed",
@@ -336,7 +378,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Advances the racer's next gate (wrapping) and grants the time bonus."
+   "doc": "Advances the racer's next gate (wrapping) and grants the time bonus; the player hears CheckpointSound and the gates' glow follows (RefreshGateHighlights)."
   },
   {
    "name": "NotifyCheckpointReached",
@@ -351,6 +393,17 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "A car crossed a gate: credited only when it is the racer's next gate and the race is active."
+  },
+  {
+   "name": "RefreshGateHighlights",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Next:int=-1"
+   ],
+   "doc": "Lights the gate whose CheckpointIndex is the player's next gate (its racer's NextCheckpointIndex) and dims every other one (BP_DFCheckpoint.SetHighlighted); with no player racer every gate is dim."
   },
   {
    "name": "HandleRacerDeath",
@@ -402,7 +455,7 @@
    "locals": [
     "Shooter:object:/Script/Engine.Actor"
    ],
-   "doc": "The explosion rule: effects, full radial damage inside the radius, a shove and a tire blast for every car caught."
+   "doc": "The explosion rule: effect, scorch decal, heavy shake and sound; full radial damage inside the radius, a shove and a tire blast for every car caught."
   },
   {
    "name": "SweepItems",
@@ -412,6 +465,46 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "Removes every live bomb and rocket (RestartRace)."
+  },
+  {
+   "name": "SweepEffects",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Removes every live effect (BP_DFFx), rock chunk (BP_DFDebris) and scorch decal (RestartRace)."
+  },
+  {
+   "name": "IsNearPlayerView",
+   "inputs": [
+    "Location:struct:/Script/CoreUObject.Vector",
+    "Radius:float"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The player's camera (GetPlayerCameraManager(0)) is within Radius of Location; false without one."
+  },
+  {
+   "name": "FindNearestCrate",
+   "inputs": [
+    "Location:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "Crate:object:/Game/DeadFire/Blueprints/BP_DFLootBox.BP_DFLootBox_C",
+    "Distance:float"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Best:object:/Game/DeadFire/Blueprints/BP_DFLootBox.BP_DFLootBox_C",
+    "BestDistance:float"
+   ],
+   "doc": "The nearest crate not yet collected (bCollected false) and its distance from Location; none and 1e+09 cm when there is none."
   },
   {
    "name": "GetItemInfo",
@@ -429,6 +522,21 @@
    "doc": "Item name, charges per crate and cap per racer, in one place."
   },
   {
+   "name": "GetItemLook",
+   "inputs": [
+    "Type:enum:/Game/DeadFire/Data/E_DFItemType.E_DFItemType",
+    "bRandom:bool"
+   ],
+   "outputs": [
+    "Colour:struct:/Script/CoreUObject.LinearColor",
+    "Icon:object:/Script/Engine.Texture2D"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "An item's colour (linear, spec \u00a73) and icon; a random crate shows the random look whatever it rolled; no item: white and the empty icon."
+  },
+  {
    "name": "GrantItem",
    "inputs": [
     "C:object:/Script/Engine.Controller",
@@ -441,7 +549,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Puts an item into a controller's inventory (capped) and stamps the pickup for the HUD."
+   "doc": "Puts an item into a controller's inventory (capped), stamps the pickup for the HUD and shows it on the car's roof."
   },
   {
    "name": "CycleItem",
@@ -468,6 +576,17 @@
    "doc": "Where a racer comes back: its last gate, else gate 0, else the player start."
   },
   {
+   "name": "ApplyRivalLook",
+   "inputs": [
+    "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A rival's car in the Fire syndicate look (spec \u00a73): NPCPaint on its paint slot (ApplyPaint), NPCTrim on its Body's trim slot, and no light bar (bHasLightBar off as well, so a construction-script rerun keeps it hidden)."
+  },
+  {
    "name": "RespawnRacer",
    "inputs": [
     "C:object:/Script/Engine.Controller"
@@ -479,7 +598,7 @@
     "Car:object:/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C",
     "SpawnAt:struct:/Script/CoreUObject.Transform"
    ],
-   "doc": "Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed."
+   "doc": "Puts a racer back in a car at its respawn point: the car teleported or replaced, the character revived and stowed, the roof weapon refreshed."
   },
   {
    "name": "IsOnAnyTrack",
@@ -605,7 +724,7 @@
     "Side:float",
     "StartDistance:float"
    ],
-   "doc": "Spawns Count NPC cars with their controllers on a grid behind the start line, alternating lanes, and registers their racers."
+   "doc": "Spawns Count NPC cars (in NPCPaint) with their controllers on a grid behind the start line, alternating lanes, and registers their racers."
   },
   {
    "name": "DespawnNPCs",
@@ -669,7 +788,7 @@
    "locals": [
     "Player:object:/Script/Engine.PlayerController"
    ],
-   "doc": "A clean race without reloading the level: clock, result, racer stats, items swept, player back on the line."
+   "doc": "A clean race without reloading the level: clock, result, racer stats, items and effects swept, player back on the line, the next gate lit."
   }
  ],
  "graphs": [
@@ -834,6 +953,12 @@
      "C",
      "DFN_K2Node_CallFunction_3",
      "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_4",
+     "C"
     ]
    ],
    "layout": {
@@ -864,6 +989,12 @@
      "entry",
      "C",
      "DFN_K2Node_CallFunction_7",
+     "C"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_8",
      "C"
     ]
    ],
@@ -937,6 +1068,25 @@
      3963,
      0
     ]
+   }
+  },
+  {
+   "name": "RefreshGateHighlights",
+   "file": "RefreshGateHighlights.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
    }
   },
   {
@@ -1081,133 +1231,145 @@
     [
      "entry",
      "then",
-     "DFN_K2Node_CallFunction_0",
+     "DFN_K2Node_SpawnActorFromClass_0",
      "execute"
     ],
     [
      "entry",
      "Location",
-     "DFN_K2Node_CallFunction_1",
+     "DFN_K2Node_CallFunction_2",
+     "Location"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_5",
+     "Epicenter"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_6",
      "Location"
     ],
     [
      "entry",
      "InstigatedBy",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_7",
      "Object"
     ],
     [
      "entry",
      "InstigatedBy",
-     "DFN_K2Node_CallFunction_3",
+     "DFN_K2Node_CallFunction_8",
      "self"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_4",
+     "DFN_K2Node_CallFunction_9",
      "A"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_10",
      "BaseDamage"
     ],
     [
      "entry",
      "Location",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_10",
      "Origin"
     ],
     [
      "entry",
      "Radius",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_10",
      "DamageRadius"
     ],
     [
      "entry",
      "Causer",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_10",
      "DamageCauser"
     ],
     [
      "entry",
      "InstigatedBy",
-     "DFN_K2Node_CallFunction_5",
+     "DFN_K2Node_CallFunction_10",
      "InstigatedByController"
     ],
     [
      "entry",
      "Location",
-     "DFN_K2Node_CallFunction_7",
+     "DFN_K2Node_CallFunction_12",
      "V2"
     ],
     [
      "entry",
      "Radius",
-     "DFN_K2Node_CallFunction_9",
+     "DFN_K2Node_CallFunction_14",
      "B"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_10",
+     "DFN_K2Node_CallFunction_15",
      "BaseDamage"
     ],
     [
      "entry",
      "InstigatedBy",
-     "DFN_K2Node_CallFunction_10",
+     "DFN_K2Node_CallFunction_15",
      "EventInstigator"
     ],
     [
      "entry",
      "Causer",
-     "DFN_K2Node_CallFunction_10",
+     "DFN_K2Node_CallFunction_15",
      "DamageCauser"
     ],
     [
      "entry",
      "Causer",
-     "DFN_K2Node_CallFunction_12",
-     "B"
-    ],
-    [
-     "entry",
-     "Location",
-     "DFN_K2Node_CallFunction_13",
-     "V2"
-    ],
-    [
-     "entry",
-     "Radius",
-     "DFN_K2Node_CallFunction_15",
-     "B"
-    ],
-    [
-     "entry",
-     "Location",
      "DFN_K2Node_CallFunction_17",
-     "Origin"
-    ],
-    [
-     "entry",
-     "Radius",
-     "DFN_K2Node_CallFunction_17",
-     "Radius"
-    ],
-    [
-     "entry",
-     "bBlowTires",
-     "DFN_K2Node_IfThenElse_5",
-     "Condition"
+     "B"
     ],
     [
      "entry",
      "Location",
      "DFN_K2Node_CallFunction_18",
+     "V2"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_20",
+     "B"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_22",
+     "Origin"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_22",
+     "Radius"
+    ],
+    [
+     "entry",
+     "bBlowTires",
+     "DFN_K2Node_IfThenElse_6",
+     "Condition"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_23",
      "Point"
     ],
     [
@@ -1248,6 +1410,87 @@
      0
     ],
     "result": null
+   }
+  },
+  {
+   "name": "SweepEffects",
+   "file": "SweepEffects.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "IsNearPlayerView",
+   "file": "IsNearPlayerView.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_3",
+     "V2"
+    ],
+    [
+     "entry",
+     "Radius",
+     "DFN_K2Node_CallFunction_4",
+     "B"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1911,
+     0
+    ]
+   }
+  },
+  {
+   "name": "FindNearestCrate",
+   "file": "FindNearestCrate.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_1",
+     "V2"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3118,
+     0
+    ]
    }
   },
   {
@@ -1298,6 +1541,64 @@
     ],
     "result": [
      2839,
+     0
+    ]
+   }
+  },
+  {
+   "name": "GetItemLook",
+   "file": "GetItemLook.txt",
+   "links": [
+    [
+     "entry",
+     "bRandom",
+     "DFN_K2Node_IfThenElse_0",
+     "Condition"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "Type",
+     "DFN_K2Node_CallFunction_4",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3086,
      0
     ]
    }
@@ -1365,6 +1666,12 @@
      "Type",
      "DFN_K2Node_CallDelegate_0",
      "Type"
+    ],
+    [
+     "entry",
+     "C",
+     "DFN_K2Node_CallFunction_14",
+     "self"
     ]
    ],
    "layout": {
@@ -1373,7 +1680,7 @@
      0
     ],
     "result": [
-     4565,
+     5360,
      0
     ]
    }
@@ -1432,6 +1739,55 @@
    }
   },
   {
+   "name": "ApplyRivalLook",
+   "file": "ApplyRivalLook.txt",
+   "links": [
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_0",
+     "self"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_CallFunction_0",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableSet_1",
+     "self"
+    ],
+    [
+     "entry",
+     "Car",
+     "DFN_K2Node_VariableGet_3",
+     "self"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "RespawnRacer",
    "file": "RespawnRacer.txt",
    "links": [
@@ -1480,7 +1836,7 @@
     [
      "entry",
      "C",
-     "DFN_K2Node_CallFunction_34",
+     "DFN_K2Node_CallFunction_36",
      "C"
     ],
     [
@@ -1981,17 +2337,25 @@
   "RaceTimeLimit": 120.0,
   "CheckpointTimeBonus": 3.0,
   "ScoreRequirement": 300,
-  "ExplosionEffect": "/Game/StarterContent/Particles/P_Explosion",
-  "ExplosionSound": "/Game/StarterContent/Audio/Explosion_Cue",
+  "ExplosionFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxExplosion",
+  "ScorchMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Scorch",
+  "ExplosionSound": "/Game/DeadFire/Art/Sounds/SW_DF_Explosion",
   "ExplosiveDamageType": "class:/Game/DeadFire/Blueprints/BP_DFExplosiveDamage",
+  "CheckpointSound": "/Game/DeadFire/Art/Sounds/SW_DF_Checkpoint",
+  "LapSound": "/Game/DeadFire/Art/Sounds/SW_DF_Lap",
   "OnFootCharacterClass": "class:/Game/DeadFire/Blueprints/BP_DFCharacter",
   "DefaultPawnClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle",
   "PlayerControllerClass": "class:/Game/DeadFire/Blueprints/BP_DFPlayerController",
   "GameStateClass": "class:/Game/DeadFire/Blueprints/BP_DFRaceGameState",
   "HUDClass": "class:/Game/DeadFire/Blueprints/BP_DFHUD",
   "NPCCount": 3,
+  "NPCPaint": "/Game/DeadFire/Art/Materials/MI_DF_Paint_Gang",
+  "NPCTrim": "/Game/DeadFire/Art/Materials/MI_DF_Trim_Gang",
   "PlayerVehicleClass": "class:/Game/DeadFire/Blueprints/BP_DFVehicle"
  },
  "component_defaults": {},
- "requires": []
+ "requires": [],
+ "removed_variables": [
+  "ExplosionEffect"
+ ]
 }

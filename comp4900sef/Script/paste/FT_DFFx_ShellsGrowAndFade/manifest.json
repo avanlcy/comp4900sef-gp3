@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_ShellsGrowAndFade",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.1: a BP_DFFxExplosion starts with its first shell at base x StartScale and Fade 1 (BeginPlay applies the t = 0 look); 0.6 s later (about 0.66 s headless) that shell's relative scale X is greater than its base x StartScale (and not past base x EndScale), its MID's Fade is below 0.9, and that MID is the shell's material.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

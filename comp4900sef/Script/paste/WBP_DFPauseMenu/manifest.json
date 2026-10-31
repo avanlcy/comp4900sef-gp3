@@ -135,7 +135,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -151,7 +153,12 @@
    "name": "ResumeButton",
    "class": "/Script/UMG.Button",
    "parent": "PauseBox",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -181,7 +188,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -189,7 +198,12 @@
    "name": "RestartButton",
    "class": "/Script/UMG.Button",
    "parent": "PauseBox",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -219,7 +233,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -227,7 +243,12 @@
    "name": "MenuButton",
    "class": "/Script/UMG.Button",
    "parent": "PauseBox",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -257,7 +278,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -265,7 +288,12 @@
    "name": "QuitButton",
    "class": "/Script/UMG.Button",
    "parent": "PauseBox",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -295,7 +323,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   }

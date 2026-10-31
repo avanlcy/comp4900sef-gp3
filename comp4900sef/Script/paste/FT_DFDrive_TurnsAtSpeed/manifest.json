@@ -1,0 +1,53 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_TurnsAtSpeed",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Review Focus 1: at 120 km/h the player's settled full lock (steer = the car's ComputeSteerScale(120), the speed-scaled value the player's branch applies) without the handbrake for 1.5 s turns the car 45 degrees or more and it stays upright (up Z > 0.7). SEDAN on the drive strip in the gear the auto-box holds at its start speed, raw AI controller (unsmoothed, unscaled inputs), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Yaw0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "KPH0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Steer",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

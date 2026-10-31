@@ -1,6 +1,8 @@
 """BP_DFCharacter (plan Task 4): child of the Third Person template character.
 
 Interact (enter vehicle), fire, health, death/revive, stowed state. Movement, camera and jump come from the parent.
+Phase 7 Task 14 (spec §6.2): the mannequin in navy and grey, with a helmet, a vest and a rifle on its bones; the rifle is
+where the weapon's shots are seen to start (Weapon.VisualOrigin).
 """
 import os
 import sys
@@ -10,15 +12,39 @@ from df import (ACTOR, BOOL, BP_CHARACTER, BP_EXPLOSIVE_DAMAGE, BP_GM, BP_VEHICL
                 FLOAT, HIT_RESULT, MATH, OBJECT, OUT, PAWN, PRIMITIVE, SCENE_COMP, SPHERE_COMP, TPC, VECTOR, Blueprint, Pin,
                 and_bool, as_pin, cast_to, cls_ref, compare, gen, get_game_mode, is_valid, math2, not_bool, obj_pin,
                 obj_spec, or_bool, struct_pin)
+from df import BP_SHAKE_LIGHT, CAMERA_SHAKE_BASE, CLASS, PLAYER_CONTROLLER, start_camera_shake  # noqa: E402  (Phase 7 Task 10)
+from df import (CHARACTER_GEAR, MI_MANNEQUIN_BODY, MI_MANNEQUIN_TRIM, NAME, NO_COLLISION, SKEL_MESH_COMP,  # noqa: E402  (Task 14)
+                STATIC_MESH_COMP, art_mesh, native_enum_pin)
+from df import SW_RIFLE, weapon_look  # noqa: E402  (Task 16)
 
 CC, VC, GMC, WC = gen(BP_CHARACTER), gen(BP_VEHICLE), gen(BP_GM), gen(BPC_WEAPON)
 CAMERA = "/Script/Engine.CameraComponent"
+ATTACHMENT_RULE = "/Script/Engine.EAttachmentRule"
+# Phase 7 Task 14 (spec §6.2): each gear part's transform relative to its bone (location cm, rotation pitch / yaw / roll),
+# measured in the editor on SK_Mannequin. Helmet and vest: their meshes' frame (X forward, Y right, Z up) upright at the
+# bone in the reference pose, the pose they were fitted to (an SCS component cannot be parented to the inherited Mesh, so
+# the construction script attaches each one keeping these offsets). Rifle: its hold point in the right fist of the idle pose
+# (the knuckles' centre, 2.5 cm towards the palm and 2 cm towards the wrist), barrel forward, pitched down 10 degrees.
+GEAR_MOUNTS = {
+    "Helmet": ((0.0, 0.0, 0.0), (0.0, 91.32, -90.0)),
+    "Vest": ((0.0, 0.0, 0.0), (0.0, 99.48, -90.0)),
+    "Rifle": ((-9.49, 4.27, -1.49), (38.30, -124.42, 68.68)),
+}
 
 
 def build() -> Blueprint:
     bp = Blueprint(BP_CHARACTER, parent=TPC, description="The on-foot player: enter cars, fire, health, death and revive; movement and camera come from the Third Person template.")
     bp.component("InteractionSphere", SPHERE_COMP, sphere_radius=300.0)
-    bp.component("Weapon", WC)
+    # bDebugTrace off as on the car (Phase 7, spec §6.2): the component template keeps its own value, whatever the weapon's default;
+    # Phase 7 Task 16 (spec §7.2): the rifle's shot sound and the shot effects, set on the template for the same reason
+    bp.component("Weapon", WC, bDebugTrace=False, **weapon_look(SW_RIFLE))
+    # Phase 7 Task 14 (spec §6.2): the mannequin's slots (0 body, 1 trim), and the gear; it never collides, so it adds no
+    # physics state to the character
+    bp.component_default("Mesh", "override_materials", [MI_MANNEQUIN_BODY, MI_MANNEQUIN_TRIM])
+    for name, asset, _ in CHARACTER_GEAR:
+        (lx, ly, lz), (pitch, yaw, roll) = GEAR_MOUNTS[name]
+        bp.component(name, STATIC_MESH_COMP, static_mesh=art_mesh(asset), relative_location={"vector": [lx, ly, lz]},
+                     relative_rotation={"rotator": {"pitch": pitch, "yaw": yaw, "roll": roll}}, **NO_COLLISION)
     H = "Dead Fire|Health"
     bp.variable("MaxHealth", "float", "100", H, editable=True)
     bp.variable("Health", "float", "100", H)
@@ -26,6 +52,9 @@ def build() -> Blueprint:
     bp.variable("bIsStowed", "bool", "false", "Dead Fire|State")
     bp.variable("bIsDead", "bool", "false", "Dead Fire|State")
     bp.variable("OwningController", "object:" + CONTROLLER, "", "Dead Fire|State")
+    # Phase 7 Task 10 (spec §5.3): on foot nothing changes but the camera shake on hits taken
+    bp.variable("HitShake", "class:" + CAMERA_SHAKE_BASE, "", "Dead Fire|Camera", editable=True)
+    bp.default("HitShake", "class:" + BP_SHAKE_LIGHT)
     bp.dispatcher("OnCharacterDamaged", ["Damage:float"])
     bp.dispatcher("OnCharacterDied", [])
     bp.dispatcher("OnCharacterRevived", [])
@@ -206,8 +235,33 @@ def build() -> Blueprint:
     fire = g.call_delegate("OnCharacterRevived")
     g.exec(sh, alive, walk, fire)
 
+    # Construction script (Phase 7 Task 14, spec §6.2): each gear part onto its bone of the inherited Mesh, keeping the
+    # part's relative transform (GEAR_MOUNTS) as its offset from the bone
+    g = bp.construction_script()
+    prev = g.call_parent(gen(TPC), "UserConstructionScript")
+    g.link_entry("then", prev, "execute")
+    for name, _, bone in CHARACTER_GEAR:
+        att = g.call_on(SCENE_COMP, "K2_AttachToComponent",
+                        inputs=[obj_pin("Parent", SCENE_COMP), Pin("SocketName", NAME, default=bone),
+                                native_enum_pin("LocationRule", ATTACHMENT_RULE, "KeepRelative"),
+                                native_enum_pin("RotationRule", ATTACHMENT_RULE, "KeepRelative"),
+                                native_enum_pin("ScaleRule", ATTACHMENT_RULE, "KeepRelative"),
+                                Pin("bWeldSimulatedBodies", BOOL, default="false")],
+                        outputs=[Pin("ReturnValue", BOOL, "out")])
+        g.link(g.var_get(name, OBJECT, cls_ref(STATIC_MESH_COMP)), name, att, "self")
+        g.link(g.var_get("Mesh", OBJECT, cls_ref(SKEL_MESH_COMP)), "Mesh", att, "Parent")
+        g.exec(prev, att)
+        prev = att
+
     # Event graph
     g = bp.event_graph()
+    g.section("Begin Play: the rifle is where the weapon's shots are seen to start (Phase 7 Task 14; the weapon draws them from its Muzzle)")
+    bpl = g.begin_play(col=0, row=10)
+    par = g.call_parent(gen(TPC), "ReceiveBeginPlay", col=1, row=10)
+    origin = g.var_set_on(WC, "VisualOrigin", OBJECT, sub_object=cls_ref(SCENE_COMP), col=2, row=10)
+    g.link(g.var_get("Weapon", OBJECT, cls_ref(WC), col=2, row=11), "Weapon", origin, "self")
+    g.link(g.var_get("Rifle", OBJECT, cls_ref(STATIC_MESH_COMP), col=1, row=11), "Rifle", origin, "VisualOrigin")
+    g.exec(bpl, par, origin)
     g.section("Any damage: lose health (explosions excepted); at 0 die and tell the GameMode")
     ad = g.event(ACTOR, "ReceiveAnyDamage",
                  [Pin("Damage", FLOAT), obj_pin("DamageType", "/Script/Engine.DamageType"), obj_pin("InstigatedBy", CONTROLLER),
@@ -237,11 +291,20 @@ def build() -> Blueprint:
     f1 = g.call_delegate("OnCharacterDamaged", [Pin("Damage", FLOAT)], col=3, row=1)
     g.link(ad, "Damage", f1, "Damage")
     g.exec(seth, f1)
+    # Phase 7 Task 10 (spec §5.3): a hit taken shakes the player's view (an AI never controls the character)
+    my_ctrl = g.call_self_native(PAWN, "GetController", outputs=[obj_pin("ReturnValue", CONTROLLER, "out")], pure=True)
+    to_pc = g.cast(PLAYER_CONTROLLER)
+    g.note(to_pc, "a player's character?")
+    g.link(my_ctrl, "ReturnValue", to_pc, "Object")
+    g.exec(f1, to_pc)
+    shake = start_camera_shake(g, (to_pc, as_pin(PLAYER_CONTROLLER)), (g.var_get("HitShake", CLASS, cls_ref(CAMERA_SHAKE_BASE)), "HitShake"))
+    g.link(to_pc, "then", shake, "execute")
     le = compare(g, "LessEqual_FloatFloat", FLOAT, b="0.0", col=4, row=3)
     g.link(seth, "Output_Get", le, "A")
     bd = g.branch(col=4, row=1)
     g.link(le, "ReturnValue", bd, "Condition")
-    g.exec(f1, bd)
+    g.exec(shake, bd)
+    g.link(to_pc, "CastFailed", bd, "execute")
     mark = g.var_set("bIsDead", BOOL, default="true", col=5, row=1)
     g.link(bd, "then", mark, "execute")
     cm = g.var_get("CharacterMovement", OBJECT, cls_ref(CHAR_MOVE), col=5, row=2)

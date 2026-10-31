@@ -1,0 +1,46 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_StraightStable",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "At 100 km/h with no steering for 3 s the heading changes 3 degrees or less and the car stays within 150 cm of its line. SEDAN on the drive strip in the gear the auto-box holds at its start speed, raw AI controller (unsmoothed, unscaled inputs), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Yaw0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Y0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

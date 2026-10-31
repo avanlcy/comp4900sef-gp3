@@ -1,0 +1,67 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_DriftBoost",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A 1.2 s drift released gives one boost: forward speed 0.2 s later at least 400 cm/s up, net of the coast-down of a control car that drifts and releases the same way with DriftBoostSpeed 0. A fresh car's 0.5 s drift released gives none. SEDAN on the drive strip in the gear the auto-box holds at its start speed, raw AI controller (unsmoothed, unscaled inputs), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "VA0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "VC0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "VA1",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "VC1",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "bShortDrift",
+   "type": "bool",
+   "default": "false",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

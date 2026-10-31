@@ -29,7 +29,7 @@
   {
    "name": "bDebugTrace",
    "type": "bool",
-   "default": "true",
+   "default": "false",
    "category": "Dead Fire|Weapon",
    "editable": true
   },
@@ -46,6 +46,62 @@
    "default": "-1",
    "category": "Dead Fire|Weapon",
    "editable": false
+  },
+  {
+   "name": "VisualOrigin",
+   "type": "object:/Script/Engine.SceneComponent",
+   "default": "",
+   "category": "Dead Fire|Weapon",
+   "editable": false
+  },
+  {
+   "name": "MuzzleFxClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFFx.BP_DFFx_C",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "TracerFxClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFFxTracer.BP_DFFxTracer_C",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "ImpactFxClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFFx.BP_DFFx_C",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "VehicleImpactFxClass",
+   "type": "class:/Game/DeadFire/Blueprints/BP_DFFx.BP_DFFx_C",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "FireSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "ImpactSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
+  },
+  {
+   "name": "VehicleImpactSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Weapon|Look",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -83,7 +139,37 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "A hitscan shot: trace, point damage credited to Instigator, OnFired."
+   "doc": "A hitscan shot: trace, its effects and sounds (PlayShotEffects), point damage credited to Instigator, OnFired."
+  },
+  {
+   "name": "GetVisualStart",
+   "inputs": [
+    "Origin:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "Start:struct:/Script/CoreUObject.Vector"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Where a shot is seen to start: VisualOrigin's Muzzle socket, else VisualOrigin, else Origin."
+  },
+  {
+   "name": "PlayShotEffects",
+   "inputs": [
+    "Origin:struct:/Script/CoreUObject.Vector",
+    "Direction:struct:/Script/CoreUObject.Vector",
+    "bHit:bool",
+    "Hit:struct:/Script/Engine.HitResult"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Start:struct:/Script/CoreUObject.Vector",
+    "End:struct:/Script/CoreUObject.Vector"
+   ],
+   "doc": "The shot as seen and heard: muzzle flash and tracer from the visual start (GetVisualStart) to the hit point, or Origin + Direction x Range on a miss, with FireSound; on a hit the impact (VehicleImpactFxClass and VehicleImpactSound on a car, else ImpactFxClass and ImpactSound), its +X along the surface normal."
   }
  ],
  "graphs": [
@@ -145,14 +231,26 @@
     ],
     [
      "entry",
+     "Origin",
+     "DFN_K2Node_CallFunction_5",
+     "Origin"
+    ],
+    [
+     "entry",
      "Direction",
-     "DFN_K2Node_CallFunction_6",
+     "DFN_K2Node_CallFunction_5",
+     "Direction"
+    ],
+    [
+     "entry",
+     "Direction",
+     "DFN_K2Node_CallFunction_7",
      "HitFromDirection"
     ],
     [
      "entry",
      "Instigator",
-     "DFN_K2Node_CallFunction_6",
+     "DFN_K2Node_CallFunction_7",
      "EventInstigator"
     ]
    ],
@@ -162,13 +260,104 @@
      0
     ],
     "result": [
-     3353,
+     3605,
      0
     ]
    }
+  },
+  {
+   "name": "GetVisualStart",
+   "file": "GetVisualStart.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Origin",
+     "DFN_K2Node_FunctionResult_0",
+     "Start"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2357,
+     0
+    ]
+   }
+  },
+  {
+   "name": "PlayShotEffects",
+   "file": "PlayShotEffects.txt",
+   "links": [
+    [
+     "entry",
+     "Origin",
+     "DFN_K2Node_CallFunction_0",
+     "Origin"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Hit",
+     "DFN_K2Node_CallFunction_1",
+     "Hit"
+    ],
+    [
+     "entry",
+     "Direction",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "Origin",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "bHit",
+     "DFN_K2Node_CallFunction_4",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "bHit",
+     "DFN_K2Node_IfThenElse_0",
+     "Condition"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "bDebugTrace": false,
+  "MuzzleFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxMuzzle",
+  "TracerFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxTracer",
+  "ImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxImpact",
+  "VehicleImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxSparks",
+  "ImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactDirt",
+  "VehicleImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactMetal"
+ },
  "component_defaults": {},
  "requires": []
 }

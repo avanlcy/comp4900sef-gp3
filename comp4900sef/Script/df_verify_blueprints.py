@@ -3,7 +3,7 @@
     exec(open(r'<repo>/comp4900sef/Script/df_verify_blueprints.py').read()); verify_all(r'<repo>/comp4900sef/Script/paste')
 
 For each manifest under the folder: the asset loads; every variable, function, event dispatcher and component it
-declares exists; struct members and enum values exist; the Blueprint compiles with no errors. Prints one line per
+declares exists, and every variable it lists as removed does not; struct members and enum values exist; the Blueprint compiles with no errors. Prints one line per
 problem and ends with VERIFY PASSED / VERIFY FAILED. Use it after editing a generated Blueprint by hand, to see whether
 the edit removed something the rest of the game calls (and re-run df_apply_blueprint.py to restore generated graphs).
 Needs the DF Blueprint Authoring plugin (tools/DFBlueprintAuthoring).
@@ -40,6 +40,9 @@ def verify_manifest(m):
     for v in m.get("variables", []):
         if v["name"] not in have_vars:
             problems.append("%s: variable %s missing" % (asset, v["name"]))
+    for name in m.get("removed_variables", []):
+        if name in have_vars:
+            problems.append("%s: variable %s should have been removed" % (asset, name))
     for disp in m.get("dispatchers", []):
         if disp["name"] not in d["dispatchers"]:
             problems.append("%s: event dispatcher %s missing" % (asset, disp["name"]))

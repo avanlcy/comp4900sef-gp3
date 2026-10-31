@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_EngineAudioFollowsRPM",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a75.4, per car (SEDAN, BRUTE and VIPER side by side on the drive strip, raw AI controllers): 0.5 s after spawn EngineAudio's sound is the car's EngineSound (the catalogue's SW_DF_Engine*), it auto-activates, and it is playing (asserted when the world has an audio device, GetMaxAudioChannelCount > 0; a -nosound run has none, so there the sound, auto-activation and multipliers stand in); at rest its volume is 0.35 and SkidAudio (SW_DF_Skid) is silent. After 3 s at full throttle the engine pitch multiplier is above 1.0 and its volume 1.0, and a 1000 cm/s sideways kick turns the SEDAN's skid volume up. Physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Channels",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

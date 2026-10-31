@@ -591,10 +591,10 @@
   }
  ],
  "defaults": {
-  "RoadMesh": "/Engine/BasicShapes/Cube",
-  "BarrierMesh": "/Engine/BasicShapes/Cube",
-  "RoadMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid",
-  "BarrierMaterial": "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
+  "RoadMesh": "/Game/DeadFire/Art/Meshes/SM_DF_RoadSlab",
+  "BarrierMesh": "/Game/DeadFire/Art/Meshes/SM_DF_Barrier",
+  "RoadMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Road",
+  "BarrierMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Concrete"
  },
  "component_defaults": {},
  "requires": []

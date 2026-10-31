@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_BlownTireShowsRim",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1, \u00a77.5: a blown front-left tyre shows SM_DF_WheelRim on WheelFL (the other wheels keep SM_DF_Wheel); InitTires puts SM_DF_Wheel back.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

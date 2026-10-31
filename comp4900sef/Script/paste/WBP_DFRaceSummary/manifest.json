@@ -199,7 +199,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -230,7 +232,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -261,7 +265,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -292,7 +298,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {
     "h_align": "Center",
@@ -317,7 +325,12 @@
    "name": "RetryButton",
    "class": "/Script/UMG.Button",
    "parent": "ButtonRow",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -346,7 +359,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -355,7 +370,11 @@
    "class": "/Script/UMG.Button",
    "parent": "ButtonRow",
    "props": {
-    "visibility": "Collapsed"
+    "visibility": "Collapsed",
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
    },
    "slot": {
     "padding": [
@@ -385,7 +404,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -393,7 +414,12 @@
    "name": "MenuButton",
    "class": "/Script/UMG.Button",
    "parent": "ButtonRow",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {}
   },
   {
@@ -415,7 +441,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   }

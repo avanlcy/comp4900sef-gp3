@@ -305,7 +305,7 @@ def build_controller() -> Blueprint:
     bp.variable("PauseWidget", "object:" + USER_WIDGET, "", MN)
     bp.default("PauseWidgetClass", "class:" + WBP_PAUSE)
 
-    g = bp.function("TogglePause", doc="Pauses the world with the pause menu up, or resumes; refused once the race is over (the summary owns the screen).")
+    g = bp.function("TogglePause", doc="Pauses the world with the pause menu up (the car's drive state cleared first), or resumes; refused once the race is over (the summary owns the screen).")
     gs = g.call_static(GAMEPLAY, "GetGameState", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
                        outputs=[obj_pin("ReturnValue", "/Script/Engine.GameStateBase", "out")], pure=True)
     cgs = g.cast(gen(BP_GS))
@@ -344,10 +344,22 @@ def build_controller() -> Blueprint:
     gonly = g.call_static("WidgetBlueprintLibrary", "SetInputMode_GameOnly", inputs=[obj_pin("PlayerController", PLAYER_CONTROLLER)], module="UMG")
     g.link(g.self_node(), "self", gonly, "PlayerController")
     g.exec(cur_off, gonly)
-    # pause
+    # pause; Phase 7 Task 10 (Review Focus 5): a key release can be missed while paused, so the car's drive state (look-back,
+    # drift, the held handbrake) is cleared first
+    cur = g.var_get("CurrentVehicle", OBJECT, cls_ref(VC))
+    has_car = is_valid(g)
+    g.link(cur, "CurrentVehicle", has_car, "Object")
+    bcar = g.branch()
+    g.note(bcar, "driving?")
+    g.link(has_car, "ReturnValue", bcar, "Condition")
+    g.link(bp_, "else", bcar, "execute")
+    clear = g.call_on(VC, "ClearDriveState")
+    g.link(cur, "CurrentVehicle", clear, "self")
+    g.link(bcar, "then", clear, "execute")
     pse = g.call_static(GAMEPLAY, "SetGamePaused", inputs=[Pin("WorldContextObject", OBJECT, hidden=True), Pin("bPaused", BOOL, default="true")],
                         outputs=[Pin("ReturnValue", BOOL, "out")])
-    g.link(bp_, "else", pse, "execute")
+    g.exec(clear, pse)
+    g.link(bcar, "else", pse, "execute")
     cw = g.create_widget()
     g.link(g.var_get("PauseWidgetClass", CLASS, cls_ref(USER_WIDGET)), "PauseWidgetClass", cw, "Class")
     g.link(g.self_node(), "self", cw, "OwningPlayer")

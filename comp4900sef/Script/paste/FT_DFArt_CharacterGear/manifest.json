@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_CharacterGear",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.2: a fresh BP_DFCharacter wears SM_DF_Helmet on its Mesh's head socket, SM_DF_Vest on spine_03 and SM_DF_Rifle on hand_r (each visible, at world scale 1); the rifle has a Muzzle socket at world scale 1; the mannequin's slots 0 and 1 are MI_DF_Mannequin_Body and MI_DF_Mannequin_Trim; the Weapon's bDebugTrace is off and BeginPlay made the Rifle its VisualOrigin.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

@@ -2,7 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Tests/FT_DFHUD_ItemRowShowsInventory",
  "parent": "/Script/FunctionalTesting.FunctionalTest",
- "description": "The HUD item row lists the racer's slots and marks empty ones.",
+ "description": "The HUD item row shows the racer's slots as icons (spec \u00a77.6): Boost x2 and a Gun show T_DF_Icon_Boost with the count 2 and T_DF_Icon_Gun, the third slot T_DF_Icon_Empty, and the selected slot 0 is framed.",
  "components": [],
  "variables": [],
  "dispatchers": [],

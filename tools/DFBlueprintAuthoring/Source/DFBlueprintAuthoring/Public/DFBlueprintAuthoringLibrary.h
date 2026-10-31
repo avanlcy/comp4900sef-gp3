@@ -26,6 +26,9 @@ class UEdGraph;
 class UEdGraphNode;
 class UActorComponent;
 class UWidget;
+class UMaterialInterface;
+class UFont;
+class UFontFace;
 struct FEdGraphPinType;
 
 UCLASS()
@@ -87,7 +90,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
 	static FString ClearGraph(UBlueprint* Blueprint, FName GraphName);
 
-	/** JSON: variables (name, type, default, category), functions, dispatchers, graphs, components. */
+	/** JSON: variables (name, type, default, category), functions, dispatchers, graphs, components (name, class, socket). */
 	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
 	static FString DescribeBlueprint(UBlueprint* Blueprint);
 
@@ -99,9 +102,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
 	static FString AddComponent(UBlueprint* Blueprint, FName Name, const FString& ClassPath, FName ParentComponent);
 
+	/**
+	 * Sets the socket (or bone) of its parent that a construction-script component attaches to (the SCS node's
+	 * AttachToName); None clears it. "exists" when it already attaches there.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString SetComponentSocket(UBlueprint* Blueprint, FName Name, FName Socket);
+
 	/** The component's template object, so Python can set_editor_property on it. */
 	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
 	static UActorComponent* GetComponentTemplate(UBlueprint* Blueprint, FName Name);
+
+	/**
+	 * Spawns a Landscape in the context object's world from a raw heightmap: Size x Size little-endian uint16 samples,
+	 * row-major with the row index along Y, 32768 = the actor's Z (world Z = (h - 32768) / 128 * Scale.Z). Location is
+	 * the actor location, i.e. vertex (0, 0); Scale.X/Y is the quad size in cm. Size must be 126 * N + 1 (components of
+	 * 2 x 2 sections of 63 quads). Uses ALandscape::Import with a new GUID, no weight layers and no edit layers, so
+	 * heights and collision exist when it returns; sets the landscape material and the actor label.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString CreateLandscapeFromRaw(UObject* WorldContextObject, const FString& RawPath, int32 Size, FVector Location, FVector Scale, UMaterialInterface* Material, const FString& Label);
+
+	/** Makes Face the default typeface entry ("Default") of a runtime composite font. "exists" when it already is. */
+	UFUNCTION(BlueprintCallable, Category = "DF Authoring")
+	static FString SetFontFace(UFont* Font, UFontFace* Face);
 
 	/**
 	 * Widget Blueprints: empties the designer tree and gives it a fresh root panel (e.g. /Script/UMG.CanvasPanel).

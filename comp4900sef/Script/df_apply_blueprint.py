@@ -55,9 +55,14 @@ def _ensure_blueprint(asset, parent):
     if found:
         return found
     package, name = asset.rsplit("/", 1)
+    parent_class = _load_class(parent)
+    if parent_class is None:  # e.g. a class path in the wrong module; the factory would fail with no message
+        raise RuntimeError("%s: parent class %s not found" % (asset, parent))
     factory = unreal.BlueprintFactory()
-    factory.set_editor_property("parent_class", _load_class(parent))
+    factory.set_editor_property("parent_class", parent_class)
     bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, package, unreal.Blueprint, factory)
+    if bp is None:
+        raise RuntimeError("%s: could not create the Blueprint (parent %s)" % (asset, parent))
     log("created %s (parent %s)" % (asset, parent))
     return bp
 
@@ -109,6 +114,19 @@ def _value(v):
         return [_value(x) for x in v]
     if isinstance(v, dict) and "vector" in v:
         return unreal.Vector(*[float(x) for x in v["vector"]])
+    if isinstance(v, dict) and "rotator" in v:  # {"rotator": {"yaw": 180}}: named, so the axis order cannot be mixed up
+        r = v["rotator"]
+        return unreal.Rotator(roll=float(r.get("roll", 0.0)), pitch=float(r.get("pitch", 0.0)), yaw=float(r.get("yaw", 0.0)))
+    if isinstance(v, dict) and "color" in v:  # {"color": [r, g, b, a]}: a LinearColor (e.g. "call:set_light_color")
+        return unreal.LinearColor(*[float(x) for x in v["color"]])
+    if isinstance(v, dict) and "enum" in v:  # {"enum": "VisibilityBasedAnimTickOption.ALWAYS_TICK_POSE_AND_REFRESH_BONES"}
+        enum_name, _, value = v["enum"].partition(".")
+        return getattr(getattr(unreal, enum_name), value)
+    if isinstance(v, dict) and "struct" in v:  # {"struct": "MaterialSpriteElement", "props": {"material": "/Game/...", ...}}: an
+        s = getattr(unreal, v["struct"])()     # engine struct (Phase 7 Task 17: a crate icon billboard's element)
+        for k, x in v.get("props", {}).items():
+            s.set_editor_property(k, _value(x))
+        return s
     if isinstance(v, str):
         if v.startswith("class:"):
             return _load_class(v[6:])
@@ -169,6 +187,27 @@ def _vec2(v):
     return unreal.Vector2D(float(v[0]), float(v[1]))
 
 
+def _load_required(path, what):
+    obj = unreal.load_asset(path)
+    if obj is None:
+        raise RuntimeError("%s: asset %s not found" % (what, path))
+    return obj
+
+
+def _set_path(obj, path, value):
+    """set_editor_property for a plain name; a dotted name ("RotOscillation.Pitch.Amplitude") walks the struct path.
+    Python hands out struct members as copies, so the leaf is set on the innermost copy and every copy is written back
+    from the inside out (an object in the chain is a reference and needs no write-back)."""
+    names = path.split(".")
+    chain = [obj]
+    for n in names[:-1]:
+        chain.append(chain[-1].get_editor_property(n))
+    chain[-1].set_editor_property(names[-1], value)
+    for i in range(len(names) - 2, -1, -1):
+        if not isinstance(chain[i + 1], unreal.Object):
+            chain[i].set_editor_property(names[i], chain[i + 1])
+
+
 def _color(v):
     return unreal.LinearColor(*[float(x) for x in v])
 
@@ -181,6 +220,27 @@ def _apply_widget_props(w, props):
             font = w.get_editor_property("font")
             font.size = int(v)
             w.set_editor_property("font", font)
+        elif k == "font_object":  # a Font asset; its default typeface is used when the font has no entry of the old name
+            font = w.get_editor_property("font")
+            font.font_object = _load_required(v, "font_object")
+            w.set_editor_property("font", font)
+        elif k == "typeface_font_name":  # the typeface entry of font_object to draw with (a SetFontFace font has only "Default")
+            font = w.get_editor_property("font")
+            font.typeface_font_name = v
+            w.set_editor_property("font", font)
+        elif k == "sounds":  # [hover, click]: a Button's style plays these SoundBase assets when hovered and pressed (Task 18)
+            style = w.get_editor_property("widget_style")
+            for prop, path in zip(("hovered_slate_sound", "pressed_slate_sound"), v):
+                sound = unreal.SlateSound()
+                sound.set_editor_property("resource_object", _load_required(path, "sounds"))
+                style.set_editor_property(prop, sound)
+            w.set_editor_property("widget_style", style)
+        elif k == "texture":  # an Image's brush draws the texture at its own size
+            tex = _load_required(v, "texture")
+            brush = w.get_editor_property("brush")
+            brush.set_editor_property("resource_object", tex)
+            brush.set_editor_property("image_size", unreal.Vector2D(tex.blueprint_get_size_x(), tex.blueprint_get_size_y()))
+            w.set_editor_property("brush", brush)
         elif k == "color":
             sc = w.get_editor_property("color_and_opacity")
             sc.specified_color = _color(v)
@@ -261,6 +321,10 @@ def pass1(m):
         apply_widget_tree(bp, m)
     for c in m.get("components", []):
         _check(A.add_component(bp, c["name"], c["class"], c.get("parent", "") or "None"), "%s component %s" % (m["asset"], c["name"]))
+        # the parent's socket or bone it attaches to; a component without one is cleared, so a socket removed from the
+        # generator leaves the asset too (plugin >= Phase 7)
+        if c.get("socket") or hasattr(A, "set_component_socket"):
+            _check(A.set_component_socket(bp, c["name"], c.get("socket", "") or "None"), "%s socket of %s" % (m["asset"], c["name"]))
         if c.get("properties"):
             tmpl = A.get_component_template(bp, c["name"])
             for k, v in c["properties"].items():
@@ -270,6 +334,15 @@ def pass1(m):
                     tmpl.set_editor_property(k, _value(v))
     for v in m.get("variables", []):
         _check(A.add_variable(bp, v["name"], v["type"], v.get("default", ""), v.get("category", ""), v.get("editable", False)), "%s var %s" % (m["asset"], v["name"]))
+    # variables the generator no longer declares (Phase 7 Task 16: a replaced stock-particle variable): deleted, so neither the
+    # variable nor its default lingers in the asset; the plugin also removes the nodes that read or wrote it
+    removed = m.get("removed_variables", [])
+    if removed:
+        have = {v["name"] for v in json.loads(A.describe_blueprint(bp))["variables"]}
+        for name in removed:
+            if name in have:
+                _check(A.remove_variable(bp, name), "%s remove variable %s" % (m["asset"], name))
+                log("%s: removed variable %s" % (m["asset"], name))
     for d in m.get("dispatchers", []):
         _check(A.add_event_dispatcher(bp, d["name"], d.get("params", [])), "%s dispatcher %s" % (m["asset"], d["name"]))
     # a function that already exists is removed and re-added so a changed signature (inputs, outputs, pure) takes effect;
@@ -417,7 +490,7 @@ def pass2(m, folder):
             if k not in (m.get("defaults") or {}):
                 cdo.set_editor_property(k, v)
         for k, v in (m.get("defaults") or {}).items():
-            cdo.set_editor_property(k, _value(v))
+            _set_path(cdo, k, _value(v))  # "Name" or a struct path "RotOscillation.Pitch.Amplitude"
         # defaults of an inherited component (e.g. the Sedan's VehicleMovement): set on the class-default object's own
         # component instance, which is how the editor stores a child Blueprint's override of a native component property
         for comp, props in component_defaults.items():

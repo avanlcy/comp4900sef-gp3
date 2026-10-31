@@ -12,7 +12,195 @@
     "Damage": 15.0,
     "Range": 10000.0,
     "Cooldown": 0.2,
-    "bDebugTrace": false
+    "bDebugTrace": false,
+    "MuzzleFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxMuzzle",
+    "TracerFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxTracer",
+    "ImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxImpact",
+    "VehicleImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxSparks",
+    "FireSound": "/Game/DeadFire/Art/Sounds/SW_DF_CarGun",
+    "ImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactDirt",
+    "VehicleImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactMetal"
+   }
+  },
+  {
+   "name": "EngineAudio",
+   "class": "/Script/Engine.AudioComponent",
+   "parent": "Mesh",
+   "properties": {
+    "auto_activate": true,
+    "sound": "/Game/DeadFire/Art/Sounds/SW_DF_EngineSedan"
+   }
+  },
+  {
+   "name": "SkidAudio",
+   "class": "/Script/Engine.AudioComponent",
+   "parent": "Mesh",
+   "properties": {
+    "auto_activate": true,
+    "sound": "/Game/DeadFire/Art/Sounds/SW_DF_Skid",
+    "volume_multiplier": 0.0
+   }
+  },
+  {
+   "name": "Body",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Car_Sedan",
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
+  },
+  {
+   "name": "WheelFL",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Wheel",
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Wheel_Front_Left"
+  },
+  {
+   "name": "WheelFR",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Wheel",
+    "relative_rotation": {
+     "rotator": {
+      "yaw": 180.0
+     }
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Wheel_Front_Right"
+  },
+  {
+   "name": "WheelRL",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Wheel",
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Wheel_Rear_Left"
+  },
+  {
+   "name": "WheelRR",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Mesh",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Wheel",
+    "relative_rotation": {
+     "rotator": {
+      "yaw": 180.0
+     }
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Wheel_Rear_Right"
+  },
+  {
+   "name": "LightBar",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_LightBar",
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Roof"
+  },
+  {
+   "name": "RoofWeapon",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "visible": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Roof"
+  },
+  {
+   "name": "ShieldBubble",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_ShieldBubble",
+    "relative_location": {
+     "vector": [
+      2.2,
+      0.0,
+      95.8
+     ]
+    },
+    "visible": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
+  },
+  {
+   "name": "BoostFlameL",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_ExhaustFlame",
+    "visible": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Exhaust_L"
+  },
+  {
+   "name": "BoostFlameR",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_ExhaustFlame",
+    "visible": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Exhaust_R"
+  },
+  {
+   "name": "WreckFire",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Body",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_ExhaustFlame",
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxFlame"
+    ],
+    "relative_location": {
+     "vector": [
+      165.0,
+      0.0,
+      85.0
+     ]
+    },
+    "relative_rotation": {
+     "rotator": {
+      "pitch": 90.0
+     }
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.6,
+      3.0,
+      3.0
+     ]
+    },
+    "visible": false,
+    "cast_shadow": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
    }
   }
  ],
@@ -130,10 +318,31 @@
    "editable": true
   },
   {
-   "name": "WreckSmokeEffect",
-   "type": "object:/Script/Engine.ParticleSystem",
+   "name": "TyreSmokeInterval",
+   "type": "float",
+   "default": "0.08",
+   "category": "Dead Fire|Effects",
+   "editable": true
+  },
+  {
+   "name": "TyreSmokeLateral",
+   "type": "float",
+   "default": "500.0",
+   "category": "Dead Fire|Effects",
+   "editable": true
+  },
+  {
+   "name": "WreckSmokeInterval",
+   "type": "float",
+   "default": "0.15",
+   "category": "Dead Fire|Effects",
+   "editable": true
+  },
+  {
+   "name": "WreckSmokeTint",
+   "type": "struct:/Script/CoreUObject.LinearColor",
    "default": "",
-   "category": "Dead Fire|Items",
+   "category": "Dead Fire|Effects",
    "editable": true
   },
   {
@@ -265,12 +474,471 @@
   {
    "name": "PaintSlot",
    "type": "int",
-   "default": "2",
+   "default": "0",
    "category": "Dead Fire|Stats",
    "editable": true
+  },
+  {
+   "name": "BodyMesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Look",
+   "editable": true
+  },
+  {
+   "name": "bHasLightBar",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Look",
+   "editable": true
+  },
+  {
+   "name": "WheelMesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Look",
+   "editable": true
+  },
+  {
+   "name": "RimMesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Look",
+   "editable": true
+  },
+  {
+   "name": "CharredMaterial",
+   "type": "object:/Script/Engine.MaterialInterface",
+   "default": "",
+   "category": "Dead Fire|Look",
+   "editable": true
+  },
+  {
+   "name": "SteerRiseRate",
+   "type": "float",
+   "default": "4.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "SteerReturnRate",
+   "type": "float",
+   "default": "7.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "SteerAtSpeed",
+   "type": "float",
+   "default": "0.45",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "SteerSpeedRef",
+   "type": "float",
+   "default": "150.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "GripAssist",
+   "type": "float",
+   "default": "3.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftGrip",
+   "type": "float",
+   "default": "0.3",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DownforceG",
+   "type": "float",
+   "default": "0.25",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DownforceCap",
+   "type": "float",
+   "default": "1960.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "StabilityDamping",
+   "type": "float",
+   "default": "2.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "CenterOfMassZ",
+   "type": "float",
+   "default": "-25.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftMinSpeed",
+   "type": "float",
+   "default": "40.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftExitSpeed",
+   "type": "float",
+   "default": "25.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftSteerMin",
+   "type": "float",
+   "default": "0.3",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftYawAccel",
+   "type": "float",
+   "default": "120.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftBoostMinSeconds",
+   "type": "float",
+   "default": "1.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "DriftBoostSpeed",
+   "type": "float",
+   "default": "500.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "AirDelay",
+   "type": "float",
+   "default": "0.25",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "AirDamping",
+   "type": "float",
+   "default": "1.5",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "AirLevelAccel",
+   "type": "float",
+   "default": "180.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "AirControlAccel",
+   "type": "float",
+   "default": "90.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "GroundProbe",
+   "type": "float",
+   "default": "150.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "ResetMaxSpeed",
+   "type": "float",
+   "default": "15.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "ResetCooldown",
+   "type": "float",
+   "default": "3.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "ResetLift",
+   "type": "float",
+   "default": "150.0",
+   "category": "Dead Fire|Handling",
+   "editable": true
+  },
+  {
+   "name": "SmoothedSteer",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bDrifting",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "DriftStartTime",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "AirborneSince",
+   "type": "float",
+   "default": "-1.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bGrounded",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "DriftBoostCount",
+   "type": "int",
+   "default": "0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "ArcadeSteer",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "ArcadeThrottle",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bArcadeHandbrake",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bHandbrakeHeld",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "LastResetTime",
+   "type": "float",
+   "default": "-1000.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bLookBack",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "ArmBaseRotation",
+   "type": "struct:/Script/CoreUObject.Rotator",
+   "default": "",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bSnapArm",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "FOVInterpSpeed",
+   "type": "float",
+   "default": "4.0",
+   "category": "Dead Fire|Camera",
+   "editable": true
+  },
+  {
+   "name": "ChaseLagSpeed",
+   "type": "float",
+   "default": "10.0",
+   "category": "Dead Fire|Camera",
+   "editable": true
+  },
+  {
+   "name": "ChaseRotationLagSpeed",
+   "type": "float",
+   "default": "8.0",
+   "category": "Dead Fire|Camera",
+   "editable": true
+  },
+  {
+   "name": "LandShakeAirTime",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|Camera",
+   "editable": true
+  },
+  {
+   "name": "LightShake",
+   "type": "class:/Script/Engine.CameraShakeBase",
+   "default": "",
+   "category": "Dead Fire|Camera",
+   "editable": true
+  },
+  {
+   "name": "EngineSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "CrashSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "CrashImpulse",
+   "type": "float",
+   "default": "650000.0",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "CrashCooldown",
+   "type": "float",
+   "default": "0.5",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "LastCrashTime",
+   "type": "float",
+   "default": "-1000.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "NextTyreSmokeTime",
+   "type": "float",
+   "default": "0.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "TirePopSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "RocketLaunchSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "BoostSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "ShieldUpSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "ShieldDownSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "ShieldHitSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Audio",
+   "editable": true
+  },
+  {
+   "name": "ShieldHitGlow",
+   "type": "float",
+   "default": "3.0",
+   "category": "Dead Fire|Effects",
+   "editable": true
+  },
+  {
+   "name": "ShieldHitSeconds",
+   "type": "float",
+   "default": "0.15",
+   "category": "Dead Fire|Effects",
+   "editable": true
+  },
+  {
+   "name": "ShieldMID",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "ShieldBaseGlow",
+   "type": "float",
+   "default": "1.0",
+   "category": "Dead Fire|Handling State",
+   "editable": false
+  },
+  {
+   "name": "bShieldShown",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Handling State",
+   "editable": false
   }
  ],
  "dispatchers": [
+  {
+   "name": "OnDriftBoost",
+   "params": []
+  },
   {
    "name": "OnVehicleDamaged",
    "params": [
@@ -312,7 +980,36 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Four fresh tires at TireMaxHealth."
+   "doc": "Four fresh tires at TireMaxHealth (the wheels show their tyres again)."
+  },
+  {
+   "name": "RefreshWheels",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Each wheel shows RimMesh while its tyre is blown, else WheelMesh (Tires index i is the i-th wheel: FL, FR, RL, RR)."
+  },
+  {
+   "name": "ApplyPaint",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "PaintMaterial, when set, on the Body's PaintSlot (BeginPlay; SpawnNPCs after giving a rival the gang paint)."
+  },
+  {
+   "name": "RefreshRoofWeapon",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [
+    "Racer:object:/Game/DeadFire/Components/BPC_DFRacer.BPC_DFRacer_C"
+   ],
+   "doc": "The roof weapon shows the driver's held weapon: SM_DF_RoofLauncher while its racer holds an RPG, else SM_DF_RoofGun while it holds a Gun, else hidden (also with no driver or outside a race). Called after ApplyItem, on GrantItem and respawn, and on Enter/Exit."
   },
   {
    "name": "GetSpeedKPH",
@@ -407,7 +1104,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Takes health off one tire; at 0 it is blown and the count and OnTireBlown update."
+   "doc": "Takes health off one tire; at 0 it is blown, the count and OnTireBlown update and the wheel shows its rim."
   },
   {
    "name": "BlowNearestTire",
@@ -446,7 +1143,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Wrecks the car once: handbrake, hop, smoke, effects-only explosion, OnVehicleDestroyed, the GameMode notified."
+   "doc": "Wrecks the car once: handbrake, charred paint and trim, hop, smoke, effects-only explosion, OnVehicleDestroyed, the GameMode notified."
   },
   {
    "name": "TeleportAndStop",
@@ -457,7 +1154,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Moves the car and zeroes its velocity (respawns and tests)."
+   "doc": "Clears the drive state, cuts the camera lag for a frame, moves the car and zeroes its velocity (respawns, resets and tests)."
   },
   {
    "name": "CanExit",
@@ -544,7 +1241,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Per-frame input: parked or wrecked cars brake; blown tires cap the throttle."
+   "doc": "Per-frame input: parked or wrecked cars brake; blown tires cap the throttle; the player's steering is smoothed and scaled with speed; writes the inputs the arcade layer reads (ArcadeSteer/Throttle/Handbrake)."
   },
   {
    "name": "ComputeDriveThrottle",
@@ -561,6 +1258,138 @@
    "doc": "Input x ThrottleScale; 0 when accelerating at or above TopSpeedKPH (0 = no limiter)."
   },
   {
+   "name": "ComputeSteerScale",
+   "inputs": [
+    "SpeedKPH:float"
+   ],
+   "outputs": [
+    "Scale:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "lerp(1, SteerAtSpeed, clamp(SpeedKPH / SteerSpeedRef, 0, 1)): less steering at speed."
+  },
+  {
+   "name": "SmoothSteer",
+   "inputs": [
+    "Current:float",
+    "Target:float",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [
+    "Steer:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Moves Current toward Target at SteerRiseRate when Target is larger and on the same side, else at SteerReturnRate; never overshoots."
+  },
+  {
+   "name": "ComputeDownforce",
+   "inputs": [
+    "SpeedKPH:float"
+   ],
+   "outputs": [
+    "Accel:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "min(DownforceG x 980 x (SpeedKPH / 100)^2, DownforceCap) in cm/s^2."
+  },
+  {
+   "name": "ComputeGripAccel",
+   "inputs": [
+    "LateralSpeed:float",
+    "bDriftingNow:bool"
+   ],
+   "outputs": [
+    "Accel:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "-LateralSpeed x GripAssist (x DriftGrip while drifting): the sideways grip acceleration."
+  },
+  {
+   "name": "ComputeTargetFOV",
+   "inputs": [
+    "SpeedKPH:float",
+    "bBoosting:bool"
+   ],
+   "outputs": [
+    "FOV:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "90 + 15 x clamp(SpeedKPH / 160, 0, 1) + 8 while boosting."
+  },
+  {
+   "name": "ComputeEnginePitch",
+   "inputs": [
+    "RPMRatio:float"
+   ],
+   "outputs": [
+    "Pitch:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "0.6 + 1.4 x clamp(RPMRatio, 0, 1)."
+  },
+  {
+   "name": "LimitDamping",
+   "inputs": [
+    "Accel:float",
+    "Value:float",
+    "DeltaSeconds:float"
+   ],
+   "outputs": [
+    "Limited:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Caps a damping acceleration at |Value| / DeltaSeconds, so one long frame never reverses Value."
+  },
+  {
+   "name": "IsGrounded",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A Visibility line trace from the actor origin GroundProbe cm straight down hits (self ignored)."
+  },
+  {
+   "name": "UpdateDrift",
+   "inputs": [
+    "Steer:float",
+    "SpeedKPH:float",
+    "bHandbrake:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Drift starts with the handbrake, |Steer| >= DriftSteerMin, SpeedKPH >= DriftMinSpeed and grounded; it ends on a handbrake release, below DriftExitSpeed or airborne. A release after DriftBoostMinSeconds kicks the car forward by DriftBoostSpeed (DriftBoostCount, OnDriftBoost)."
+  },
+  {
+   "name": "TickArcade",
+   "inputs": [
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Per-frame arcade handling: ground probe and drift state; the handbrake input (held, but not while drifting); grounded: grip assist, downforce, stability or drift yaw; airborne past AirDelay: pitch/roll damping, levelling, and air control for the player's car."
+  },
+  {
    "name": "SetAIInput",
    "inputs": [
     "Throttle:float",
@@ -572,6 +1401,112 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "The AI controller's inputs; TickDriveOverrides applies them every frame while bAIControlled."
+  },
+  {
+   "name": "TickTyreSmoke",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Spec \u00a75.5: on the ground and drifting or sliding (|lateral speed| > TyreSmokeLateral), a BP_DFFxPuff at each rear wheel every TyreSmokeInterval, only within 8000 cm of the player's camera (GameMode.IsNearPlayerView; Review Focus 2)."
+  },
+  {
+   "name": "SpawnWreckSmoke",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The wreck's looping timer (every WreckSmokeInterval from DestroyVehicle): a BP_DFFxPuff darkened by WreckSmokeTint over the WreckFire while within 8000 cm of the player's camera; the timer stops if the car is no longer wrecked."
+  },
+  {
+   "name": "PlayDriverShake",
+   "inputs": [
+    "Shake:class:/Script/Engine.CameraShakeBase",
+    "Scale:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Plays a camera shake on the driver's view when a player drives this car (an AI driver has no view)."
+  },
+  {
+   "name": "ShowDriverDamage",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The damage vignette (WBP_DFRaceHUD.ShowDamage) on the race HUD of the player driving this car."
+  },
+  {
+   "name": "ResetCar",
+   "inputs": [],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Spec \u00a75.2: below ResetMaxSpeed km/h over the ground and ResetCooldown s after the last reset, the car is lifted ResetLift cm with pitch and roll zeroed and its velocities zeroed (TeleportAndStop): no death, no position gain. Refused (false) otherwise, and for a wreck."
+  },
+  {
+   "name": "SetLookBack",
+   "inputs": [
+    "bOn:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Look-back (spec \u00a75.3): the spring arm turns to the rear (ArmBaseRotation + 180 degrees of yaw) or back to the chase view; the turn is a cut, not a swing (the arm's rotation lag is off until TickCamera's next frame)."
+  },
+  {
+   "name": "ClearDriveState",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Ends look-back (the arm faces forward again), any drift (no boost), the smoothed steer and the held handbrake. Called on exit, on TeleportAndStop (respawns, resets) and on pause, where a key release can be missed."
+  },
+  {
+   "name": "TickCamera",
+   "inputs": [
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A player's car only: the chase camera's FOV moves toward ComputeTargetFOV(speed, boosting) at FOVInterpSpeed /s (spec \u00a75.3); the spring arm's rotation and location lag come back on the frame after a look-back or teleport cut."
+  },
+  {
+   "name": "TickAudio",
+   "inputs": [
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Spec \u00a75.4, every frame: EngineAudio's pitch = ComputeEnginePitch(engine rpm / max rpm) and its volume = 0.35 + 0.65 x |throttle input| (clamped to 1), 0 for a parked or wrecked car (engine off) [call]; SkidAudio's volume = clamp((|lateral speed| - 300) / 700, 0, 1) on the ground, 0 in the air."
+  },
+  {
+   "name": "HandleCrashHit",
+   "inputs": [
+    "NormalImpulse:struct:/Script/CoreUObject.Vector",
+    "Location:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [
+    "ReturnValue:bool"
+   ],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Spec \u00a75.4: a hit whose normal impulse is above CrashImpulse, at least CrashCooldown s after the last crash, plays CrashSound at the contact and gives the driver a light camera shake (\u00a75.3). Returns whether it did."
   },
   {
    "name": "IsShielded",
@@ -600,7 +1535,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Starts the shield timer."
+   "doc": "Starts the shield timer (the shield-up sound; the bubble shows at once)."
   },
   {
    "name": "ClearEffects",
@@ -609,7 +1544,34 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Ends boost and shield."
+   "doc": "Ends boost and shield (silently: a restart or a respawn, not the shield running out)."
+  },
+  {
+   "name": "RefreshEffectLook",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "BoostFlameL/R show while BoostRemaining > 0 and ShieldBubble while IsShielded(); the shield's end (shown, now not shielded) plays ShieldDownSound."
+  },
+  {
+   "name": "ShieldHit",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "A blocked hit: ShieldHitSound, and the bubble glows ShieldHitGlow for ShieldHitSeconds."
+  },
+  {
+   "name": "EndShieldHit",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The bubble's flash is over: its own glow again (ShieldBaseGlow)."
   },
   {
    "name": "TickEffects",
@@ -620,7 +1582,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Per-frame boost force; both effect timers run down."
+   "doc": "Per-frame boost force; both effect timers run down; the flames and the bubble follow them (RefreshEffectLook)."
   },
   {
    "name": "CanUseItem",
@@ -733,6 +1695,63 @@
      "entry",
      "then",
      "DFN_K2Node_CallArrayFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RefreshWheels",
+   "file": "RefreshWheels.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ApplyPaint",
+   "file": "ApplyPaint.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RefreshRoofWeapon",
+   "file": "RefreshRoofWeapon.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
      "execute"
     ]
    ],
@@ -1044,20 +2063,26 @@
     ],
     [
      "entry",
-     "TireIndex",
+     "Damage",
      "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "TireIndex",
+     "DFN_K2Node_CallFunction_4",
      "Index"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_4",
      "Damage"
     ],
     [
      "entry",
      "Damage",
-     "DFN_K2Node_CallFunction_3",
+     "DFN_K2Node_CallFunction_5",
      "B"
     ],
     [
@@ -1074,8 +2099,14 @@
     ],
     [
      "entry",
+     "Damage",
+     "DFN_K2Node_CallFunction_7",
+     "A"
+    ],
+    [
+     "entry",
      "Instigator",
-     "DFN_K2Node_CallFunction_6",
+     "DFN_K2Node_CallFunction_11",
      "Killer"
     ]
    ],
@@ -1106,13 +2137,13 @@
     [
      "entry",
      "Killer",
-     "DFN_K2Node_CallFunction_6",
+     "DFN_K2Node_CallFunction_9",
      "InstigatedBy"
     ],
     [
      "entry",
      "Killer",
-     "DFN_K2Node_CallFunction_7",
+     "DFN_K2Node_CallFunction_10",
      "Killer"
     ]
    ],
@@ -1137,7 +2168,7 @@
     [
      "entry",
      "NewTransform",
-     "DFN_K2Node_CallFunction_2",
+     "DFN_K2Node_CallFunction_3",
      "NewTransform"
     ]
    ],
@@ -1316,7 +2347,7 @@
      0
     ],
     "result": [
-     5115,
+     5382,
      0
     ]
    }
@@ -1338,7 +2369,7 @@
      0
     ],
     "result": [
-     7137,
+     7656,
      0
     ]
    }
@@ -1371,6 +2402,12 @@
      "then",
      "DFN_K2Node_IfThenElse_0",
      "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_19",
+     "DeltaSeconds"
     ]
    ],
    "layout": {
@@ -1428,6 +2465,424 @@
    }
   },
   {
+   "name": "ComputeSteerScale",
+   "file": "ComputeSteerScale.txt",
+   "links": [
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_2",
+     "ReturnValue",
+     "result",
+     "Scale"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1148,
+     0
+    ]
+   }
+  },
+  {
+   "name": "SmoothSteer",
+   "file": "SmoothSteer.txt",
+   "links": [
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "Current",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Current",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_3",
+     "B"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_7",
+     "B"
+    ],
+    [
+     "entry",
+     "Target",
+     "DFN_K2Node_CallFunction_9",
+     "A"
+    ],
+    [
+     "entry",
+     "Current",
+     "DFN_K2Node_CallFunction_9",
+     "B"
+    ],
+    [
+     "entry",
+     "Current",
+     "DFN_K2Node_CallFunction_11",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_11",
+     "ReturnValue",
+     "result",
+     "Steer"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     2082,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeDownforce",
+   "file": "ComputeDownforce.txt",
+   "links": [
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_4",
+     "ReturnValue",
+     "result",
+     "Accel"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1133,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeGripAccel",
+   "file": "ComputeGripAccel.txt",
+   "links": [
+    [
+     "entry",
+     "bDriftingNow",
+     "DFN_K2Node_CallFunction_1",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "LateralSpeed",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_3",
+     "ReturnValue",
+     "result",
+     "Accel"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1356,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeTargetFOV",
+   "file": "ComputeTargetFOV.txt",
+   "links": [
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "bBoosting",
+     "DFN_K2Node_CallFunction_3",
+     "bPickA"
+    ],
+    [
+     "DFN_K2Node_CallFunction_5",
+     "ReturnValue",
+     "result",
+     "FOV"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1378,
+     0
+    ]
+   }
+  },
+  {
+   "name": "ComputeEnginePitch",
+   "file": "ComputeEnginePitch.txt",
+   "links": [
+    [
+     "entry",
+     "RPMRatio",
+     "DFN_K2Node_CallFunction_0",
+     "Value"
+    ],
+    [
+     "DFN_K2Node_CallFunction_2",
+     "ReturnValue",
+     "result",
+     "Pitch"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     934,
+     0
+    ]
+   }
+  },
+  {
+   "name": "LimitDamping",
+   "file": "LimitDamping.txt",
+   "links": [
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "Value",
+     "DFN_K2Node_CallFunction_1",
+     "A"
+    ],
+    [
+     "entry",
+     "Accel",
+     "DFN_K2Node_CallFunction_3",
+     "Value"
+    ],
+    [
+     "DFN_K2Node_CallFunction_3",
+     "ReturnValue",
+     "result",
+     "Limited"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1141,
+     0
+    ]
+   }
+  },
+  {
+   "name": "IsGrounded",
+   "file": "IsGrounded.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_3",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1463,
+     0
+    ]
+   }
+  },
+  {
+   "name": "UpdateDrift",
+   "file": "UpdateDrift.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Steer",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_2",
+     "A"
+    ],
+    [
+     "entry",
+     "bHandbrake",
+     "DFN_K2Node_CallFunction_3",
+     "A"
+    ],
+    [
+     "entry",
+     "bHandbrake",
+     "DFN_K2Node_CallFunction_7",
+     "A"
+    ],
+    [
+     "entry",
+     "SpeedKPH",
+     "DFN_K2Node_CallFunction_8",
+     "A"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "TickArcade",
+   "file": "TickArcade.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_22",
+     "DeltaSeconds"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_39",
+     "DeltaSeconds"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_53",
+     "DeltaSeconds"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_57",
+     "DeltaSeconds"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "SetAIInput",
    "file": "SetAIInput.txt",
    "links": [
@@ -1462,6 +2917,244 @@
      0
     ],
     "result": null
+   }
+  },
+  {
+   "name": "TickTyreSmoke",
+   "file": "TickTyreSmoke.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "SpawnWreckSmoke",
+   "file": "SpawnWreckSmoke.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "PlayDriverShake",
+   "file": "PlayDriverShake.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Shake",
+     "DFN_K2Node_CallFunction_1",
+     "Shake"
+    ],
+    [
+     "entry",
+     "Scale",
+     "DFN_K2Node_CallFunction_1",
+     "Scale"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowDriverDamage",
+   "file": "ShowDriverDamage.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_DynamicCast_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ResetCar",
+   "file": "ResetCar.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     4563,
+     0
+    ]
+   }
+  },
+  {
+   "name": "SetLookBack",
+   "file": "SetLookBack.txt",
+   "links": [
+    [
+     "entry",
+     "bOn",
+     "DFN_K2Node_VariableSet_0",
+     "bLookBack"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "bOn",
+     "DFN_K2Node_CallFunction_1",
+     "bPickA"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ClearDriveState",
+   "file": "ClearDriveState.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "TickCamera",
+   "file": "TickCamera.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_4",
+     "DeltaTime"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "TickAudio",
+   "file": "TickAudio.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_4",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "HandleCrashHit",
+   "file": "HandleCrashHit.txt",
+   "links": [
+    [
+     "entry",
+     "NormalImpulse",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "Location",
+     "DFN_K2Node_CallFunction_7",
+     "Location"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     3052,
+     0
+    ]
    }
   },
   {
@@ -1538,6 +3231,63 @@
      "entry",
      "then",
      "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RefreshEffectLook",
+   "file": "RefreshEffectLook.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_1",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShieldHit",
+   "file": "ShieldHit.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "EndShieldHit",
+   "file": "EndShieldHit.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
      "execute"
     ]
    ],
@@ -1697,7 +3447,7 @@
      0
     ],
     "result": [
-     4916,
+     5464,
      0
     ]
    }
@@ -1790,7 +3540,7 @@
      0
     ],
     "result": [
-     5646,
+     5913,
      0
     ]
    }
@@ -1815,6 +3565,25 @@
    }
   },
   {
+   "name": "UserConstructionScript",
+   "file": "UserConstructionScript.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallParentFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "EventGraph",
    "file": "EventGraph.txt",
    "links": [],
@@ -1825,8 +3594,79 @@
   }
  ],
  "defaults": {
-  "WreckSmokeEffect": "/Game/StarterContent/Particles/P_Smoke"
+  "TyreSmokeInterval": 0.08,
+  "TyreSmokeLateral": 500.0,
+  "WreckSmokeInterval": 0.15,
+  "WreckSmokeTint": {
+   "color": [
+    0.3,
+    0.28,
+    0.26,
+    1.0
+   ]
+  },
+  "PaintMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Paint_Sedan",
+  "PaintSlot": 0,
+  "BodyMesh": "/Game/DeadFire/Art/Meshes/SM_DF_Car_Sedan",
+  "bHasLightBar": true,
+  "WheelMesh": "/Game/DeadFire/Art/Meshes/SM_DF_Wheel",
+  "RimMesh": "/Game/DeadFire/Art/Meshes/SM_DF_WheelRim",
+  "CharredMaterial": "/Game/DeadFire/Art/Materials/MI_DF_Paint_Charred",
+  "SteerRiseRate": 4.0,
+  "SteerReturnRate": 7.0,
+  "SteerAtSpeed": 0.45,
+  "SteerSpeedRef": 150.0,
+  "GripAssist": 3.0,
+  "DriftGrip": 0.3,
+  "DownforceG": 0.25,
+  "DownforceCap": 1960.0,
+  "StabilityDamping": 2.0,
+  "CenterOfMassZ": -25.0,
+  "DriftMinSpeed": 40.0,
+  "DriftExitSpeed": 25.0,
+  "DriftSteerMin": 0.3,
+  "DriftYawAccel": 120.0,
+  "DriftBoostMinSeconds": 1.0,
+  "DriftBoostSpeed": 500.0,
+  "AirDelay": 0.25,
+  "AirDamping": 1.5,
+  "AirLevelAccel": 180.0,
+  "AirControlAccel": 90.0,
+  "GroundProbe": 150.0,
+  "ResetMaxSpeed": 15.0,
+  "ResetCooldown": 3.0,
+  "ResetLift": 150.0,
+  "AirborneSince": -1.0,
+  "LastResetTime": -1000.0,
+  "FOVInterpSpeed": 4.0,
+  "ChaseLagSpeed": 10.0,
+  "ChaseRotationLagSpeed": 8.0,
+  "LandShakeAirTime": 0.5,
+  "LightShake": "class:/Game/DeadFire/Blueprints/BP_DFShakeLight",
+  "EngineSound": "/Game/DeadFire/Art/Sounds/SW_DF_EngineSedan",
+  "CrashSound": "/Game/DeadFire/Art/Sounds/SW_DF_Crash",
+  "CrashImpulse": 650000.0,
+  "CrashCooldown": 0.5,
+  "LastCrashTime": -1000.0,
+  "TirePopSound": "/Game/DeadFire/Art/Sounds/SW_DF_TirePop",
+  "RocketLaunchSound": "/Game/DeadFire/Art/Sounds/SW_DF_RocketLaunch",
+  "BoostSound": "/Game/DeadFire/Art/Sounds/SW_DF_Boost",
+  "ShieldUpSound": "/Game/DeadFire/Art/Sounds/SW_DF_ShieldUp",
+  "ShieldDownSound": "/Game/DeadFire/Art/Sounds/SW_DF_ShieldDown",
+  "ShieldHitSound": "/Game/DeadFire/Art/Sounds/SW_DF_ShieldHit",
+  "ShieldHitGlow": 3.0,
+  "ShieldHitSeconds": 0.15
  },
- "component_defaults": {},
- "requires": []
+ "component_defaults": {
+  "Mesh": {
+   "visible": false,
+   "visibility_based_anim_tick_option": {
+    "enum": "VisibilityBasedAnimTickOption.ALWAYS_TICK_POSE_AND_REFRESH_BONES"
+   }
+  }
+ },
+ "requires": [],
+ "removed_variables": [
+  "WreckSmokeEffect"
+ ]
 }

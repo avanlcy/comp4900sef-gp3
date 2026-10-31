@@ -1,0 +1,22 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFShakeHeavy",
+ "parent": "/Script/GameplayCameras.MatineeCameraShake",
+ "description": "Heavy camera shake: an explosion nearby, scaled by distance.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "OscillationDuration": 0.6,
+  "RotOscillation.Pitch.Amplitude": 4.0,
+  "RotOscillation.Pitch.Frequency": 20.0,
+  "RotOscillation.Yaw.Amplitude": 3.0,
+  "RotOscillation.Yaw.Frequency": 18.0,
+  "LocOscillation.Z.Amplitude": 6.0,
+  "LocOscillation.Z.Frequency": 15.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

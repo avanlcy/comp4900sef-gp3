@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_SelfDestroys",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.1: all seven effects spawned at the test origin (the LootBurst tinted the way callers do it, df.spawn_fx: spawn, then SetTint in the same frame, so its shells' Color is the tint x MI_DF_FxBurst's white = the tint) are there at once, and 1.5 s later no BP_DFFx is left within 20 m of the test.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Near",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

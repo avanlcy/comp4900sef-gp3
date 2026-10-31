@@ -12,6 +12,8 @@ from df import (ACTOR, BOOL, BP_GI, BP_GM, BP_MENU_GM, BP_MENU_PC, BP_PC, BP_VEH
                 WBP_MAIN_MENU, WBP_PAUSE, WBP_SETTINGS, WBP_VEHICLE_SELECT, Blueprint, Pin, as_pin, compare, game_instance, gen,
                 is_valid, math2, native_enum_pin, obj_pin, struct_pin)
 from hud import AMBER, BORDER, BUTTON, HBOX, SIZEBOX, TEXT_BLOCK, UMG, VBOX, WIDGET, add_text_helpers, cat, label, pick, s_int, text_props  # noqa: E402
+from hud import button_props  # noqa: E402  (Phase 7 Task 18: every button's hover and click sounds)
+from df import IMAGE, T_LOGO  # noqa: E402  (Phase 7 Task 18: the main menu's wordmark)
 
 ARR = "KismetArrayLibrary"
 
@@ -20,7 +22,7 @@ DARK = [0.05, 0.05, 0.05, 1]
 
 
 def button(bp, name, label, parent, padding=(0, 0, 0, 12), size=28):
-    bp.widget(name, BUTTON, parent, slot={"padding": list(padding), "h_align": "Fill"})
+    bp.widget(name, BUTTON, parent, button_props(), slot={"padding": list(padding), "h_align": "Fill"})
     bp.widget(name[:-6] + "Label", TEXT_BLOCK, name, text_props(label, size, DARK, "Center"))
 
 
@@ -165,22 +167,29 @@ def wrapped(props, width=480.0):
     return props
 
 
-def page_frame(bp, title, subtitle=None):
-    """A translucent panel over the left third of the screen with a title; the cars stay visible to the right."""
-    bp.widget("Panel", BORDER, None, {"brush_color": [0, 0, 0, 0.7]}, {"anchors": [0, 0, 0, 1], "position": [0, 0], "size": [560, 0]})
+PANEL_WIDTH = 600       # Phase 7 Task 18: 560 before; Russo One is wider, and the page titles and the track rules stay inside it
+LOGO_SIZE = (520, 130)  # T_DF_Logo (1024 x 256) scaled into the panel's column: 40 px either side
+
+
+def page_frame(bp, title, logo=False):
+    """A translucent panel over the left third of the screen with a title; the cars stay visible to the right. Phase 7 Task 18
+    (spec §7.6): the main menu shows the wordmark T_DF_Logo ("DEAD FIRE" and the CJK title, which Russo One lacks) instead."""
+    bp.widget("Panel", BORDER, None, {"brush_color": [0, 0, 0, 0.7]}, {"anchors": [0, 0, 0, 1], "position": [0, 0], "size": [PANEL_WIDTH, 0]})
     bp.widget("Column", VBOX, None, slot={"anchors": [0, 0, 0, 0], "position": [40, 60], "auto_size": True})
-    bp.widget("TitleText", TEXT_BLOCK, "Column", text_props(title, 48, AMBER), {"padding": [0, 0, 0, 6 if subtitle else 28]})
-    if subtitle:
-        bp.widget("SubtitleText", TEXT_BLOCK, "Column", text_props(subtitle, 28), {"padding": [0, 0, 0, 28]})
+    if logo:
+        bp.widget("LogoBox", SIZEBOX, "Column", {"width_override": LOGO_SIZE[0], "height_override": LOGO_SIZE[1]}, {"padding": [0, 0, 0, 28]})
+        bp.widget("Logo", IMAGE, "LogoBox", {"texture": T_LOGO})
+    else:
+        bp.widget("TitleText", TEXT_BLOCK, "Column", text_props(title, 40, AMBER), {"padding": [0, 0, 0, 28]})  # 48 before (Task 18)
 
 
 def nav_row(bp, confirm_name, confirm_label):
     bp.widget("NavRow", HBOX, "Column", slot={"padding": [0, 24, 0, 16]})
-    bp.widget("LeftButton", BUTTON, "NavRow", slot={"padding": [0, 0, 12, 0]})
+    bp.widget("LeftButton", BUTTON, "NavRow", button_props(), slot={"padding": [0, 0, 12, 0]})
     bp.widget("LeftLabel", TEXT_BLOCK, "LeftButton", text_props("<", 28, DARK, "Center"))
-    bp.widget("RightButton", BUTTON, "NavRow", slot={"padding": [0, 0, 24, 0]})
+    bp.widget("RightButton", BUTTON, "NavRow", button_props(), slot={"padding": [0, 0, 24, 0]})
     bp.widget("RightLabel", TEXT_BLOCK, "RightButton", text_props(">", 28, DARK, "Center"))
-    bp.widget(confirm_name, BUTTON, "NavRow")
+    bp.widget(confirm_name, BUTTON, "NavRow", button_props())
     bp.widget(confirm_name[:-6] + "Label", TEXT_BLOCK, confirm_name, text_props(confirm_label, 28, DARK, "Center"))
     button(bp, "BackButton", "BACK", "Column", padding=(0, 0, 0, 0), size=24)
 
@@ -229,7 +238,7 @@ def construct_index(g, selected_var):
 
 def build_main_menu() -> WidgetBlueprint:
     bp = WidgetBlueprint(WBP_MAIN_MENU, description="The main menu: PLAY, SETTINGS, QUIT and how much is unlocked.")
-    page_frame(bp, "DEAD FIRE", "\u6b7b\u706b")
+    page_frame(bp, "DEAD FIRE", logo=True)
     button(bp, "PlayButton", "PLAY", "Column")
     button(bp, "SettingsButton", "SETTINGS", "Column")
     button(bp, "QuitButton", "QUIT", "Column", padding=(0, 0, 0, 28))
@@ -442,10 +451,10 @@ def build_settings() -> WidgetBlueprint:
     bp.widget("VolumeText", TEXT_BLOCK, "VolumeRow", text_props("100 %", 22), {"padding": [16, 0, 0, 0], "v_align": "Center"})
     bp.widget("DifficultyLabel", TEXT_BLOCK, "Column", text_props("DIFFICULTY", 22), {"padding": [0, 0, 0, 6]})
     bp.widget("DiffRow", HBOX, "Column", slot={"padding": [0, 0, 0, 6]})
-    bp.widget("DiffLeftButton", BUTTON, "DiffRow")
+    bp.widget("DiffLeftButton", BUTTON, "DiffRow", button_props())
     bp.widget("DiffLeftLabel", TEXT_BLOCK, "DiffLeftButton", text_props("<", 24, DARK, "Center"))
     bp.widget("DifficultyText", TEXT_BLOCK, "DiffRow", text_props("NORMAL", 28, justify="Center"), {"padding": [16, 0, 16, 0], "v_align": "Center"})
-    bp.widget("DiffRightButton", BUTTON, "DiffRow")
+    bp.widget("DiffRightButton", BUTTON, "DiffRow", button_props())
     bp.widget("DiffRightLabel", TEXT_BLOCK, "DiffRightButton", text_props(">", 24, DARK, "Center"))
     bp.widget("DifficultyHint", TEXT_BLOCK, "Column", wrapped(text_props("EASY: 2 slower rivals   NORMAL: 3   HARD: 5 faster, better armed", 16)), {"padding": [0, 0, 0, 24]})
     button(bp, "ModeButton", "WINDOWED", "Column")

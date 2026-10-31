@@ -15,6 +15,7 @@ from df import (ACTOR, BOOL, BP_BOMB, BP_CHARACTER, BP_DESTRUCTIBLE, BP_EXPLOSIV
                 SPLINE_COMP, STRING, STRUCT, TRANSFORM, VECTOR, WBP_HUD, Pin, as_pin, enum_pin, enum_value, gen,
                 get_all_actors_of_class, is_valid, obj_pin, struct_path, struct_pin)
 from tests import T, race_context, spawn_character, spawn_vehicle, tire  # noqa: E402
+from df import art_icon, asset_object, enum_is, native_enum_pin, not_bool, or_bool  # noqa: E402  (Phase 7 Task 18)
 
 RC, GMC, VC, CC, PCC, BOMBC, PROJC, LOOTC = (gen(BPC_RACER), gen(BP_GM), gen(BP_VEHICLE), gen(BP_CHARACTER), gen(BP_PC), gen(BP_BOMB),
                                             gen(BP_PROJECTILE), gen(BP_LOOTBOX))
@@ -535,18 +536,63 @@ def point_blank_rocket_tests():
     return [t.finish()]
 
 
-# ---- Task 7: HUD item row ----
+# ---- Task 7: HUD item row; Phase 7 Task 18 (spec §7.6): icon slots, charge counts, the selected slot framed ----
+IMAGE_W = "/Script/UMG.Image"
+WIDGET_W = "/Script/UMG.Widget"
+SLATE_BRUSH = "/Script/SlateCore.SlateBrush"
+VISIBILITY = "/Script/UMG.ESlateVisibility"
+COLLAPSED, HIDDEN = 1, 2  # ESlateVisibility: Visible, Collapsed, Hidden, HitTestInvisible, SelfHitTestInvisible
+
+
+def hud_part(t: T, hud, name, cls):
+    """A widget of the race HUD (ItemIcon0, Vignette, ...)."""
+    return t.get(WHUD, name, OBJECT, hud, sub=cls_ref(cls))
+
+
+def widget_shown(t: T, widget):
+    """(node, pin) of a bool: the widget's visibility is neither Collapsed nor Hidden (GetVisibility, which is valid
+    before Slate builds the widget)."""
+    vis = t.g.call_on(WIDGET_W, "GetVisibility", outputs=[native_enum_pin("ReturnValue", VISIBILITY, direction="out")], pure=True)
+    t.link(widget, vis, "self")
+    gone = or_bool(t.g)
+    for pin, value in (("A", COLLAPSED), ("B", HIDDEN)):
+        t.g.link(enum_is(t.g, (vis, "ReturnValue"), value), "ReturnValue", gone, pin)
+    shown = not_bool(t.g)
+    t.g.link(gone, "ReturnValue", shown, "A")
+    return (shown, "ReturnValue")
+
+
+def icon_is(t: T, hud, index, icon, message):
+    """AssertTrue(ItemIcon<index>'s brush resource is the catalogue UI image `icon`)."""
+    brush = t.get(IMAGE_W, "Brush", STRUCT, hud_part(t, hud, "ItemIcon%d" % index, IMAGE_W), sub=struct_ref(SLATE_BRUSH))
+    res = t.g.call_static("WidgetBlueprintLibrary", "GetBrushResource", inputs=[struct_pin("Brush", SLATE_BRUSH)],
+                          outputs=[obj_pin("ReturnValue", "/Script/CoreUObject.Object", "out")], pure=True, module="UMG")
+    t.link(brush, res, "Brush")
+    same = t.g.call_static(MATH, "EqualEqual_ObjectObject", inputs=[obj_pin("A", "/Script/CoreUObject.Object"),
+                                                                   Pin("B", OBJECT, sub_object=cls_ref("/Script/CoreUObject.Object"),
+                                                                       default_object=asset_object(art_icon(icon)))],
+                           outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    t.g.link(res, "ReturnValue", same, "A")
+    t.true((same, "ReturnValue"), message)
+
+
 def hud_item_tests():
-    t = T("FT_DFHUD_ItemRowShowsInventory", "The HUD item row lists the racer's slots and marks empty ones.")
+    t = T("FT_DFHUD_ItemRowShowsInventory", "The HUD item row shows the racer's slots as icons (spec §7.6): Boost x2 and a Gun "
+          "show T_DF_Icon_Boost with the count 2 and T_DF_Icon_Gun, the third slot T_DF_Icon_Empty, and the selected slot 0 is framed.")
     pc, gm, gs, racer, gates = race_context(t)
-    t.true(grant(t, gm, pc, ITEM_SHIELD), "first shield granted")
-    t.true(grant(t, gm, pc, ITEM_SHIELD), "second shield granted")
+    t.true(grant(t, gm, pc, ITEM_BOOST), "first boost granted")
+    t.true(grant(t, gm, pc, ITEM_BOOST), "second boost granted")
+    t.true(grant(t, gm, pc, ITEM_GUN), "gun granted")
     t.delay(0.5)
     huds = widgets(t, WHUD)
     t.eq_int(t.length(huds, WHUD), 1, "one race HUD on screen")
     hud = t.item(huds, WHUD)
-    text_reads(t, t.get(WHUD, "Slot0Text", OBJECT, hud, sub=cls_ref(TEXT_BLOCK)), "SHIELD x2", "slot 0 reads SHIELD x2")
-    text_reads(t, t.get(WHUD, "Slot1Text", OBJECT, hud, sub=cls_ref(TEXT_BLOCK)), "-", "slot 1 reads -")
+    icon_is(t, hud, 0, "T_DF_Icon_Boost", "slot 0 shows T_DF_Icon_Boost")
+    text_reads(t, hud_part(t, hud, "ItemCount0", TEXT_BLOCK), "2", "slot 0's count reads 2")
+    icon_is(t, hud, 1, "T_DF_Icon_Gun", "slot 1 shows T_DF_Icon_Gun")
+    icon_is(t, hud, 2, "T_DF_Icon_Empty", "the empty slot 2 shows T_DF_Icon_Empty")
+    t.true(widget_shown(t, hud_part(t, hud, "ItemFrame0", "/Script/UMG.Border")), "the selected slot 0 is framed (ItemFrame0 shown)")
+    t.false(widget_shown(t, hud_part(t, hud, "ItemFrame1", "/Script/UMG.Border")), "slot 1, not selected, has no frame")
     return [t.finish()]
 
 

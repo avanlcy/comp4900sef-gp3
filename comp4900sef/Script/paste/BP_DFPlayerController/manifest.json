@@ -57,7 +57,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Pauses the world with the pause menu up, or resumes; refused once the race is over (the summary owns the screen)."
+   "doc": "Pauses the world with the pause menu up (the car's drive state cleared first), or resumes; refused once the race is over (the summary owns the screen)."
   },
   {
    "name": "SwitchToPawn",

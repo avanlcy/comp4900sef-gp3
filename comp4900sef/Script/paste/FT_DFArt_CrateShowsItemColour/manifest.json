@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_CrateShowsItemColour",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.4: a crate with ItemType Shield shows GetItemLook(Shield, false): its stripe MID's EmissiveColor (within 0.01, Glow 2) on the Crate and the Lid, the icon billboard's T_DF_Icon_Shield in that colour, and its beacon shown in that colour. GetItemLook's icons are the catalogue's (Shield: T_DF_Icon_Shield; random: T_DF_Icon_Random). A random crate (bRandom, Reset) shows T_DF_Icon_Random and the random colour, whatever it rolled. Fix round 1: the crate rests on the ground where the level places it (base 40 cm below the actor, the lid's top 40 cm above), and its pickup sphere is centred on the actor.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

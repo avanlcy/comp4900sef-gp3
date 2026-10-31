@@ -738,6 +738,10 @@ def screenshot_test():
     rp = t.g.call_on(gen("/Game/DeadFire/Blueprints/BP_DFGameInstance"), "ResetProgress")
     t.link((gic, as_pin("/Game/DeadFire/Blueprints/BP_DFGameInstance")), rp, "self")
     t.step(rp)
+    # Phase 7 Task 17 (spec §7.4, §7.5): the item looks after the restart (the player back in the car): a crate from the road at
+    # 40 m and close up, a bomb, the shield and the boost (shots.item_look_shots; imported here, as shots.py imports this module)
+    from shots import item_look_shots
+    item_look_shots(t, pc, gm, shot)
     return [t.finish()]
 
 

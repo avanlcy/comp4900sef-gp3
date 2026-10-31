@@ -1,0 +1,36 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFDebris",
+ "parent": "/Script/Engine.Actor",
+ "description": "A chunk of a demolished rock (spec \u00a78.2): SM_DF_RockChunk simulating physics, ignoring pawns and cars, gone after 8 s.",
+ "components": [
+  {
+   "name": "Chunk",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_RockChunk",
+    "call:set_collision_profile_name": "PhysicsActor"
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "InitialLifeSpan": 8.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

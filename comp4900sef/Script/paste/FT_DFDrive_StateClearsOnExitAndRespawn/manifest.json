@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_StateClearsOnExitAndRespawn",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Review Focus 5: look-back, drift, the smoothed steer and the held handbrake are cleared, and the spring arm faces forward again, after ExitVehicle, after TeleportAndStop (respawns) and after a pause (TogglePause twice).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

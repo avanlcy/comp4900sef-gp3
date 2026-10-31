@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_WreckCharred",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1: a fresh SEDAN wears MI_DF_Paint_Sedan; DestroyVehicle puts MI_DF_Paint_Charred on the Body's slots 0 (paint) and 1 (trim). Spec \u00a77.1 (Task 16): the wreck's fire on the bonnet (WreckFire) is hidden on a fresh car and shown on the wreck.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

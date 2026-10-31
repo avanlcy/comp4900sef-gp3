@@ -1,0 +1,53 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_ResetCarUprights",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "A SEDAN dropped upside down comes to rest on its roof; ResetCar() then returns true, 1.0 s later the car is upright (up Z > 0.95) and its racer's deaths are unchanged (a reset is no death). SEDAN on the drive strip, raw AI controller (its racer component is the racer), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "UpZ0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "KPH0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "T0",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Deaths0",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

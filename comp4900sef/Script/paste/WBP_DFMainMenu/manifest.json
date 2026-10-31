@@ -120,7 +120,7 @@
      0
     ],
     "size": [
-     560,
+     600,
      0
     ]
    }
@@ -145,55 +145,12 @@
    }
   },
   {
-   "name": "TitleText",
-   "class": "/Script/UMG.TextBlock",
+   "name": "LogoBox",
+   "class": "/Script/UMG.SizeBox",
    "parent": "Column",
    "props": {
-    "text": "DEAD FIRE",
-    "font_size": 48,
-    "color": [
-     1,
-     0.75,
-     0.2,
-     1
-    ],
-    "shadow": [
-     0,
-     0,
-     0,
-     0.8
-    ],
-    "justify": "Left"
-   },
-   "slot": {
-    "padding": [
-     0,
-     0,
-     0,
-     6
-    ]
-   }
-  },
-  {
-   "name": "SubtitleText",
-   "class": "/Script/UMG.TextBlock",
-   "parent": "Column",
-   "props": {
-    "text": "\u6b7b\u706b",
-    "font_size": 28,
-    "color": [
-     1,
-     1,
-     1,
-     1
-    ],
-    "shadow": [
-     0,
-     0,
-     0,
-     0.8
-    ],
-    "justify": "Left"
+    "width_override": 520,
+    "height_override": 130
    },
    "slot": {
     "padding": [
@@ -205,10 +162,24 @@
    }
   },
   {
+   "name": "Logo",
+   "class": "/Script/UMG.Image",
+   "parent": "LogoBox",
+   "props": {
+    "texture": "/Game/DeadFire/Art/UI/T_DF_Logo"
+   },
+   "slot": {}
+  },
+  {
    "name": "PlayButton",
    "class": "/Script/UMG.Button",
    "parent": "Column",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -238,7 +209,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -246,7 +219,12 @@
    "name": "SettingsButton",
    "class": "/Script/UMG.Button",
    "parent": "Column",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -276,7 +254,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -284,7 +264,12 @@
    "name": "QuitButton",
    "class": "/Script/UMG.Button",
    "parent": "Column",
-   "props": {},
+   "props": {
+    "sounds": [
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIHover",
+     "/Game/DeadFire/Art/Sounds/SW_DF_UIClick"
+    ]
+   },
    "slot": {
     "padding": [
      0,
@@ -314,7 +299,9 @@
      0,
      0.8
     ],
-    "justify": "Center"
+    "justify": "Center",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   },
@@ -337,7 +324,9 @@
      0,
      0.8
     ],
-    "justify": "Left"
+    "justify": "Left",
+    "font_object": "/Game/DeadFire/Art/UI/F_DF_Display",
+    "typeface_font_name": "Default"
    },
    "slot": {}
   }

@@ -1,0 +1,132 @@
+{
+ "body_box": {
+  "max": [
+   228.138,
+   88.75,
+   152.777
+  ],
+  "min": [
+   -223.708,
+   -88.75,
+   20.141
+  ]
+ },
+ "bump_wedge": {
+  "max": [
+   0.0,
+   0.0,
+   34.875
+  ],
+  "min": [
+   -125.112,
+   -218.3,
+   0.0
+  ]
+ },
+ "mannequin_sockets": {
+  "hand_r": true,
+  "head": true,
+  "spine_03": true
+ },
+ "pole": {
+  "max": [
+   11.81,
+   10.228,
+   49.276
+  ],
+  "min": [
+   -11.81,
+   -10.228,
+   -25.848
+  ]
+ },
+ "ramp": {
+  "max": [
+   0.0,
+   0.0,
+   242.712
+  ],
+  "min": [
+   -500.0,
+   -440.0,
+   -0.012
+  ]
+ },
+ "source": {
+  "level": "L_TestTrack",
+  "physics_asset": "/Game/Vehicle/Sedan/Sedan_PhysicsAsset.Sedan_PhysicsAsset",
+  "skeletal_mesh": "/Game/Vehicle/Sedan/Sedan_SkelMesh.Sedan_SkelMesh",
+  "vehicle": "/Game/DeadFire/Blueprints/BP_DFVehicle.BP_DFVehicle_C"
+ },
+ "steer_angle": 50.0,
+ "suspension_max_drop": 25.0,
+ "suspension_max_raise": 5.0,
+ "wheel_offset": {
+  "Wheel_Front_Left": [
+   0.0,
+   -12.0,
+   0.0
+  ],
+  "Wheel_Front_Right": [
+   0.0,
+   12.0,
+   0.0
+  ],
+  "Wheel_Rear_Left": [
+   0.0,
+   -12.0,
+   0.0
+  ],
+  "Wheel_Rear_Right": [
+   0.0,
+   12.0,
+   0.0
+  ]
+ },
+ "wheel_radius": 35.0,
+ "wheel_rot": {
+  "Wheel_Front_Left": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "Wheel_Front_Right": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "Wheel_Rear_Left": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "Wheel_Rear_Right": [
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "wheel_width": 10.0,
+ "wheels": {
+  "Wheel_Front_Left": [
+   140.822,
+   -63.96,
+   33.887
+  ],
+  "Wheel_Front_Right": [
+   140.822,
+   63.961,
+   33.887
+  ],
+  "Wheel_Rear_Left": [
+   -135.683,
+   -63.96,
+   33.887
+  ],
+  "Wheel_Rear_Right": [
+   -135.683,
+   63.961,
+   33.887
+  ]
+ }
+}

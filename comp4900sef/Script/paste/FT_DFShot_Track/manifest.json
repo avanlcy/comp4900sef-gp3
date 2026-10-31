@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShot_Track",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Phase 7 Task 21 capture: the player's next gate lit and another dim, then the shortcut's rock wall whole, breaking and broken (placed in L_DF_FunctionalTests for a capture run only).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

@@ -1,0 +1,46 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_CollectedCrateHidesVisuals",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.4: Pickup by an on-foot character (owned by the player) succeeds; in that frame the Crate, Icon and Beacon are hidden, the Lid still shows (it pops off), and one BP_DFFxLootBurst stands at the crate tinted with the crate's colour (GetItemLook). Fix round 1: one frame later the Lid has risen at least 10 cm (the test ticks after the crate); 0.8 s after the pickup (the pop's 0.4 s and a headless frame) the Lid is hidden and so is the actor. Reset shows all four again, the Lid back at its rest transform on the Lid socket.",
+ "components": [],
+ "variables": [
+  {
+   "name": "Bursts",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "Burst",
+   "type": "object:/Game/DeadFire/Blueprints/BP_DFFxLootBurst.BP_DFFxLootBurst_C",
+   "default": "",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "LidZ0",
+   "type": "float",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

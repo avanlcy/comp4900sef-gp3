@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_ExplosionSpawnsFx",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.3: SpawnExplosion (effects only: no damage) spawns one BP_DFFxExplosion within 15 m of the blast in the same frame, and the GameMode keeps the scorch decal it spawned (MI_DF_Scorch, at the blast; the restart before cleared the earlier ones): 4 m across (DecalSize, a half-extent, = (200, 200, 200)) and fading out over 20 s (GetFadeDuration).",
+ "components": [],
+ "variables": [
+  {
+   "name": "Explosions",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

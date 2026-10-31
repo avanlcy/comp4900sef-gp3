@@ -2,6 +2,10 @@
 top-left SCORE / LAPS / KILLS / LIVES; top-centre clock (red under 10 s); bottom-right speed and gear (R in red);
 bottom-left car health bar + tires, or character health on foot; crosshair on foot; prompt line at 72 % height;
 warning line at 40 % height (RETURN TO TRACK countdown, WRECKED, YOU DIED, CHECKPOINT +8 s for 1.5 s).
+Phase 7 Task 18 (spec §7.6): every text in Russo One (F_DF_Display); the item row is three icon tiles (GetItemLook's icon or
+T_DF_Icon_Empty, the charges, the selected slot framed); the crosshair is an image that HitMarker turns red when the player's
+shot hits a car or a character; ShowDamage flashes a red vignette (the player's car calls it, the character's hits are bound); DRIFT on a drift
+boost; the warning line ends with the crate prompt when the car is stopped near a crate; every button has the UI sounds.
 """
 import os
 import sys
@@ -14,11 +18,15 @@ from df import (BOOL, BP_CHARACTER, BP_GM, BP_GS, BP_HUD, BP_PC, BP_VEHICLE, BPC
                 STRUCT, VECTOR, WBP_HUD, WBP_SUMMARY, Blueprint, Graph, Node, Pin, and_bool, as_pin, compare, enum_pin,
                 game_time, gen, is_valid, math2, member, native_enum_pin, not_bool, obj_pin, obj_spec, struct_path,
                 struct_pin, struct_spec)
+from df import (ACTOR, BP_LOOTBOX, BPC_WEAPON, EMPTY_ICON, F_DISPLAY, HIT_RESULT, IMAGE, SW_UI_CLICK, SW_UI_HOVER,  # noqa: E402
+                T_CROSSHAIR, T_VIGNETTE, TEXTURE_2D, art_icon, asset_object, timer)  # Phase 7 Task 18
 
 UMG = "/Script/UMG"
 TEXT_BLOCK, PROGRESS, VBOX, HBOX, BUTTON, BORDER, SIZEBOX, WIDGET, USER_WIDGET = (
     UMG + ".TextBlock", UMG + ".ProgressBar", UMG + ".VerticalBox", UMG + ".HorizontalBox", UMG + ".Button",
     UMG + ".Border", UMG + ".SizeBox", UMG + ".Widget", UMG + ".UserWidget")
+OVERLAY = UMG + ".Overlay"
+VECTOR2D = "/Script/CoreUObject.Vector2D"
 SLATE_COLOR = "/Script/SlateCore.SlateColor"
 GEOMETRY = "/Script/SlateCore.Geometry"
 VIS = "/Script/UMG.ESlateVisibility"
@@ -29,6 +37,12 @@ TIRE, RESULT, ITEM = struct_path(S_TIRE), struct_path(S_RESULT), struct_path(S_I
 ITEM_ENUM = enum_pin("x", E_ITEM_TYPE).sub_object
 PICKUP_FLASH_SECONDS = 1.5
 WHITE, RED, AMBER, SHADOW = [1, 1, 1, 1], [1, 0.15, 0.1, 1], [1, 0.75, 0.2, 1], [0, 0, 0, 0.8]
+# Phase 7 Task 18 (spec §7.6): the timed HUD looks and the crate prompt
+HIT_MARKER_SECONDS, HIT_MARKER_SCALE = 0.15, 1.3  # a hit turns the crosshair red at 1.3x for this long
+DAMAGE_SECONDS = 0.3                              # the damage vignette after a hit taken
+DRIFT_SECONDS = 0.6                               # the DRIFT label after a drift boost
+CRATE_PROMPT = "CRATE NEARBY - E TO GET OUT"
+CRATE_PROMPT_CM = 4000.0                          # driving below exit speed this close to an uncollected crate shows the prompt
 
 
 # ---------- graph helpers ----------
@@ -83,15 +97,6 @@ def one_decimal(g, src):
     fs = g.call_static("KismetStringLibrary", "Conv_FloatToString", inputs=[Pin("InFloat", FLOAT)], outputs=[Pin("ReturnValue", STRING, "out")], pure=True)
     g.link(secs, "ReturnValue", fs, "InFloat")
     return (fs, "ReturnValue")
-
-
-def amber(g, widget: str, cond, prev):
-    w = g.var_get(widget, OBJECT, cls_ref(TEXT_BLOCK))
-    n = g.call_self("SetAmber", inputs=[obj_pin("Target", TEXT_BLOCK), Pin("bAmber", BOOL)])
-    g.link(w, widget, n, "Target")
-    g.link(cond[0], cond[1], n, "bAmber")
-    g.link(prev[0], prev[1], n, "execute")
-    return n
 
 
 def label(g, widget: str, text_src, prev):
@@ -179,12 +184,63 @@ def add_widget_helpers(bp: Blueprint):
 
 
 def text_props(text, size, color=WHITE, justify="Left"):
-    return {"text": text, "font_size": size, "color": color, "shadow": SHADOW, "justify": justify}
+    # Phase 7 Task 18 (spec §7.6): every text in Russo One; F_DF_Display's one typeface entry is "Default" (SetFontFace)
+    return {"text": text, "font_size": size, "color": color, "shadow": SHADOW, "justify": justify,
+            "font_object": F_DISPLAY, "typeface_font_name": "Default"}
+
+
+def button_props(**props):
+    """A Button's props: Phase 7 Task 18 (spec §7.6), every button plays SW_DF_UIHover when hovered and SW_DF_UIClick when pressed."""
+    return dict(props, sounds=[SW_UI_HOVER, SW_UI_CLICK])
+
+
+def set_icon(g, widget: str, texture_src, prev):
+    """SetBrushFromTexture on an Image widget of this Blueprint (keeps the widget's size); texture_src is a (node, pin) source or
+    an asset path (a literal). Returns the call node."""
+    literal = isinstance(texture_src, str)
+    n = g.call_on(IMAGE, "SetBrushFromTexture", inputs=[Pin("Texture", OBJECT, sub_object=cls_ref(TEXTURE_2D),
+                                                            default_object=asset_object(texture_src) if literal else None),
+                                                        Pin("bMatchSize", BOOL, default="false")])
+    g.link(g.var_get(widget, OBJECT, cls_ref(IMAGE)), widget, n, "self")
+    if not literal:
+        g.link(texture_src[0], texture_src[1], n, "Texture")
+    g.link(prev[0], prev[1], n, "execute")
+    return n
+
+
+def crosshair_look(g, rgba, scale, prev):
+    """CrosshairImage's colour and render scale (both axes); returns the last call node."""
+    cross = g.var_get("CrosshairImage", OBJECT, cls_ref(IMAGE))
+    col = g.call_on(IMAGE, "SetColorAndOpacity", inputs=[struct_pin("InColorAndOpacity", LINEAR_COLOR, default="(R=%f,G=%f,B=%f,A=%f)" % tuple(rgba))])
+    g.link(cross, "CrosshairImage", col, "self")
+    g.link(prev[0], prev[1], col, "execute")
+    size = g.call_static(MATH, "MakeVector2D", inputs=[Pin("X", FLOAT, default="%f" % scale), Pin("Y", FLOAT, default="%f" % scale)],
+                         outputs=[struct_pin("ReturnValue", VECTOR2D, "out")], pure=True)
+    sc = g.call_on(WIDGET, "SetRenderScale", inputs=[struct_pin("Scale", VECTOR2D)])
+    g.link(cross, "CrosshairImage", sc, "self")
+    g.link(size, "ReturnValue", sc, "Scale")
+    g.exec(col, sc)
+    return sc
+
+
+def timed_show(bp, show_fn, hide_fn, widget, cls, seconds, show_doc, hide_doc):
+    """show_fn(): the widget shown (SetShown) and hide_fn armed for `seconds` (a repeat restarts the countdown); hide_fn():
+    the widget collapsed again."""
+    for fn, shown_, doc in ((show_fn, "true", show_doc), (hide_fn, "false", hide_doc)):
+        g = bp.function(fn, doc=doc)
+        n = g.call_self("SetShown", inputs=[obj_pin("Target", WIDGET), Pin("bShown", BOOL, default=shown_)])
+        g.link(g.var_get(widget, OBJECT, cls_ref(cls)), widget, n, "Target")
+        g.link_entry("then", n, "execute")
+        if fn == show_fn:
+            g.exec(n, timer(g, hide_fn, seconds, looping=False))
 
 
 # ---------- in-race HUD ----------
 def build_hud() -> WidgetBlueprint:
     bp = WidgetBlueprint(WBP_HUD, description="The in-race HUD.")
+    # Phase 7 Task 18 (spec §7.6): the red damage vignette over the whole screen, first so it draws behind the rest; ShowDamage
+    bp.widget("Vignette", IMAGE, None, {"texture": T_VIGNETTE, "visibility": "Collapsed"},
+              {"anchors": [0, 0, 1, 1], "position": [0, 0], "size": [0, 0]})
     bp.widget("StatsBox", VBOX, slot={"anchors": [0, 0, 0, 0], "position": [40, 30], "auto_size": True})
     for name, text in (("ScoreText", "SCORE 0"), ("LapText", "LAPS 0"), ("KillsText", "KILLS 0"), ("LivesText", "LIVES 3"),
                        ("PositionText", "POS 1 / 1")):  # Phase 4 (spec §5): rank among every racer
@@ -203,8 +259,11 @@ def build_hud() -> WidgetBlueprint:
     bp.widget("CharacterHealthText", TEXT_BLOCK, "CharacterPanel", text_props("HEALTH 100 / 100", 24))
     bp.widget("CharacterHealthBox", SIZEBOX, "CharacterPanel", {"width_override": 320, "height_override": 14}, {"padding": [0, 4, 0, 4]})
     bp.widget("CharacterHealthBar", PROGRESS, "CharacterHealthBox", {"percent": 1.0, "fill_color": [0.25, 0.6, 1.0, 1]})
-    bp.widget("CrosshairText", TEXT_BLOCK, None, text_props("+", 32, justify="Center"),
+    # Phase 7 Task 18: the crosshair is an image (64 px, white; HitMarker turns it red and larger for a moment)
+    bp.widget("CrosshairImage", IMAGE, None, {"texture": T_CROSSHAIR},
               {"anchors": [0.5, 0.5, 0.5, 0.5], "alignment": [0.5, 0.5], "auto_size": True})
+    bp.widget("DriftText", TEXT_BLOCK, None, dict(text_props("DRIFT", 56, AMBER, "Center"), visibility="Collapsed"),
+              {"anchors": [0.5, 0.28, 0.5, 0.28], "alignment": [0.5, 0.5], "auto_size": True})
     bp.widget("PromptText", TEXT_BLOCK, None, text_props("", 26, justify="Center"),
               {"anchors": [0.5, 0.72, 0.5, 0.72], "alignment": [0.5, 0.5], "auto_size": True})
     bp.widget("WarningText", TEXT_BLOCK, None, text_props("", 40, AMBER, "Center"),
@@ -213,8 +272,17 @@ def build_hud() -> WidgetBlueprint:
     bp.widget("ItemPanel", VBOX, None, slot={"anchors": [0.5, 1, 0.5, 1], "alignment": [0.5, 1], "position": [0, -120], "auto_size": True})
     bp.widget("EffectText", TEXT_BLOCK, "ItemPanel", text_props("", 22, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 4]})
     bp.widget("ItemRow", HBOX, "ItemPanel", slot={"h_align": "Center"})
+    # Phase 7 Task 18 (spec §7.6): each slot an 80 px tile: the frame (the selected slot, in its item's colour) under a dark
+    # inset, the item's icon, and its charges in the corner
     for i in range(3):
-        bp.widget("Slot%dText" % i, TEXT_BLOCK, "ItemRow", text_props("-", 24), {"padding": [12, 0, 12, 0]})
+        bp.widget("ItemSlot%d" % i, SIZEBOX, "ItemRow", {"width_override": 80, "height_override": 80}, {"padding": [8, 0, 8, 0]})
+        bp.widget("ItemStack%d" % i, OVERLAY, "ItemSlot%d" % i)
+        fill = {"h_align": "Fill", "v_align": "Fill"}
+        bp.widget("ItemFrame%d" % i, BORDER, "ItemStack%d" % i, {"brush_color": AMBER, "visibility": "Collapsed"}, fill)
+        bp.widget("ItemBack%d" % i, BORDER, "ItemStack%d" % i, {"brush_color": [0, 0, 0, 0.55]}, dict(fill, padding=[4, 4, 4, 4]))
+        bp.widget("ItemIcon%d" % i, IMAGE, "ItemStack%d" % i, {"texture": art_icon(EMPTY_ICON)}, dict(fill, padding=[10, 10, 10, 10]))
+        bp.widget("ItemCount%d" % i, TEXT_BLOCK, "ItemStack%d" % i, text_props("", 22, justify="Right"),
+                  {"h_align": "Right", "v_align": "Bottom", "padding": [0, 0, 7, 3]})
     bp.widget("ItemHintText", TEXT_BLOCK, "ItemPanel", text_props("[Q] USE   [R] NEXT", 18, justify="Center"), {"h_align": "Center", "padding": [0, 4, 0, 0]})
     add_widget_helpers(bp)
 
@@ -298,8 +366,10 @@ def build_hud() -> WidgetBlueprint:
     g.link(near, "ReturnValue", nv, "Object")
     label(g, "PromptText", pick(g, "[E] Enter vehicle", "", (nv, "ReturnValue")), (near, "then"))
 
-    # RefreshItems(Racer, Car): three slot labels (selected in amber), the effect line and the key hint (spec §9)
-    g = bp.function("RefreshItems", doc="The three item slots (selected in amber), the effect line and the key hint.", inputs=["Racer:object:" + RC, "Car:" + obj_spec(BP_VEHICLE)])
+    # RefreshItems(Racer, Car): three icon slots (Phase 7 Task 18, spec §7.6: the icon from GetItemLook or T_DF_Icon_Empty, the
+    # charges, the selected filled slot framed in its item's colour), the effect line and the key hint (spec §9)
+    g = bp.function("RefreshItems", doc="The three item slots (icon, charges, the selected one framed), the effect line and the key hint.",
+                    inputs=["Racer:object:" + RC, "Car:" + obj_spec(BP_VEHICLE)])
     gm_ = g.call_static(GAMEPLAY, "GetGameMode", inputs=[Pin("WorldContextObject", OBJECT, hidden=True)],
                         outputs=[obj_pin("ReturnValue", "/Script/Engine.GameModeBase", "out")], pure=True)
     gm = g.cast(GMC)
@@ -325,20 +395,25 @@ def build_hud() -> WidgetBlueprint:
         g.link(inv_i, "Inventory", item, "TargetArray")
         br = g.break_struct(ITEM, [enum_pin(member(S_ITEM_STACK, "Type"), E_ITEM_TYPE, "out"), Pin(member(S_ITEM_STACK, "Charges"), INT, "out")])
         g.link(item, "Item", br, ITEM.rsplit(".", 1)[1])
-        info = g.call_on(GMC, "GetItemInfo", inputs=[enum_pin("Type", E_ITEM_TYPE)],
-                         outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
-        g.link(gm, as_pin(BP_GM), info, "self")
-        g.link(br, member(S_ITEM_STACK, "Type"), info, "Type")
-        filled = label(g, "Slot%dText" % i, cat(g, (info, "Name"), " x", s_int(g, (br, member(S_ITEM_STACK, "Charges")))), (bi, "then"))
-        empty = label(g, "Slot%dText" % i, cat(g, "-"), (bi, "else"))
+        look = g.call_on(GMC, "GetItemLook", inputs=[enum_pin("Type", E_ITEM_TYPE), Pin("bRandom", BOOL, default="false")],
+                         outputs=[struct_pin("Colour", LINEAR_COLOR, "out"), obj_pin("Icon", TEXTURE_2D, "out")], pure=True)
+        g.link(gm, as_pin(BP_GM), look, "self")
+        g.link(br, member(S_ITEM_STACK, "Type"), look, "Type")
+        icon = set_icon(g, "ItemIcon%d" % i, (look, "Icon"), (bi, "then"))
+        count = label(g, "ItemCount%d" % i, s_int(g, (br, member(S_ITEM_STACK, "Charges"))), (icon, "then"))
+        tint = g.call_on(BORDER, "SetBrushColor", inputs=[struct_pin("InBrushColor", LINEAR_COLOR)])
+        g.link(g.var_get("ItemFrame%d" % i, OBJECT, cls_ref(BORDER)), "ItemFrame%d" % i, tint, "self")
+        g.link(look, "Colour", tint, "InBrushColor")
+        g.exec(count, tint)
+        empty = label(g, "ItemCount%d" % i, cat(g, ""), (set_icon(g, "ItemIcon%d" % i, art_icon(EMPTY_ICON), (bi, "else")), "then"))
         is_sel = compare(g, "EqualEqual_IntInt", INT, a=str(i))
         g.link(sel, "SelectedSlot", is_sel, "B")
         both = and_bool(g)
         g.link(is_sel, "ReturnValue", both, "A")
         g.link(has, "ReturnValue", both, "B")
-        am = amber(g, "Slot%dText" % i, (both, "ReturnValue"), (filled, "then"))
-        g.link(empty, "then", am, "execute")
-        prev = (am, "then")
+        frame = shown(g, "ItemFrame%d" % i, BORDER, (both, "ReturnValue"), (tint, "then"))
+        g.link(empty, "then", frame, "execute")
+        prev = (frame, "then")
     cv = is_valid(g)
     g.link_entry("Car", cv, "Object")
     hint = shown(g, "ItemHintText", TEXT_BLOCK, (cv, "ReturnValue"), prev)
@@ -359,8 +434,10 @@ def build_hud() -> WidgetBlueprint:
     label(g, "EffectText", pick(g, with_boost, without, (b_on, "ReturnValue")), (bc, "then"))
     label(g, "EffectText", cat(g, ""), (bc, "else"))
 
-    # RefreshWarning(PC, GM, Racer): WRECKED > YOU DIED > RETURN TO TRACK n.n > CHECKPOINT +8 s (1.5 s) > nothing
-    g = bp.function("RefreshWarning", doc="WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP.", inputs=["PC:" + obj_spec(BP_PC), "GM:" + obj_spec(BP_GM), "Racer:object:" + RC])
+    # RefreshWarning(PC, GM, Racer): WRECKED > YOU DIED > RETURN TO TRACK n.n > CHECKPOINT +8 s (1.5 s) > PICKED UP > (Phase 7 Task 18,
+    # in a car below exit speed) CRATE NEARBY > nothing
+    g = bp.function("RefreshWarning", doc="WRECKED > YOU DIED > RETURN TO TRACK > CHECKPOINT > PICKED UP > CRATE NEARBY (in a car, stopped).",
+                    inputs=["PC:" + obj_spec(BP_PC), "GM:" + obj_spec(BP_GM), "Racer:object:" + RC])
     car = g.var_get_on(PCC, "CurrentVehicle", OBJECT, cls_ref(VC))
     g.link_entry("PC", car, "self")
     ch = g.var_get_on(PCC, "OnFootCharacter", OBJECT, cls_ref(CC))
@@ -428,11 +505,39 @@ def build_hud() -> WidgetBlueprint:
                       outputs=[Pin("Name", STRING, "out"), Pin("BoxCharges", INT, "out"), Pin("MaxCharges", INT, "out")], pure=True)
     g.link_entry("GM", pinfo, "self")
     g.link(lptype, "LastPickupType", pinfo, "Type")
-    pickup_text = pick(g, cat(g, "PICKED UP ", (pinfo, "Name")), "", (recent_p, "ReturnValue"))
-    timers = pick(g, off_text, pick(g, cp_text, pickup_text, (recent, "ReturnValue")), (is_off, "ReturnValue"))
+
+    def timers_then(last):
+        """RETURN TO TRACK > CHECKPOINT > PICKED UP > last (a literal or a source)."""
+        pickup_text = pick(g, cat(g, "PICKED UP ", (pinfo, "Name")), last, (recent_p, "ReturnValue"))
+        return pick(g, off_text, pick(g, cp_text, pickup_text, (recent, "ReturnValue")), (is_off, "ReturnValue"))
+
+    timers = timers_then("")
     wrecked = g.var_get_on(VC, "bIsDestroyed", BOOL)
     g.link(car, "CurrentVehicle", wrecked, "self")
-    label(g, "WarningText", pick(g, "WRECKED", timers, (wrecked, "bIsDestroyed")), (b, "then"))
+    # Phase 7 Task 18 (spec §7.6, §7.4): below exit speed, last in line, CRATE_PROMPT within CRATE_PROMPT_CM of an uncollected crate
+    slow = g.call_on(VC, "IsBelowExitSpeed", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
+    g.link(car, "CurrentVehicle", slow, "self")
+    bslow = g.branch()
+    g.note(bslow, "stopped? a crate nearby?")
+    g.link(slow, "ReturnValue", bslow, "Condition")
+    g.link(b, "then", bslow, "execute")
+    car_at = g.call_on(ACTOR, "K2_GetActorLocation", outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(car, "CurrentVehicle", car_at, "self")
+    nearest = g.call_on(GMC, "FindNearestCrate", inputs=[struct_pin("Location", VECTOR)],
+                        outputs=[obj_pin("Crate", gen(BP_LOOTBOX), "out"), Pin("Distance", FLOAT, "out")])
+    g.link_entry("GM", nearest, "self")
+    g.link(car_at, "ReturnValue", nearest, "Location")
+    g.link(bslow, "then", nearest, "execute")
+    crate_ok = is_valid(g)
+    g.link(nearest, "Crate", crate_ok, "Object")
+    close = compare(g, "LessEqual_FloatFloat", FLOAT, b="%f" % CRATE_PROMPT_CM)
+    g.link(nearest, "Distance", close, "A")
+    near = and_bool(g)
+    g.link(crate_ok, "ReturnValue", near, "A")
+    g.link(close, "ReturnValue", near, "B")
+    crate_line = timers_then(pick(g, CRATE_PROMPT, "", (near, "ReturnValue")))
+    label(g, "WarningText", pick(g, "WRECKED", crate_line, (wrecked, "bIsDestroyed")), (nearest, "then"))
+    label(g, "WarningText", pick(g, "WRECKED", timers, (wrecked, "bIsDestroyed")), (bslow, "else"))
     dead = g.call_on(CC, "IsDead", outputs=[Pin("ReturnValue", BOOL, "out")], pure=True)
     g.link(ch, "OnFootCharacter", dead, "self")
     bd = g.branch()
@@ -496,7 +601,7 @@ def build_hud() -> WidgetBlueprint:
     n = shown(g, "DrivePanel", VBOX, (in_car, "ReturnValue"), (n, "then"))
     n = shown(g, "VehiclePanel", VBOX, (in_car, "ReturnValue"), (n, "then"))
     n = shown(g, "CharacterPanel", VBOX, (on_foot, "ReturnValue"), (n, "then"))
-    n = shown(g, "CrosshairText", TEXT_BLOCK, (on_foot, "ReturnValue"), (n, "then"))
+    n = shown(g, "CrosshairImage", IMAGE, (on_foot, "ReturnValue"), (n, "then"))
     bc = g.branch()
     g.link(in_car, "ReturnValue", bc, "Condition")
     g.exec(n, bc)
@@ -518,11 +623,81 @@ def build_hud() -> WidgetBlueprint:
     g.link(R[0], R[1], rw, "Racer")
     g.exec(ri, rw)
 
+    # Phase 7 Task 18 (spec §7.6): the timed looks. A repeat restarts the countdown (K2_SetTimer finds the function's timer).
+    g = bp.function("HitMarker", doc="The player's shot hit a car or a character: the crosshair turns red at %gx for %g s (EndHitMarker)." % (HIT_MARKER_SCALE, HIT_MARKER_SECONDS))
+    g.exec(crosshair_look(g, RED, HIT_MARKER_SCALE, ("entry", "then")), timer(g, "EndHitMarker", HIT_MARKER_SECONDS, looping=False))
+    g = bp.function("EndHitMarker", doc="The crosshair back to white at 1x.")
+    crosshair_look(g, WHITE, 1.0, ("entry", "then"))
+    timed_show(bp, "ShowDamage", "HideDamage", "Vignette", IMAGE, DAMAGE_SECONDS,
+               "A hit taken by the player's car (its TakeDamageInternal) or character: the red vignette for %g s." % DAMAGE_SECONDS, "The vignette off.")
+    timed_show(bp, "ShowDrift", "HideDrift", "DriftText", TEXT_BLOCK, DRIFT_SECONDS,
+               "A drift boost of the player's car: DRIFT for %g s." % DRIFT_SECONDS, "DRIFT off.")
+
     g = bp.event_graph()
-    g.section("Tick: refresh everything")
+    g.section("Tick: refresh everything, then bind the player's car and character (Phase 7 Task 18; a binding is added once)")
     tick = g.event(USER_WIDGET, "Tick", [struct_pin("MyGeometry", GEOMETRY), Pin("InDeltaTime", FLOAT)], col=0, row=1)
     r = g.call_self("Refresh", col=1, row=1)
     g.exec(tick, r)
+    shot = g.custom_event("OnPlayerShot", [struct_pin("Hit", HIT_RESULT), Pin("bHit", BOOL)])  # BPC_DFWeapon.OnFired's parameters
+    drift = g.custom_event("OnPlayerDriftBoost")                                                # BP_DFVehicle.OnDriftBoost's
+    hurt = g.custom_event("OnPlayerHurt", [Pin("Damage", FLOAT)])                               # BP_DFCharacter.OnCharacterDamaged's
+    own = g.call_self_native(WIDGET, "GetOwningPlayer", outputs=[obj_pin("ReturnValue", PLAYER_CONTROLLER, "out")], pure=True)
+    pc = g.cast(PCC)
+    g.link(own, "ReturnValue", pc, "Object")
+    g.exec(r, pc)
+
+    def bind(owner_class, delegate, target_src, event, prev):
+        n = g.add_delegate_on(owner_class, delegate)
+        g.link(target_src[0], target_src[1], n, "self")
+        g.link(event, "OutputDelegate", n, "Delegate")
+        g.link(prev[0], prev[1], n, "execute")
+        return n
+
+    def weapon_of(cls, owner):
+        n = g.var_get_on(cls, "Weapon", OBJECT, cls_ref(gen(BPC_WEAPON)))
+        g.link(owner[0], owner[1], n, "self")
+        return (n, "Weapon")
+
+    car = get_on(g, PCC, "CurrentVehicle", OBJECT, (pc, as_pin(BP_PC)), sub=cls_ref(VC))
+    car_ok = is_valid(g)
+    g.link(car[0], car[1], car_ok, "Object")
+    bcar = g.branch()
+    g.note(bcar, "in a car? its gun and its drift boosts")
+    g.link(car_ok, "ReturnValue", bcar, "Condition")
+    g.link(pc, "then", bcar, "execute")
+    car_gun = bind(gen(BPC_WEAPON), "OnFired", weapon_of(VC, car), shot, (bcar, "then"))
+    car_drift = bind(VC, "OnDriftBoost", car, drift, (car_gun, "then"))
+    ch = get_on(g, PCC, "OnFootCharacter", OBJECT, (pc, as_pin(BP_PC)), sub=cls_ref(CC))
+    ch_ok = is_valid(g)
+    g.link(ch[0], ch[1], ch_ok, "Object")
+    bch = g.branch()
+    g.note(bch, "the character: its rifle and its hits taken")
+    g.link(ch_ok, "ReturnValue", bch, "Condition")
+    g.exec(car_drift, bch)
+    g.link(bcar, "else", bch, "execute")
+    ch_gun = bind(gen(BPC_WEAPON), "OnFired", weapon_of(CC, ch), shot, (bch, "then"))
+    bind(CC, "OnCharacterDamaged", ch, hurt, (ch_gun, "then"))
+
+    # fix round 1 (controller ruling, spec §7.2 "on a hit"): only a hit on a car or a character is a target; the road, the
+    # ground, a rock or a crate block the trace too (bHit) but get no marker
+    g.section("The player's shot hit a car or a character: the hit marker")
+    what = g.call_static(GAMEPLAY, "BreakHitResult", inputs=[struct_pin("Hit", HIT_RESULT)], outputs=[obj_pin("HitActor", ACTOR, "out")], pure=True)
+    g.link(shot, "Hit", what, "Hit")
+    on_car = g.cast(VC)
+    g.note(on_car, "a car?")
+    g.link(what, "HitActor", on_car, "Object")
+    g.exec(shot, on_car)
+    on_person = g.cast(CC)
+    g.note(on_person, "a character?")
+    g.link(what, "HitActor", on_person, "Object")
+    g.link(on_car, "CastFailed", on_person, "execute")
+    marker = g.call_self("HitMarker")
+    g.link(on_car, "then", marker, "execute")
+    g.link(on_person, "then", marker, "execute")
+    g.section("The player's drift boost: DRIFT")
+    g.exec(drift, g.call_self("ShowDrift"))
+    g.section("The player's character took a hit: the vignette (the car's own hits come through its TakeDamageInternal)")
+    g.exec(hurt, g.call_self("ShowDamage"))
     return bp
 
 
@@ -538,11 +713,11 @@ def build_summary() -> WidgetBlueprint:
     # Phase 5 (spec §5.2): what the race unlocked, NEXT when the next track is open, QUIT became MENU
     bp.widget("UnlockText", TEXT_BLOCK, "SummaryBox", text_props("", 26, AMBER, "Center"), {"h_align": "Center", "padding": [0, 0, 0, 20]})
     bp.widget("ButtonRow", HBOX, "SummaryBox", slot={"h_align": "Center"})
-    bp.widget("RetryButton", BUTTON, "ButtonRow", slot={"padding": [0, 0, 24, 0]})
+    bp.widget("RetryButton", BUTTON, "ButtonRow", button_props(), slot={"padding": [0, 0, 24, 0]})
     bp.widget("RetryLabel", TEXT_BLOCK, "RetryButton", text_props("RETRY", 28, [0.05, 0.05, 0.05, 1], "Center"))
-    bp.widget("NextButton", BUTTON, "ButtonRow", {"visibility": "Collapsed"}, slot={"padding": [0, 0, 24, 0]})
+    bp.widget("NextButton", BUTTON, "ButtonRow", button_props(visibility="Collapsed"), slot={"padding": [0, 0, 24, 0]})
     bp.widget("NextLabel", TEXT_BLOCK, "NextButton", text_props("NEXT", 28, [0.05, 0.05, 0.05, 1], "Center"))
-    bp.widget("MenuButton", BUTTON, "ButtonRow")
+    bp.widget("MenuButton", BUTTON, "ButtonRow", button_props())
     bp.widget("MenuLabel", TEXT_BLOCK, "MenuButton", text_props("MENU", 28, [0.05, 0.05, 0.05, 1], "Center"))
     bp.variable("LevelIndex", "int", "0", "Dead Fire|Summary")  # the track just raced (NEXT starts LevelIndex + 1)
     add_text_helpers(bp)

@@ -2,25 +2,23 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFLootBox",
  "parent": "/Script/Engine.Actor",
- "description": "A crate collected on touch by a character on foot; fixed or random item; comes back after a delay.",
+ "description": "A crate collected on touch by a character on foot; fixed or random item; comes back after a delay. Its stripe, floating icon and beacon pillar show the item's colour.",
  "components": [
   {
    "name": "Crate",
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "",
    "properties": {
-    "static_mesh": "/Game/StarterContent/Shapes/Shape_Cube",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Crate",
     "relative_scale3d": {
      "vector": [
-      0.8,
-      0.8,
-      0.8
+      1.0,
+      1.0,
+      1.0
      ]
     },
     "call:set_collision_profile_name": "OverlapAllDynamic",
-    "override_materials": [
-     "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange"
-    ]
+    "override_materials": []
    }
   },
   {
@@ -31,6 +29,62 @@
     "sphere_radius": 150.0,
     "absolute_scale": true,
     "call:set_collision_profile_name": "OverlapOnlyPawn"
+   }
+  },
+  {
+   "name": "Lid",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Crate",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_CrateLid",
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   },
+   "socket": "Lid"
+  },
+  {
+   "name": "Icon",
+   "class": "/Script/Engine.MaterialBillboardComponent",
+   "parent": "Crate",
+   "properties": {
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      105.0
+     ]
+    },
+    "elements": [
+     {
+      "struct": "MaterialSpriteElement",
+      "props": {
+       "material": "/Game/DeadFire/Art/Materials/MI_DF_Icon",
+       "base_size_x": 35.0,
+       "base_size_y": 35.0,
+       "size_is_in_screen_space": false
+      }
+     }
+    ],
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
+  },
+  {
+   "name": "Beacon",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "Crate",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_BeaconPillar",
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      160.0
+     ]
+    },
+    "cast_shadow": false,
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
    }
   }
  ],
@@ -83,6 +137,125 @@
    "default": "-1",
    "category": "Dead Fire|Loot",
    "editable": false
+  },
+  {
+   "name": "StripeGlow",
+   "type": "float",
+   "default": "2.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "IconHeight",
+   "type": "float",
+   "default": "105.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "IconBobHeight",
+   "type": "float",
+   "default": "20.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "IconBobPeriod",
+   "type": "float",
+   "default": "2.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "LidPopSeconds",
+   "type": "float",
+   "default": "0.4",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "LidPopHeight",
+   "type": "float",
+   "default": "60.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "LidPopTilt",
+   "type": "float",
+   "default": "40.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "LidPopDrift",
+   "type": "float",
+   "default": "25.0",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "LootOpenSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "DenySound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": true
+  },
+  {
+   "name": "StripeMID",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "LidStripeMID",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "IconMID",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "BeaconMID",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "LootColour",
+   "type": "struct:/Script/CoreUObject.LinearColor",
+   "default": "",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "bLidPopping",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
+  },
+  {
+   "name": "LidPopAge",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Loot Look",
+   "editable": false
   }
  ],
  "dispatchers": [
@@ -127,6 +300,64 @@
    "category": "Dead Fire",
    "locals": [],
    "doc": "Rolls a random type when asked, then shows and collides again."
+  },
+  {
+   "name": "ApplyLook",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The item's look (GameMode.GetItemLook of ItemType, bRandom): the crate's and the lid's stripe glow in its colour (EmissiveColor and Tint, Glow StripeGlow), the icon shows its texture in that colour, the beacon takes the colour. Makes the dynamic materials the first time (the same ones after)."
+  },
+  {
+   "name": "ShowLook",
+   "inputs": [
+    "bShown:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Shows or hides the crate and everything on it (Lid, Icon, Beacon)."
+  },
+  {
+   "name": "BobIcon",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The icon floats at IconHeight, bobbing IconBobHeight (peak to peak) on an IconBobPeriod cycle."
+  },
+  {
+   "name": "PopLid",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The lid pops off: it shows (the crate, icon and beacon are hidden) and TickLidPop moves it from now."
+  },
+  {
+   "name": "TickLidPop",
+   "inputs": [
+    "DeltaSeconds:float"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "While the lid pops: t = LidPopAge / LidPopSeconds; it rises LidPopHeight x (1 - (1 - t)^2), drifts LidPopDrift x t along +X and tilts LidPopTilt x t; at t = 1 it hides, and so does the collected actor."
+  },
+  {
+   "name": "RestLid",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Ends any pop and puts the lid back on the Crate's Lid socket (its rest transform)."
   }
  ],
  "graphs": [
@@ -199,7 +430,7 @@
      0
     ],
     "result": [
-     5639,
+     7901,
      0
     ]
    }
@@ -224,6 +455,132 @@
    }
   },
   {
+   "name": "ApplyLook",
+   "file": "ApplyLook.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ShowLook",
+   "file": "ShowLook.txt",
+   "links": [
+    [
+     "entry",
+     "bShown",
+     "DFN_K2Node_CallFunction_0",
+     "bNewVisibility"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "BobIcon",
+   "file": "BobIcon.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_9",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "PopLid",
+   "file": "PopLid.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "TickLidPop",
+   "file": "TickLidPop.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "DeltaSeconds",
+     "DFN_K2Node_CallFunction_0",
+     "B"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "RestLid",
+   "file": "RestLid.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "EventGraph",
    "file": "EventGraph.txt",
    "links": [],
@@ -233,7 +590,18 @@
    }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "StripeGlow": 2.0,
+  "IconHeight": 105.0,
+  "IconBobHeight": 20.0,
+  "IconBobPeriod": 2.0,
+  "LidPopSeconds": 0.4,
+  "LidPopHeight": 60.0,
+  "LidPopTilt": 40.0,
+  "LidPopDrift": 25.0,
+  "LootOpenSound": "/Game/DeadFire/Art/Sounds/SW_DF_LootOpen",
+  "DenySound": "/Game/DeadFire/Art/Sounds/SW_DF_Deny"
+ },
  "component_defaults": {},
  "requires": []
 }

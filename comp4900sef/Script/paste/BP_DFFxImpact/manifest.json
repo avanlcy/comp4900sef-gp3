@@ -1,0 +1,92 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxImpact",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "A hitscan hit, +X along the surface normal: a hot spark star and a spray of dust thrown off the surface.",
+ "components": [
+  {
+   "name": "Burst",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxStar",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      0.45,
+      0.45,
+      0.45
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxSpark"
+    ]
+   }
+  },
+  {
+   "name": "Dust",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxCone",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.2,
+      0.9,
+      0.9
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxDust"
+    ]
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "Lifetime": 0.3,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.5,
+  "RiseSpeed": 0.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

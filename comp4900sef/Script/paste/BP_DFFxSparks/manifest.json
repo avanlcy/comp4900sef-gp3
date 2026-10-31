@@ -1,0 +1,92 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFFxSparks",
+ "parent": "/Game/DeadFire/Blueprints/BP_DFFx",
+ "description": "Sparks (tyre pop, car-on-car crash): a hot yellow spiky star and small orange bits flying out.",
+ "components": [
+  {
+   "name": "Star",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxStar",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      0.8,
+      0.8,
+      0.8
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxTracer"
+    ]
+   }
+  },
+  {
+   "name": "Bits",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Fx/SM_DF_FxChunk",
+    "component_tags": [
+     "FxShell"
+    ],
+    "cast_shadow": false,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.2,
+      1.2,
+      1.2
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false,
+    "override_materials": [
+     "/Game/DeadFire/Art/Materials/MI_DF_FxBlast"
+    ]
+   }
+  }
+ ],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [],
+ "defaults": {
+  "Lifetime": 0.25,
+  "StartScale": 0.3,
+  "EndScale": 1.0,
+  "FadeExponent": 1.0,
+  "RiseSpeed": 0.0,
+  "LightStart": 0.0,
+  "Tint": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ },
+ "component_defaults": {},
+ "requires": []
+}

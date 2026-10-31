@@ -1,5 +1,10 @@
 """BP_DFCheckpoint (plan Task 6): gate with a trigger across the road and two poles; reports vehicle crossings to
 the GameMode, which owns the ordering rules. Index 0 is the start/finish line.
+
+Phase 7 Task 21 (spec §8.2): the poles are two 6 m SM_DF_GatePylon, PoleOffset either side of the road, with SM_DF_GateBanner
+overhead (its origin is the gate's, scaled on Y to the pole spacing by the construction script). Their Gate slot (0) glows:
+SetHighlighted(bOn) gives each of the three its own material instance (GlowMIDs) and sets its Glow to HighlightGlow (the player's
+next gate) or DimGlow; the GameMode's RefreshGateHighlights calls it on every gate. The Trigger is unchanged.
 """
 import os
 import sys
@@ -8,25 +13,68 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from df import (ACTOR, BOOL, BOX_COMP, BP_CHECKPOINT, BP_GM, BP_VEHICLE, CONTROLLER, FLOAT, HIT_RESULT, INT, MATH,  # noqa: E402
                 OBJECT, OUT, PAWN, PRIMITIVE, SCENE_COMP, STATIC_MESH_COMP, TRANSFORM, VECTOR, Blueprint, Pin, as_pin,
                 cast_to, cls_ref, gen, get_game_mode, is_valid, math2, obj_pin, struct_pin)
+from df import (GATE_BANNER_Y_CM, GATE_POLE_OFFSET, GATE_GLOW_OFF, GATE_GLOW_ON, GATE_GLOW_SLOT, MATERIAL_INTERFACE, MID, NAME, NO_COLLISION,  # noqa: E402
+                SM_GATE_BANNER, SM_GATE_PYLON)  # Phase 7 Task 21
 
 CPC, VC, GMC = gen(BP_CHECKPOINT), gen(BP_VEHICLE), gen(BP_GM)
-POLE = "/Game/VehicleAdv/ArenaMesh/pole"
+GLOW_PARTS = ("LeftPole", "RightPole", "Banner")  # the three meshes whose Gate slot glows, in GlowMIDs order
 
 
 def build() -> Blueprint:
-    bp = Blueprint(BP_CHECKPOINT, parent="/Script/Engine.Actor", description="A gate across the road: trigger, two poles, respawn point; index 0 is the start line.")
+    bp = Blueprint(BP_CHECKPOINT, parent="/Script/Engine.Actor", description="A gate across the road: trigger, two pylons and a banner "
+                   "that glow when it is the player's next gate, respawn point; index 0 is the start line.")
     bp.component("Trigger", BOX_COMP, **{"box_extent": {"vector": [100, 1400, 250]},
                                          "call:set_collision_profile_name": "Trigger",
                                          "generate_overlap_events": True})
-    bp.component("LeftPole", STATIC_MESH_COMP, **{"static_mesh": POLE, "relative_location": {"vector": [0, -700, 0]},
+    bp.component("LeftPole", STATIC_MESH_COMP, **{"static_mesh": SM_GATE_PYLON, "relative_location": {"vector": [0, -GATE_POLE_OFFSET, 0]},
                                                    "call:set_collision_profile_name": "NoCollision"})
-    bp.component("RightPole", STATIC_MESH_COMP, **{"static_mesh": POLE, "relative_location": {"vector": [0, 700, 0]},
+    bp.component("RightPole", STATIC_MESH_COMP, **{"static_mesh": SM_GATE_PYLON, "relative_location": {"vector": [0, GATE_POLE_OFFSET, 0]},
                                                     "call:set_collision_profile_name": "NoCollision"})
+    # Task 21: the banner hangs 4.7-5.5 m up between the pylon tops; its origin is the gate's, so it sits at (0, 0, 0)
+    bp.component("Banner", STATIC_MESH_COMP, static_mesh=SM_GATE_BANNER, relative_location={"vector": [0, 0, 0]},
+                 relative_scale3d={"vector": [1.0, 2 * GATE_POLE_OFFSET / GATE_BANNER_Y_CM, 1.0]}, **NO_COLLISION)
     C = "Dead Fire|Checkpoint"
     bp.variable("CheckpointIndex", "int", "0", C, editable=True)
     bp.variable("TriggerHalfExtent", "struct:" + VECTOR, "(X=100.000000,Y=1400.000000,Z=250.000000)", C, editable=True)
-    bp.variable("PoleOffset", "float", "700", C, editable=True)
+    bp.variable("PoleOffset", "float", "%g" % GATE_POLE_OFFSET, C, editable=True)
+    bp.default("PoleOffset", GATE_POLE_OFFSET)  # Task 22: class default every apply (the declared default reaches only a new asset)
     bp.variable("RespawnHeightOffset", "float", "50", C, editable=True)
+    L = "Dead Fire|Checkpoint|Look"  # Task 21 (spec §8.2): the Gate slot's Glow on the player's next gate and on the others
+    bp.variable("HighlightGlow", "float", "%g" % GATE_GLOW_ON, L, editable=True)
+    bp.variable("DimGlow", "float", "%g" % GATE_GLOW_OFF, L, editable=True)
+    bp.default("HighlightGlow", GATE_GLOW_ON)
+    bp.default("DimGlow", GATE_GLOW_OFF)
+    bp.variable("GlowMIDs", "array<object:%s>" % MID, "", "Dead Fire|Checkpoint|State")  # LeftPole, RightPole, Banner
+
+    # SetHighlighted(bOn): each glowing part's Gate-slot MID (made once: CreateDynamicMaterialInstance hands back the slot's MID
+    # when it already is one), Glow = HighlightGlow or DimGlow; GlowMIDs is rebuilt in GLOW_PARTS order every call
+    g = bp.function("SetHighlighted", inputs=["bOn:bool"], doc="Glow = HighlightGlow (bOn: the player's next gate) or DimGlow on the "
+                    "Gate slot of both pylons and the banner, each through its own material instance (GlowMIDs).")
+    mid_elem = Pin("e", OBJECT, sub_object=cls_ref(MID))
+    clear = g.call_array("KismetArrayLibrary", "Array_Clear", mid_elem, pure=False)
+    g.link(g.var_get("GlowMIDs", OBJECT, cls_ref(MID), container="Array"), "GlowMIDs", clear, "TargetArray")
+    g.link_entry("then", clear, "execute")
+    prev = clear
+    for part in GLOW_PARTS:
+        make = g.call_on(PRIMITIVE, "CreateDynamicMaterialInstance",
+                         inputs=[Pin("ElementIndex", INT, default=str(GATE_GLOW_SLOT)), obj_pin("SourceMaterial", MATERIAL_INTERFACE),
+                                 Pin("OptionalName", NAME, default="None")],
+                         outputs=[obj_pin("ReturnValue", MID, "out")])
+        g.link(g.var_get(part, OBJECT, cls_ref(STATIC_MESH_COMP)), part, make, "self")
+        keep = g.call_array("KismetArrayLibrary", "Array_Add", mid_elem, inputs=[Pin("NewItem", OBJECT, "in", cls_ref(MID))],
+                            outputs=[Pin("ReturnValue", INT, "out")], pure=False)
+        g.link(g.var_get("GlowMIDs", OBJECT, cls_ref(MID), container="Array"), "GlowMIDs", keep, "TargetArray")
+        g.link(make, "ReturnValue", keep, "NewItem")
+        glow = g.call_static(MATH, "SelectFloat", inputs=[Pin("A", FLOAT), Pin("B", FLOAT), Pin("bPickA", BOOL)],
+                             outputs=[Pin("ReturnValue", FLOAT, "out")], pure=True)
+        g.link(g.var_get("HighlightGlow", FLOAT), "HighlightGlow", glow, "A")
+        g.link(g.var_get("DimGlow", FLOAT), "DimGlow", glow, "B")
+        g.link_entry("bOn", glow, "bPickA")
+        set_glow = g.call_on(MID, "SetScalarParameterValue", inputs=[Pin("ParameterName", NAME, default="Glow"), Pin("Value", FLOAT)])
+        g.link(make, "ReturnValue", set_glow, "self")
+        g.link(glow, "ReturnValue", set_glow, "Value")
+        g.exec(prev, make, keep, set_glow)
+        prev = set_glow
 
     # GetRespawnTransform: actor rotation, location raised by RespawnHeightOffset
     g = bp.function("GetRespawnTransform", doc="The gate's transform raised by RespawnHeightOffset.", outputs=["Transform:struct:" + TRANSFORM], pure=True)
@@ -82,7 +130,7 @@ def build() -> Blueprint:
     g.link(notify, "ReturnValue", r, "ReturnValue")
     g.exec(notify, r)
 
-    # Construction script: apply extent and pole offsets so edits in the level update the gate
+    # Construction script: apply extent and pole offsets so edits in the level update the gate (Task 21: and the banner's span)
     g = bp.construction_script()
     trig = g.var_get("Trigger", OBJECT, cls_ref(BOX_COMP))
     ext = g.var_get("TriggerHalfExtent", "struct", sub_object="ScriptStruct'\"%s\"'" % VECTOR)
@@ -106,6 +154,16 @@ def build() -> Blueprint:
         g.link(v, "ReturnValue", setl, "NewLocation")
         g.exec(prev, setl)
         prev = setl
+    # the banner spans the pole spacing: Y scale = 2 x PoleOffset / its 100 cm
+    span = math2(g, "Multiply_FloatFloat", FLOAT, b="%f" % (2.0 / GATE_BANNER_Y_CM))
+    g.link(g.var_get("PoleOffset", FLOAT), "PoleOffset", span, "A")
+    sv = g.call_static(MATH, "MakeVector", inputs=[Pin("X", FLOAT, default="1.0"), Pin("Y", FLOAT), Pin("Z", FLOAT, default="1.0")],
+                       outputs=[struct_pin("ReturnValue", VECTOR, "out")], pure=True)
+    g.link(span, "ReturnValue", sv, "Y")
+    stretch = g.call_on(SCENE_COMP, "SetRelativeScale3D", inputs=[struct_pin("NewScale3D", VECTOR)])
+    g.link(g.var_get("Banner", OBJECT, cls_ref(STATIC_MESH_COMP)), "Banner", stretch, "self")
+    g.link(sv, "ReturnValue", stretch, "NewScale3D")
+    g.exec(prev, stretch)
 
     g = bp.event_graph()
     g.section("Begin Play: register with the GameMode")

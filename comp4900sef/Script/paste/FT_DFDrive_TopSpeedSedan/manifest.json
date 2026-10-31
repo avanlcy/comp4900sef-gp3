@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFDrive_TopSpeedSedan",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "SEDAN at full throttle for 12 s on the drive strip: top speed within 5% of the recorded baseline (measured before the Phase 7 handling change).",
+ "components": [],
+ "variables": [
+  {
+   "name": "MaxKPH",
+   "type": "float",
+   "default": "0.0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

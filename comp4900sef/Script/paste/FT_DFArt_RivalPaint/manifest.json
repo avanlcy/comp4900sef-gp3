@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_RivalPaint",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a76.1, \u00a73: with NPCCount 1, SpawnNPCs gives the NPC's car MI_DF_Paint_Gang on Body slot 0, the gang's flame-orange MI_DF_Trim_Gang on slot 1 and no light bar (the player's car alone has one); wrecked, both slots turn MI_DF_Paint_Charred, and the NPC is back 2.5 s later in a fresh car with the same gang look. The NPCs are despawned and NPCCount set back to 0 on every finish.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

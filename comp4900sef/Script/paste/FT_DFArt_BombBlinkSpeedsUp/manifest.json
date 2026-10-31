@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_BombBlinkSpeedsUp",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.5: the bomb (Shell SM_DF_Bomb, its BombLamp slot the BlinkLamp MID) blinks faster as the fuse runs: ComputeBlinkHz is 1 at 0 s, 3.5 at FuseSeconds / 2, 6 at FuseSeconds and 6 beyond it.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

@@ -1,0 +1,104 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Blueprints/BP_DFScatter",
+ "parent": "/Script/Engine.Actor",
+ "description": "One scatter mesh (spec \u00a78.3): a hierarchical instanced static mesh with one instance per Transforms entry, solid when bBlocking, culled at CullDistance.",
+ "components": [
+  {
+   "name": "Instances",
+   "class": "/Script/Engine.HierarchicalInstancedStaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "call:set_collision_profile_name": "NoCollision"
+   }
+  }
+ ],
+ "variables": [
+  {
+   "name": "Mesh",
+   "type": "object:/Script/Engine.StaticMesh",
+   "default": "",
+   "category": "Dead Fire|Scatter",
+   "editable": true
+  },
+  {
+   "name": "Transforms",
+   "type": "array<struct:/Script/CoreUObject.Transform>",
+   "default": "",
+   "category": "Dead Fire|Scatter",
+   "editable": true
+  },
+  {
+   "name": "bBlocking",
+   "type": "bool",
+   "default": "true",
+   "category": "Dead Fire|Scatter",
+   "editable": true
+  },
+  {
+   "name": "CullDistance",
+   "type": "int",
+   "default": "30000",
+   "category": "Dead Fire|Scatter",
+   "editable": true
+  }
+ ],
+ "dispatchers": [],
+ "functions": [
+  {
+   "name": "RebuildInstances",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Clears the instances, sets Mesh, the collision (BlockAll when bBlocking, else NoCollision) and the cull distance, then adds one instance per Transforms entry (relative to the actor)."
+  }
+ ],
+ "graphs": [
+  {
+   "name": "RebuildInstances",
+   "file": "RebuildInstances.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "UserConstructionScript",
+   "file": "UserConstructionScript.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "bBlocking": true,
+  "CullDistance": 30000
+ },
+ "component_defaults": {},
+ "requires": []
+}

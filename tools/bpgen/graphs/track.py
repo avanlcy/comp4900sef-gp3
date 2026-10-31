@@ -1,6 +1,7 @@
 """BP_DFTrackSpline (plan Task 6): closed spline whose construction script lays road slabs (and optional barriers)
 along it in pieces of about PieceLength, plus progress / lateral-distance queries for checkpoints, AI and the
-off-track timer. Same algorithm as the Phase 1 C++ ADFTrackSpline::RebuildTrack.
+off-track timer. Same algorithm as the Phase 1 C++ ADFTrackSpline::RebuildTrack. Phase 7 Task 21: the pieces are
+SM_DF_RoadSlab in MI_DF_Road (and SM_DF_Barrier in MI_DF_Concrete when barriers are on).
 """
 import os
 import sys
@@ -9,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from df import (BOOL, BP_TRACK, FLOAT, INT, MATH, OBJECT, OUT, SPACE, SPLINE_COMP, SPLINE_MESH_COMP, STRUCT,  # noqa: E402
                 TRANSFORM, VECTOR, Blueprint, Graph, Node, Pin, and_bool, cls_ref, compare, math2, native_enum_pin,
                 struct_pin)
+from df import MI_CONCRETE, MI_ROAD, SM_BARRIER, SM_ROAD_SLAB  # noqa: E402  (Phase 7 Task 21)
 
 V2D = "/Script/CoreUObject.Vector2D"
 STATIC_MESH = "/Script/Engine.StaticMesh"
@@ -140,10 +142,12 @@ def build() -> Blueprint:
     bp.variable("SegmentCount", "int", "0", I)
     bp.variable("GeneratedMeshCount", "int", "0", I)
     bp.variable("PieceStep", "float", "0", I)
-    bp.default("RoadMesh", "/Engine/BasicShapes/Cube")
-    bp.default("BarrierMesh", "/Engine/BasicShapes/Cube")
-    bp.default("RoadMaterial", "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid")
-    bp.default("BarrierMaterial", "/Game/VehicleAdv/Materials/MaterialInstances/SolidOrange")
+    # Phase 7 Task 21 (spec §8.2): the road slab and the jersey barrier keep the cube's unit contract (100 cm, centred), so
+    # MeshNativeSize stays 100 and the road's top still sits on the spline
+    bp.default("RoadMesh", SM_ROAD_SLAB)
+    bp.default("BarrierMesh", SM_BARRIER)
+    bp.default("RoadMaterial", MI_ROAD)
+    bp.default("BarrierMaterial", MI_CONCRETE)
 
     # ---- queries ----
     g = bp.function("GetSegmentCount", doc="Road pieces laid by the last rebuild.", outputs=["Count:int"], pure=True)

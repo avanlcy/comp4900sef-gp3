@@ -1,0 +1,26 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFShot_Points",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Phase 7 Task 22 capture: a shipped race level from the race: the grid, four fixed points along the main road, the item looks on its ground and the player on foot (placed in L_TestTrack or L_Switchback for a capture run only).",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {
+  "TimeLimit": 120.0
+ },
+ "component_defaults": {},
+ "requires": []
+}

@@ -2,7 +2,7 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFCheckpoint",
  "parent": "/Script/Engine.Actor",
- "description": "A gate across the road: trigger, two poles, respawn point; index 0 is the start line.",
+ "description": "A gate across the road: trigger, two pylons and a banner that glow when it is the player's next gate, respawn point; index 0 is the start line.",
  "components": [
   {
    "name": "Trigger",
@@ -25,11 +25,11 @@
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "",
    "properties": {
-    "static_mesh": "/Game/VehicleAdv/ArenaMesh/pole",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_GatePylon",
     "relative_location": {
      "vector": [
       0,
-      -700,
+      -800.0,
       0
      ]
     },
@@ -41,15 +41,39 @@
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "",
    "properties": {
-    "static_mesh": "/Game/VehicleAdv/ArenaMesh/pole",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_GatePylon",
     "relative_location": {
      "vector": [
       0,
-      700,
+      800.0,
       0
      ]
     },
     "call:set_collision_profile_name": "NoCollision"
+   }
+  },
+  {
+   "name": "Banner",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_GateBanner",
+    "relative_location": {
+     "vector": [
+      0,
+      0,
+      0
+     ]
+    },
+    "relative_scale3d": {
+     "vector": [
+      1.0,
+      16.0,
+      1.0
+     ]
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
    }
   }
  ],
@@ -71,7 +95,7 @@
   {
    "name": "PoleOffset",
    "type": "float",
-   "default": "700",
+   "default": "800",
    "category": "Dead Fire|Checkpoint",
    "editable": true
   },
@@ -81,10 +105,42 @@
    "default": "50",
    "category": "Dead Fire|Checkpoint",
    "editable": true
+  },
+  {
+   "name": "HighlightGlow",
+   "type": "float",
+   "default": "4",
+   "category": "Dead Fire|Checkpoint|Look",
+   "editable": true
+  },
+  {
+   "name": "DimGlow",
+   "type": "float",
+   "default": "0.6",
+   "category": "Dead Fire|Checkpoint|Look",
+   "editable": true
+  },
+  {
+   "name": "GlowMIDs",
+   "type": "array<object:/Script/Engine.MaterialInstanceDynamic>",
+   "default": "",
+   "category": "Dead Fire|Checkpoint|State",
+   "editable": false
   }
  ],
  "dispatchers": [],
  "functions": [
+  {
+   "name": "SetHighlighted",
+   "inputs": [
+    "bOn:bool"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Glow = HighlightGlow (bOn: the player's next gate) or DimGlow on the Gate slot of both pylons and the banner, each through its own material instance (GlowMIDs)."
+  },
   {
    "name": "GetRespawnTransform",
    "inputs": [],
@@ -111,6 +167,43 @@
   }
  ],
  "graphs": [
+  {
+   "name": "SetHighlighted",
+   "file": "SetHighlighted.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallArrayFunction_0",
+     "execute"
+    ],
+    [
+     "entry",
+     "bOn",
+     "DFN_K2Node_CallFunction_1",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "bOn",
+     "DFN_K2Node_CallFunction_4",
+     "bPickA"
+    ],
+    [
+     "entry",
+     "bOn",
+     "DFN_K2Node_CallFunction_7",
+     "bPickA"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
   {
    "name": "GetRespawnTransform",
    "file": "GetRespawnTransform.txt",
@@ -202,7 +295,11 @@
    }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "PoleOffset": 800.0,
+  "HighlightGlow": 4.0,
+  "DimGlow": 0.6
+ },
  "component_defaults": {},
  "requires": []
 }

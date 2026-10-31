@@ -1,0 +1,32 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFHUD_DamageVignette",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.6: the player's car takes 10 damage: in that frame the race HUD's Vignette is shown, and 0.7 s later (the 0.3 s vignette plus one headless frame) it is hidden. Out of the car, a 10-point hit on the player's character shows it again.",
+ "components": [],
+ "variables": [
+  {
+   "name": "HealthBefore",
+   "type": "float",
+   "default": "0",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

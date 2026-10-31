@@ -2,14 +2,14 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFDestructible",
  "parent": "/Script/Engine.Actor",
- "description": "A block only explosives demolish; it closes the shortcut road.",
+ "description": "A rock wall only explosives demolish (it breaks into eight physics chunks); it closes the shortcut road.",
  "components": [
   {
    "name": "Rock",
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "",
    "properties": {
-    "static_mesh": "/Game/StarterContent/Shapes/Shape_Cube",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_RockWall",
     "relative_scale3d": {
      "vector": [
       3.0,
@@ -18,9 +18,7 @@
      ]
     },
     "call:set_collision_profile_name": "BlockAllDynamic",
-    "override_materials": [
-     "/Game/VehicleAdv/Materials/MaterialInstances/BlackGrid"
-    ]
+    "override_materials": []
    }
   }
  ],
@@ -45,6 +43,13 @@
    "default": "false",
    "category": "Dead Fire|Destructible",
    "editable": false
+  },
+  {
+   "name": "DebrisSpeed",
+   "type": "float",
+   "default": "600",
+   "category": "Dead Fire|Destructible",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -55,16 +60,52 @@
  ],
  "functions": [
   {
+   "name": "SpawnChunk",
+   "inputs": [
+    "Cell:struct:/Script/CoreUObject.Vector"
+   ],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "One rock chunk (BP_DFDebris) at Cell of the Rock's bounds, sized to its grid cell and pushed DebrisSpeed cm/s away from the rock's centre."
+  },
+  {
    "name": "Demolish",
    "inputs": [],
    "outputs": [],
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Once: effects-only explosion, hidden and non-colliding; the road behind is open."
+   "doc": "Once: effects-only explosion at the wall's foot, hidden and non-colliding (the road behind is open), and eight physics chunks (a 2 x 2 x 2 grid over its bounds) pushed out."
   }
  ],
  "graphs": [
+  {
+   "name": "SpawnChunk",
+   "file": "SpawnChunk.txt",
+   "links": [
+    [
+     "entry",
+     "Cell",
+     "DFN_K2Node_CallFunction_1",
+     "B"
+    ],
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_SpawnActorFromClass_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
   {
    "name": "Demolish",
    "file": "Demolish.txt",
@@ -94,7 +135,9 @@
    }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "DebrisSpeed": 600.0
+ },
  "component_defaults": {},
  "requires": []
 }

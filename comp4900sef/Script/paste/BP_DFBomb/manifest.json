@@ -2,26 +2,70 @@
  "kind": "blueprint",
  "asset": "/Game/DeadFire/Blueprints/BP_DFBomb",
  "parent": "/Script/Engine.Actor",
- "description": "The dropped bomb: arms after a delay, then detonates when a car touches it or when its fuse runs out.",
+ "description": "The dropped bomb, a mine with a red lamp that blinks faster as its fuse runs: arms after a delay, then detonates when a car touches it or when its fuse runs out.",
  "components": [
   {
    "name": "Shell",
    "class": "/Script/Engine.StaticMeshComponent",
    "parent": "",
    "properties": {
-    "static_mesh": "/Game/StarterContent/Shapes/Shape_Sphere",
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Bomb",
     "relative_scale3d": {
      "vector": [
-      0.5,
-      0.5,
-      0.5
+      1.0,
+      1.0,
+      1.0
      ]
     },
-    "call:set_collision_profile_name": "OverlapOnlyPawn",
-    "override_materials": [
-     "/Game/VehicleAdv/Materials/MaterialInstances/SolidRed"
-    ]
+    "override_materials": [],
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
    }
+  },
+  {
+   "name": "Trigger",
+   "class": "/Script/Engine.SphereComponent",
+   "parent": "Shell",
+   "properties": {
+    "sphere_radius": 25.0,
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      55.0
+     ]
+    },
+    "call:set_collision_profile_name": "OverlapOnlyPawn"
+   }
+  },
+  {
+   "name": "BlinkLight",
+   "class": "/Script/Engine.PointLightComponent",
+   "parent": "Shell",
+   "properties": {
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      40.0
+     ]
+    },
+    "intensity_units": {
+     "enum": "LightUnits.UNITLESS"
+    },
+    "intensity": 0.0,
+    "attenuation_radius": 400.0,
+    "cast_shadows": false,
+    "call:set_light_color": {
+     "color": [
+      1.0,
+      0.05,
+      0.03,
+      1.0
+     ]
+    }
+   },
+   "socket": "Lamp"
   }
  ],
  "variables": [
@@ -80,6 +124,55 @@
    "default": "",
    "category": "Dead Fire|Bomb",
    "editable": false
+  },
+  {
+   "name": "BlinkGlow",
+   "type": "float",
+   "default": "3.0",
+   "category": "Dead Fire|Bomb Look",
+   "editable": true
+  },
+  {
+   "name": "BlinkLightIntensity",
+   "type": "float",
+   "default": "1500.0",
+   "category": "Dead Fire|Bomb Look",
+   "editable": true
+  },
+  {
+   "name": "ArmSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Bomb Look",
+   "editable": true
+  },
+  {
+   "name": "BeepSound",
+   "type": "object:/Script/Engine.SoundBase",
+   "default": "",
+   "category": "Dead Fire|Bomb Look",
+   "editable": true
+  },
+  {
+   "name": "BlinkLamp",
+   "type": "object:/Script/Engine.MaterialInstanceDynamic",
+   "default": "",
+   "category": "Dead Fire|Bomb Look",
+   "editable": false
+  },
+  {
+   "name": "bBlinkOn",
+   "type": "bool",
+   "default": "false",
+   "category": "Dead Fire|Bomb Look",
+   "editable": false
+  },
+  {
+   "name": "NextBlinkTime",
+   "type": "float",
+   "default": "0",
+   "category": "Dead Fire|Bomb Look",
+   "editable": false
   }
  ],
  "dispatchers": [],
@@ -91,7 +184,29 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Arms the bomb: the next car to touch it detonates it."
+   "doc": "Arms the bomb (the arming click): the next car to touch it detonates it."
+  },
+  {
+   "name": "ComputeBlinkHz",
+   "inputs": [
+    "Elapsed:float"
+   ],
+   "outputs": [
+    "Hz:float"
+   ],
+   "pure": true,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "The lamp's blink rate Elapsed seconds after the drop: lerp(1, 6, clamp(Elapsed / FuseSeconds, 0, 1)) Hz."
+  },
+  {
+   "name": "TickBlink",
+   "inputs": [],
+   "outputs": [],
+   "pure": false,
+   "category": "Dead Fire",
+   "locals": [],
+   "doc": "Toggles the lamp (BlinkLamp Glow, BlinkLight) when a blink is due, beeping as it comes on; the next toggle is half a period of ComputeBlinkHz later."
   },
   {
    "name": "Detonate",
@@ -109,7 +224,7 @@
    "pure": false,
    "category": "Dead Fire",
    "locals": [],
-   "doc": "Settles the bomb 30 cm above the ground found by a short trace down from the drop point."
+   "doc": "Settles the mine on the ground found by a short trace down from the drop point."
   }
  ],
  "graphs": [
@@ -121,6 +236,59 @@
      "entry",
      "then",
      "DFN_K2Node_VariableSet_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
+   "name": "ComputeBlinkHz",
+   "file": "ComputeBlinkHz.txt",
+   "links": [
+    [
+     "entry",
+     "Elapsed",
+     "DFN_K2Node_CallFunction_0",
+     "A"
+    ],
+    [
+     "DFN_K2Node_CallFunction_3",
+     "ReturnValue",
+     "result",
+     "Hz"
+    ],
+    [
+     "entry",
+     "then",
+     "result",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": [
+     1336,
+     0
+    ]
+   }
+  },
+  {
+   "name": "TickBlink",
+   "file": "TickBlink.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_IfThenElse_0",
      "execute"
     ]
    ],
@@ -180,7 +348,12 @@
    }
   }
  ],
- "defaults": {},
+ "defaults": {
+  "BlinkGlow": 3.0,
+  "BlinkLightIntensity": 1500.0,
+  "ArmSound": "/Game/DeadFire/Art/Sounds/SW_DF_BombArm",
+  "BeepSound": "/Game/DeadFire/Art/Sounds/SW_DF_BombBeep"
+ },
  "component_defaults": {},
  "requires": []
 }

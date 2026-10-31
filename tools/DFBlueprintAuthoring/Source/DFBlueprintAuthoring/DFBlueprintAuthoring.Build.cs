@@ -17,6 +17,8 @@ public class DFBlueprintAuthoring : ModuleRules
 			"Json",
 			"UMG",
 			"UMGEditor",
+			"Landscape",
+			"SlateCore",
 		});
 	}
 }

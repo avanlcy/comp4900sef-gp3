@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_NextGateHighlighted",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a78.2: after RestartRace the player's next gate (1) glows (its pylons' and banner's Gate MIDs at Glow 4) and the other gates are dim (0.6). Passing gate 1 (NotifyCheckpointReached, which advances the gate through NotifyCheckpointPassed) lights gate 2 and dims gate 1; passing 2 and 3 lights the start line (0); crossing it (a lap) lights gate 1 again.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

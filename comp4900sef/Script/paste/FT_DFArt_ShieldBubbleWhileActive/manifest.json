@@ -1,0 +1,24 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFArt_ShieldBubbleWhileActive",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Spec \u00a77.5, on a BRUTE: ShieldBubble is hidden on a fresh car, shown right after ActivateShield (its centre within 2 cm of Body x (2.2, 0, 95.8)), and hidden ShieldDuration + 0.2 s later (the test ticks after the car). Shielded again, a blocked hit sets the bubble MID's Glow to 3, and 0.5 s later it is back to the MI's glow.",
+ "components": [],
+ "variables": [],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

@@ -1,0 +1,53 @@
+{
+ "kind": "blueprint",
+ "asset": "/Game/DeadFire/Tests/FT_DFFx_NoTyreSmokeFarAway",
+ "parent": "/Script/FunctionalTesting.FunctionalTest",
+ "description": "Review Focus 2, spec \u00a75.5: IsNearPlayerView(loc, 8000) is true 20 m and false 100 m from the player's camera. Two SEDANs at 80 km/h on the open ground west of the start line, heading away from the parked player's camera, drift for 1 s (full lock with the handbrake): the one that starts 20 m from the camera leaves BP_DFFxPuff tyre smoke around it; the one that starts 100 m away (drifting at 0.5 s, and still beyond 80 m at the end) leaves none. SEDAN on the drive strip in the gear the auto-box holds at its start speed, raw AI controller (unsmoothed, unscaled inputs), the car ticking after the test, physics in step with game time (time dilation 0.25).",
+ "components": [],
+ "variables": [
+  {
+   "name": "FarPuffs",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "NearPuffs",
+   "type": "int",
+   "default": "0",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "CamLoc",
+   "type": "struct:/Script/CoreUObject.Vector",
+   "default": "",
+   "category": "",
+   "editable": false
+  },
+  {
+   "name": "bFarDrifting",
+   "type": "bool",
+   "default": "false",
+   "category": "",
+   "editable": false
+  }
+ ],
+ "dispatchers": [],
+ "functions": [],
+ "graphs": [
+  {
+   "name": "EventGraph",
+   "file": "EventGraph.txt",
+   "links": [],
+   "layout": {
+    "entry": null,
+    "result": null
+   }
+  }
+ ],
+ "defaults": {},
+ "component_defaults": {},
+ "requires": []
+}

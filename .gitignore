@@ -80,3 +80,6 @@ Builds/
 # Python bytecode caches (the generators and editor scripts)
 __pycache__/
 *.pyc
+
+# Generated art (rebuilt by tools/artgen)
+/art/

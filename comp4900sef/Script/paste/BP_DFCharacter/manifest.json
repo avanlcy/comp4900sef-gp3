@@ -16,7 +16,88 @@
    "name": "Weapon",
    "class": "/Game/DeadFire/Components/BPC_DFWeapon.BPC_DFWeapon_C",
    "parent": "",
-   "properties": {}
+   "properties": {
+    "bDebugTrace": false,
+    "MuzzleFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxMuzzle",
+    "TracerFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxTracer",
+    "ImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxImpact",
+    "VehicleImpactFxClass": "class:/Game/DeadFire/Blueprints/BP_DFFxSparks",
+    "FireSound": "/Game/DeadFire/Art/Sounds/SW_DF_Rifle",
+    "ImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactDirt",
+    "VehicleImpactSound": "/Game/DeadFire/Art/Sounds/SW_DF_ImpactMetal"
+   }
+  },
+  {
+   "name": "Helmet",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Helmet",
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_rotation": {
+     "rotator": {
+      "pitch": 0.0,
+      "yaw": 91.32,
+      "roll": -90.0
+     }
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
+  },
+  {
+   "name": "Vest",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Vest",
+    "relative_location": {
+     "vector": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "relative_rotation": {
+     "rotator": {
+      "pitch": 0.0,
+      "yaw": 99.48,
+      "roll": -90.0
+     }
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
+  },
+  {
+   "name": "Rifle",
+   "class": "/Script/Engine.StaticMeshComponent",
+   "parent": "",
+   "properties": {
+    "static_mesh": "/Game/DeadFire/Art/Meshes/SM_DF_Rifle",
+    "relative_location": {
+     "vector": [
+      -9.49,
+      4.27,
+      -1.49
+     ]
+    },
+    "relative_rotation": {
+     "rotator": {
+      "pitch": 38.3,
+      "yaw": -124.42,
+      "roll": 68.68
+     }
+    },
+    "call:set_collision_profile_name": "NoCollision",
+    "generate_overlap_events": false
+   }
   }
  ],
  "variables": [
@@ -61,6 +142,13 @@
    "default": "",
    "category": "Dead Fire|State",
    "editable": false
+  },
+  {
+   "name": "HitShake",
+   "type": "class:/Script/Engine.CameraShakeBase",
+   "default": "",
+   "category": "Dead Fire|Camera",
+   "editable": true
   }
  ],
  "dispatchers": [
@@ -368,6 +456,25 @@
    }
   },
   {
+   "name": "UserConstructionScript",
+   "file": "UserConstructionScript.txt",
+   "links": [
+    [
+     "entry",
+     "then",
+     "DFN_K2Node_CallParentFunction_0",
+     "execute"
+    ]
+   ],
+   "layout": {
+    "entry": [
+     0,
+     0
+    ],
+    "result": null
+   }
+  },
+  {
    "name": "EventGraph",
    "file": "EventGraph.txt",
    "links": [],
@@ -377,7 +484,16 @@
    }
   }
  ],
- "defaults": {},
- "component_defaults": {},
+ "defaults": {
+  "HitShake": "class:/Game/DeadFire/Blueprints/BP_DFShakeLight"
+ },
+ "component_defaults": {
+  "Mesh": {
+   "override_materials": [
+    "/Game/DeadFire/Art/Materials/MI_DF_Mannequin_Body",
+    "/Game/DeadFire/Art/Materials/MI_DF_Mannequin_Trim"
+   ]
+  }
+ },
  "requires": []
 }
